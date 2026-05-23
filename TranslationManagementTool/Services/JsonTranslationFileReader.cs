@@ -22,7 +22,7 @@ public class JsonTranslationFileReader
         var language = ExtractLanguage(filePath);
         var baseFileName = ExtractBaseFileName(filePath);
         var json = File.ReadAllText(filePath);
-        
+
         var translationFile = new TranslationFile
         {
             FilePath = filePath,
@@ -38,7 +38,7 @@ public class JsonTranslationFileReader
     {
         var fileName = Path.GetFileName(filePath);
         var match = LanguagePattern.Match(fileName);
-        
+
         if (match.Success && match.Groups.Count > 1)
         {
             return match.Groups[1].Value.ToLowerInvariant();
@@ -51,7 +51,7 @@ public class JsonTranslationFileReader
     {
         var fileName = Path.GetFileNameWithoutExtension(filePath);
         var match = LanguagePattern.Match(Path.GetFileName(filePath));
-        
+
         if (match.Success)
         {
             // Remove language suffix (e.g., "forms_en" → "forms")
@@ -109,7 +109,7 @@ public class JsonTranslationFileReader
     private List<TranslationKey> ParseJsonKeys(string json, string baseFileName, string language)
     {
         var keys = new List<TranslationKey>();
-        
+
         try
         {
             var document = JsonDocument.Parse(json);
@@ -129,8 +129,8 @@ public class JsonTranslationFileReader
         {
             foreach (var property in element.EnumerateObject())
             {
-                var currentKey = string.IsNullOrEmpty(prefix) 
-                    ? property.Name 
+                var currentKey = string.IsNullOrEmpty(prefix)
+                    ? property.Name
                     : $"{prefix}.{property.Name}";
 
                 if (property.Value.ValueKind == JsonValueKind.String)

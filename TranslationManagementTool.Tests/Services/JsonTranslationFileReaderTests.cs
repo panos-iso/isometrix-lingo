@@ -109,7 +109,7 @@ public class JsonTranslationFileReaderTests : IDisposable
         // Arrange
         var enFilePath = Path.Combine(_testDirectory, "forms_en.json");
         var esFilePath = Path.Combine(_testDirectory, "forms_es.json");
-        
+
         File.WriteAllText(enFilePath, @"{""hello"": ""Hello"", ""goodbye"": ""Goodbye""}");
         File.WriteAllText(esFilePath, @"{""hello"": ""Hola""}");
 
@@ -123,7 +123,7 @@ public class JsonTranslationFileReaderTests : IDisposable
 
         // Assert
         Assert.Equal(2, consolidated.Count);
-        
+
         var helloKey = consolidated.First(k => k.Key == "hello");
         Assert.Equal("Hello", helloKey.LanguageValues["en"]);
         Assert.Equal("Hola", helloKey.LanguageValues["es"]);
@@ -140,7 +140,7 @@ public class JsonTranslationFileReaderTests : IDisposable
         var enFilePath = Path.Combine(_testDirectory, "app_en.json");
         var esFilePath = Path.Combine(_testDirectory, "app_es.json");
         var frFilePath = Path.Combine(_testDirectory, "app_fr.json");
-        
+
         File.WriteAllText(enFilePath, @"{""key1"": ""Value1"", ""key2"": ""Value2""}");
         File.WriteAllText(esFilePath, @"{""key1"": ""Valor1""}");
         File.WriteAllText(frFilePath, @"{""key2"": ""Valeur2""}");

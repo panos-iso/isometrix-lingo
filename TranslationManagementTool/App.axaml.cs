@@ -22,7 +22,7 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var settingsService = new UserSettingsService();
-            
+
             if (settingsService.IsFirstRun())
             {
                 var welcomeWindow = new WelcomeWindow();

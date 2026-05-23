@@ -8,7 +8,7 @@ public partial class WelcomeViewModel : ViewModelBase
 {
     [ObservableProperty]
     private string _username = string.Empty;
-    
+
     private readonly UserSettingsService _settingsService;
 
     public WelcomeViewModel()
