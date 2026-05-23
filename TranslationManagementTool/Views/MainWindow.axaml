@@ -39,10 +39,20 @@
                       IsReadOnly="True"
                       GridLinesVisibility="All"
                       BorderThickness="1"
-                      BorderBrush="Gray">
+                      BorderBrush="Gray"
+                      CanUserResizeColumns="True"
+                      CanUserReorderColumns="False">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Key" Binding="{Binding Key}" Width="2*"/>
-                    <DataGridTextColumn Header="Source File" Binding="{Binding SourceFile}" Width="*"/>
+                    <DataGridTextColumn Header="Key" 
+                                        Binding="{Binding Key}" 
+                                        Width="Auto" 
+                                        MinWidth="150" 
+                                        MaxWidth="400"/>
+                    <DataGridTextColumn Header="Source File" 
+                                        Binding="{Binding SourceFile}" 
+                                        Width="Auto" 
+                                        MinWidth="100" 
+                                        MaxWidth="200"/>
                     <!-- Language columns will be added dynamically in code-behind -->
                 </DataGrid.Columns>
             </DataGrid>

@@ -1,12 +1,17 @@
 using System.Linq;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
 using Avalonia.Data;
+using TranslationManagementTool.Converters;
+using TranslationManagementTool.Helpers;
 using TranslationManagementTool.ViewModels;
 
 namespace TranslationManagementTool.Views;
 
 public partial class MainWindow : Window
 {
+    private static readonly LanguageValueConverter LanguageConverter = new();
+
     public MainWindow()
     {
         InitializeComponent();
@@ -36,11 +41,29 @@ public partial class MainWindow : Window
         // Add a column for each language
         foreach (var language in viewModel.Languages.OrderBy(l => l))
         {
-            var column = new DataGridTextColumn
+            var languageName = LanguageHelper.GetLanguageName(language);
+            var column = new DataGridTemplateColumn
             {
-                Header = language.ToUpperInvariant(),
-                Width = new DataGridLength(1.5, DataGridLengthUnitType.Star),
-                Binding = new Binding($"LanguageValues[{language}]")
+                Header = languageName,
+                Width = DataGridLength.Auto,
+                MinWidth = 120,
+                MaxWidth = 300,
+                CellTemplate = new FuncDataTemplate<object>((_, _) =>
+                {
+                    var textBlock = new TextBlock
+                    {
+                        TextWrapping = Avalonia.Media.TextWrapping.NoWrap,
+                        TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
+                        Margin = new Avalonia.Thickness(5, 2)
+                    };
+                    var binding = new Binding("LanguageValues")
+                    {
+                        Converter = LanguageConverter,
+                        ConverterParameter = language
+                    };
+                    textBlock.Bind(TextBlock.TextProperty, binding);
+                    return textBlock;
+                })
             };
             TranslationsGrid.Columns.Add(column);
         }
