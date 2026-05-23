@@ -1,0 +1,20 @@
+{
+  "login": {
+    "title": "Login",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign In",
+    "forgot": "Forgot Password?"
+  },
+  "navigation": {
+    "home": "Home",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "messages": {
+    "welcome": "Welcome back!",
+    "error": "An error occurred",
+    "success": "Operation completed successfully"
+  }
+}

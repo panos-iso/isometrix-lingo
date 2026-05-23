@@ -33,7 +33,8 @@
 
         <!-- Main Content Area -->
         <Grid Margin="10">
-            <DataGrid ItemsSource="{Binding TranslationStore.FilteredKeys}"
+            <DataGrid x:Name="TranslationsGrid"
+                      ItemsSource="{Binding TranslationStore.FilteredKeys}"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
                       GridLinesVisibility="All"
@@ -42,7 +43,7 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Key" Binding="{Binding Key}" Width="2*"/>
                     <DataGridTextColumn Header="Source File" Binding="{Binding SourceFile}" Width="*"/>
-                    <!-- Language columns will be added dynamically later -->
+                    <!-- Language columns will be added dynamically in code-behind -->
                 </DataGrid.Columns>
             </DataGrid>
         </Grid>

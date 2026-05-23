@@ -148,4 +148,43 @@ public class TranslationStoreTests
         Assert.Empty(store.FilteredKeys);
         Assert.Empty(store.SourceFiles);
     }
+
+    [Fact]
+    public void AddTranslations_TracksLanguages()
+    {
+        // Arrange
+        var store = new TranslationStore();
+        var keys = new List<TranslationKey>
+        {
+            new() { Key = "key1", SourceFile = "file1", LanguageValues = new() { { "en", "Hello" }, { "es", "Hola" } } },
+            new() { Key = "key2", SourceFile = "file1", LanguageValues = new() { { "en", "Goodbye" }, { "fr", "Au revoir" } } }
+        };
+
+        // Act
+        store.AddTranslations(keys);
+
+        // Assert
+        Assert.Equal(3, store.Languages.Count);
+        Assert.Contains("en", store.Languages);
+        Assert.Contains("es", store.Languages);
+        Assert.Contains("fr", store.Languages);
+    }
+
+    [Fact]
+    public void Clear_RemovesLanguages()
+    {
+        // Arrange
+        var store = new TranslationStore();
+        var keys = new List<TranslationKey>
+        {
+            new() { Key = "key1", SourceFile = "file1", LanguageValues = new() { { "en", "Hello" } } }
+        };
+        store.AddTranslations(keys);
+
+        // Act
+        store.Clear();
+
+        // Assert
+        Assert.Empty(store.Languages);
+    }
 }

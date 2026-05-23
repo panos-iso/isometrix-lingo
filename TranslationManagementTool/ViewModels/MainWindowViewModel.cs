@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -17,6 +18,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _statusMessage = "Ready. Click Import to load translation files.";
 
+    public event EventHandler? LanguagesChanged;
+
     public MainWindowViewModel()
     {
         _translationStore = new TranslationStore();
@@ -24,6 +27,8 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     public TranslationStore TranslationStore => _translationStore;
+
+    public IReadOnlyCollection<string> Languages => _translationStore.Languages;
 
     [RelayCommand]
     private async Task ImportFiles(Window window)
@@ -74,5 +79,6 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         StatusMessage = $"Imported {files.Count} file(s) with {_translationStore.FilteredKeys.Count} translation keys.";
+        LanguagesChanged?.Invoke(this, EventArgs.Empty);
     }
 }

@@ -10,9 +10,11 @@ public class TranslationStore
     private readonly List<TranslationKey> _allKeys = new();
     private readonly ObservableCollection<TranslationKey> _filteredKeys = new();
     private readonly HashSet<string> _sourceFiles = new();
+    private readonly HashSet<string> _languages = new();
 
     public ObservableCollection<TranslationKey> FilteredKeys => _filteredKeys;
     public IReadOnlyCollection<string> SourceFiles => _sourceFiles;
+    public IReadOnlyCollection<string> Languages => _languages;
 
     public void AddTranslations(List<TranslationKey> keys)
     {
@@ -20,6 +22,12 @@ public class TranslationStore
         {
             _allKeys.Add(key);
             _sourceFiles.Add(key.SourceFile);
+            
+            // Track all languages found in this key
+            foreach (var language in key.LanguageValues.Keys)
+            {
+                _languages.Add(language);
+            }
         }
         RefreshFilteredKeys();
     }
@@ -29,6 +37,7 @@ public class TranslationStore
         _allKeys.Clear();
         _filteredKeys.Clear();
         _sourceFiles.Clear();
+        _languages.Clear();
     }
 
     public void FilterBySourceFiles(List<string>? fileNames)
