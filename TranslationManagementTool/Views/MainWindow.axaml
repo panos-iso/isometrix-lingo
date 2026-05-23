@@ -7,7 +7,8 @@
         x:Class="TranslationManagementTool.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="TranslationManagementTool">
+        Title="Translation Management Tool"
+        Width="1000" Height="600">
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
@@ -15,6 +16,36 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    <DockPanel>
+        <!-- Top Toolbar -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10">
+            <Button Content="Import Files"
+                    Command="{Binding ImportFilesCommand}"
+                    CommandParameter="{Binding $parent[Window]}"
+                    Margin="0,0,10,0"/>
+        </StackPanel>
+
+        <!-- Bottom Status Bar -->
+        <TextBlock DockPanel.Dock="Bottom"
+                   Text="{Binding StatusMessage}"
+                   Background="LightGray"
+                   Padding="10,5"/>
+
+        <!-- Main Content Area -->
+        <Grid Margin="10">
+            <DataGrid ItemsSource="{Binding TranslationStore.FilteredKeys}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      GridLinesVisibility="All"
+                      BorderThickness="1"
+                      BorderBrush="Gray">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Key" Binding="{Binding Key}" Width="2*"/>
+                    <DataGridTextColumn Header="Source File" Binding="{Binding SourceFile}" Width="*"/>
+                    <!-- Language columns will be added dynamically later -->
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+    </DockPanel>
 
 </Window>
