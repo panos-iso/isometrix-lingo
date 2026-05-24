@@ -9,7 +9,7 @@ echo "Publishing Translation Management Tool for macOS (Apple Silicon)..."
 rm -rf publish/macos
 
 # Publish self-contained app
-dotnet publish TranslationManagementTool/TranslationManagementTool.csproj \
+dotnet publish IsometrixLingo/IsometrixLingo.csproj \
   -c Release \
   -r osx-arm64 \
   --self-contained true \
@@ -23,7 +23,7 @@ if [ $? -eq 0 ]; then
     echo ""
     echo "To create distributable archive:"
     echo "  cd publish/macos"
-    echo "  tar -czf TranslationTool-macOS-arm64.tar.gz TranslationManagementTool"
+    echo "  tar -czf TranslationTool-macOS-arm64.tar.gz isometrix-lingo"
 else
     echo "❌ Build failed!"
     exit 1

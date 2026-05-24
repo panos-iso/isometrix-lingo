@@ -1,0 +1,71 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:IsometrixLingo.ViewModels"
+        xmlns:converters="using:IsometrixLingo.Converters"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="600"
+        x:Class="IsometrixLingo.Views.AddKeyDialog"
+        x:DataType="vm:AddKeyViewModel"
+        Title="Add New Translation Key"
+        Width="500" Height="600"
+        WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <converters:SourceFileConverter x:Key="SourceFileConverter"/>
+    </Window.Resources>
+
+    <DockPanel Margin="20">
+        <!-- Buttons at bottom -->
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="Cancel" Click="OnCancelClick" Width="100" Margin="0,0,10,0"/>
+            <Button Content="Add Key" Click="OnAddClick" Width="100"/>
+        </StackPanel>
+
+        <!-- Form content -->
+        <ScrollViewer>
+            <StackPanel Spacing="15">
+                <!-- Key Name -->
+                <StackPanel>
+                    <TextBlock Text="Key Name *" FontWeight="Bold" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding KeyName}" 
+                             PlaceholderText="e.g., login.username or button.submit"/>
+                </StackPanel>
+
+                <!-- Source File -->
+                <StackPanel>
+                    <TextBlock Text="Source File *" FontWeight="Bold" Margin="0,0,0,5"/>
+                    <ComboBox ItemsSource="{Binding AvailableSourceFiles}"
+                              SelectedItem="{Binding SelectedSourceFile}"
+                              PlaceholderText="Select a source file"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource SourceFileConverter}}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Language Values -->
+                <StackPanel>
+                    <TextBlock Text="Translations (Optional)" FontWeight="Bold" Margin="0,0,0,5"/>
+                    <TextBlock Text="You can add translations now or edit them later" 
+                               FontSize="11" Foreground="Gray" Margin="0,0,0,10"/>
+                    
+                    <ItemsControl ItemsSource="{Binding LanguageValues}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:LanguageValueItem">
+                                <StackPanel Margin="0,0,0,10">
+                                    <TextBlock Text="{Binding LanguageCode}" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding Value}" 
+                                             PlaceholderText="{Binding LanguageCode, StringFormat='Translation for {0}'}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>
