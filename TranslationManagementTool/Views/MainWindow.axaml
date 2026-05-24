@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:TranslationManagementTool.ViewModels"
+        xmlns:converters="using:TranslationManagementTool.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
@@ -9,6 +10,10 @@
         Icon="/Assets/avalonia-logo.ico"
         Title="Translation Management Tool"
         Width="1000" Height="600">
+
+    <Window.Resources>
+        <converters:SourceFileConverter x:Key="SourceFileConverter"/>
+    </Window.Resources>
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
@@ -24,10 +29,16 @@
                     CommandParameter="{Binding $parent[Window]}"
                     Margin="0,0,10,0"/>
             
-            <Button Content="Export Modified"
+            <Button Content="Export All"
                     Command="{Binding ExportModifiedFilesCommand}"
                     CommandParameter="{Binding $parent[Window]}"
-                    IsEnabled="{Binding HasModifiedKeys}"
+                    IsEnabled="{Binding HasKeys}"
+                    Margin="0,0,10,0"/>
+            
+            <Button Content="Add Key"
+                    Command="{Binding AddKeyCommand}"
+                    CommandParameter="{Binding $parent[Window]}"
+                    IsEnabled="{Binding HasKeys}"
                     Margin="0,0,10,0"/>
             
             <TextBlock Text="Search:" 
@@ -88,10 +99,10 @@
                                         MinWidth="150" 
                                         MaxWidth="400"/>
                     <DataGridTextColumn Header="Source File" 
-                                        Binding="{Binding Source.Name}" 
+                                        Binding="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
                                         Width="Auto" 
-                                        MinWidth="100" 
-                                        MaxWidth="200"/>
+                                        MinWidth="150" 
+                                        MaxWidth="250"/>
                     <DataGridTemplateColumn Header="Actions" Width="Auto">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
