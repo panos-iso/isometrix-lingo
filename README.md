@@ -23,7 +23,7 @@ Built with **Avalonia UI** and **.NET 10** for macOS and Windows.
 
 Download the latest release for your platform:
 
-👉 **[Releases Page](https://github.com/panos-iso/translations-management-tool/releases)**
+👉 **[Releases Page](https://github.com/panos-iso/isometrix-lingo/releases)**
 
 - **macOS (Apple Silicon)**: `TranslationTool-macOS-arm64.tar.gz`
 - **Windows (x64)**: `TranslationTool-Windows-x64.zip`
@@ -104,8 +104,8 @@ The tool preserves the original structure of your files:
 
 ```bash
 # Clone repository
-git clone https://github.com/panos-iso/translations-management-tool.git
-cd translations-management-tool
+git clone https://github.com/panos-iso/isometrix-lingo.git
+cd isometrix-lingo
 
 # Restore dependencies
 dotnet restore
