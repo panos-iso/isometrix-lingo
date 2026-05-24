@@ -24,43 +24,61 @@
 
     <DockPanel>
         <!-- Top Toolbar -->
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10">
-            <Button Content="Import Files"
-                    Command="{Binding ImportFilesCommand}"
+        <DockPanel DockPanel.Dock="Top" Margin="10">
+            <!-- Right: User Profile (docked to right) -->
+            <Button DockPanel.Dock="Right" 
+                    Content="👤" 
+                    Command="{Binding ShowProfileCommand}"
                     CommandParameter="{Binding $parent[Window]}"
-                    IsEnabled="{Binding CanImport}"
-                    Margin="0,0,10,0"/>
+                    FontSize="16"
+                    Padding="8,4"
+                    Margin="15,0,0,0">
+                <ToolTip.Tip>
+                    <TextBlock>
+                        <Run Text="View profile"/>
+                    </TextBlock>
+                </ToolTip.Tip>
+            </Button>
             
-            <Button Content="Export All"
-                    Command="{Binding ExportModifiedFilesCommand}"
-                    CommandParameter="{Binding $parent[Window]}"
-                    IsEnabled="{Binding HasKeys}"
-                    Margin="0,0,10,0"/>
-            
-            <Button Content="Add Key"
-                    Command="{Binding AddKeyCommand}"
-                    CommandParameter="{Binding $parent[Window]}"
-                    IsEnabled="{Binding HasKeys}"
-                    Margin="0,0,10,0"/>
-            
-            <Button Content="Save Progress"
-                    Command="{Binding SaveProgressCommand}"
-                    IsEnabled="{Binding HasUnsavedChanges}"
-                    Margin="0,0,10,0"/>
-            
-            <Button Content="Start Over"
-                    Command="{Binding StartOverCommand}"
-                    IsEnabled="{Binding HasKeys}"
-                    Margin="0,0,10,0"/>
-            
-            <TextBlock Text="Search:" 
-                       VerticalAlignment="Center" 
-                       Margin="20,0,5,0"/>
-            <TextBox Text="{Binding SearchText}"
-                     PlaceholderText="Search keys and values..."
-                     MinWidth="250"
-                     VerticalAlignment="Center"/>
-        </StackPanel>
+            <!-- Left: Action Buttons and Search -->
+            <StackPanel Orientation="Horizontal">
+                <Button Content="Import Files"
+                        Command="{Binding ImportFilesCommand}"
+                        CommandParameter="{Binding $parent[Window]}"
+                        IsEnabled="{Binding CanImport}"
+                        Margin="0,0,10,0"/>
+                
+                <Button Content="Export All"
+                        Command="{Binding ExportModifiedFilesCommand}"
+                        CommandParameter="{Binding $parent[Window]}"
+                        IsEnabled="{Binding HasKeys}"
+                        Margin="0,0,10,0"/>
+                
+                <Button Content="Add Key"
+                        Command="{Binding AddKeyCommand}"
+                        CommandParameter="{Binding $parent[Window]}"
+                        IsEnabled="{Binding HasKeys}"
+                        Margin="0,0,10,0"/>
+                
+                <Button Content="Save Progress"
+                        Command="{Binding SaveProgressCommand}"
+                        IsEnabled="{Binding HasUnsavedChanges}"
+                        Margin="0,0,10,0"/>
+                
+                <Button Content="Start Over"
+                        Command="{Binding StartOverCommand}"
+                        IsEnabled="{Binding HasKeys}"
+                        Margin="0,0,10,0"/>
+                
+                <TextBlock Text="Search:" 
+                           VerticalAlignment="Center" 
+                           Margin="20,0,5,0"/>
+                <TextBox Text="{Binding SearchText}"
+                         PlaceholderText="Search keys and values..."
+                         MinWidth="200"
+                         VerticalAlignment="Center"/>
+            </StackPanel>
+        </DockPanel>
 
         <!-- File Filters Panel -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,0,10,10">
