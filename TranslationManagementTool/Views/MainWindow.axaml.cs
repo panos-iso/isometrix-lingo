@@ -4,6 +4,7 @@ using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using TranslationManagementTool.Converters;
 using TranslationManagementTool.Helpers;
+using TranslationManagementTool.Models;
 using TranslationManagementTool.ViewModels;
 
 namespace TranslationManagementTool.Views;
@@ -24,6 +25,35 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel viewModel)
         {
             viewModel.LanguagesChanged += OnLanguagesChanged;
+            viewModel.OnEditTranslationRequested += OnEditTranslationRequested;
+        }
+    }
+
+    private async void OnEditTranslationRequested(object? sender, TranslationKey translationKey)
+    {
+        if (DataContext is not MainWindowViewModel mainViewModel)
+            return;
+
+        var editViewModel = new EditTranslationViewModel(translationKey, mainViewModel.TranslationStore);
+        var dialog = new EditTranslationDialog
+        {
+            DataContext = editViewModel
+        };
+
+        var result = await dialog.ShowDialog<bool>(this);
+        
+        if (result)
+        {
+            // Refresh UI to show updated values
+            mainViewModel.TranslationStore.RefreshUI();
+            
+            // Update status message to show modified count
+            var modifiedCount = mainViewModel.TranslationStore.GetModifiedKeys().Count;
+            if (modifiedCount > 0)
+            {
+                var currentStatus = mainViewModel.StatusMessage.Split('.')[0];
+                mainViewModel.StatusMessage = $"{currentStatus}. {modifiedCount} key(s) modified.";
+            }
         }
     }
 
@@ -32,10 +62,10 @@ public partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel viewModel)
             return;
 
-        // Remove existing language columns (keep Key and Source File)
-        while (TranslationsGrid.Columns.Count > 2)
+        // Remove existing language columns (keep Key, Source File, and Actions button)
+        while (TranslationsGrid.Columns.Count > 3)
         {
-            TranslationsGrid.Columns.RemoveAt(2);
+            TranslationsGrid.Columns.RemoveAt(3);
         }
 
         // Add a column for each language

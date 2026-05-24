@@ -86,6 +86,17 @@
                                         Width="Auto" 
                                         MinWidth="100" 
                                         MaxWidth="200"/>
+                    <DataGridTemplateColumn Header="Actions" Width="Auto">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="Edit"
+                                        Command="{Binding $parent[Window].DataContext.EditTranslationCommand}"
+                                        CommandParameter="{Binding}"
+                                        Margin="5,2"
+                                        Padding="15,5"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <!-- Language columns will be added dynamically in code-behind -->
                 </DataGrid.Columns>
             </DataGrid>

@@ -107,7 +107,18 @@ public class TranslationStore
         {
             translationKey.LanguageValues[language] = newValue;
             translationKey.IsModified = true;
+            
+            // Trigger property change notification for the dictionary
+            // This is a workaround: we reassign to trigger INotifyPropertyChanged
+            var temp = translationKey.LanguageValues;
+            translationKey.LanguageValues = new Dictionary<string, string>(temp);
         }
+    }
+
+    public void RefreshUI()
+    {
+        // Force UI refresh by re-applying filters
+        ApplyFilters();
     }
 
     public List<TranslationKey> GetModifiedKeys()

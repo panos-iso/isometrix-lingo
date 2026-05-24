@@ -1,0 +1,65 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:TranslationManagementTool.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+        x:Class="TranslationManagementTool.Views.EditTranslationDialog"
+        x:DataType="vm:EditTranslationViewModel"
+        Title="Edit Translation"
+        Width="600" Height="400"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <Design.DataContext>
+        <vm:EditTranslationViewModel/>
+    </Design.DataContext>
+
+    <DockPanel Margin="20">
+        <!-- Bottom Buttons -->
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="Save" 
+                    Command="{Binding SaveCommand}"
+                    Click="OnSaveClick"
+                    IsDefault="True"
+                    Margin="0,0,10,0"
+                    Padding="20,8"/>
+            <Button Content="Cancel"
+                    Click="OnCancelClick"
+                    IsCancel="True"
+                    Padding="20,8"/>
+        </StackPanel>
+
+        <!-- Content -->
+        <StackPanel>
+            <!-- Key Display -->
+            <TextBlock Text="Translation Key:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+            <TextBox Text="{Binding Key}" 
+                     IsReadOnly="True" 
+                     Background="LightGray"
+                     Margin="0,0,0,20"/>
+
+            <!-- Language Values -->
+            <TextBlock Text="Translations:" FontWeight="SemiBold" Margin="0,0,0,10"/>
+            <ScrollViewer MaxHeight="240">
+                <ItemsControl ItemsSource="{Binding LanguageValues}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,0,0,15">
+                                <TextBlock Text="{Binding LanguageName}" 
+                                          FontWeight="Medium"
+                                          Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding Value}" 
+                                        AcceptsReturn="True"
+                                        TextWrapping="Wrap"
+                                        MinHeight="60"
+                                        MaxHeight="100"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </StackPanel>
+    </DockPanel>
+
+</Window>

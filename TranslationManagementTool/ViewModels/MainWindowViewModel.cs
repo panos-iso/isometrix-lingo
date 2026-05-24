@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TranslationManagementTool.Models;
 using TranslationManagementTool.Services;
+using TranslationManagementTool.Views;
 
 namespace TranslationManagementTool.ViewModels;
 
@@ -155,4 +156,13 @@ public partial class MainWindowViewModel : ViewModelBase
             }
         }
     }
+
+    [RelayCommand]
+    private async Task EditTranslation(TranslationKey translationKey)
+    {
+        // Window will be accessed through the view
+        OnEditTranslationRequested?.Invoke(this, translationKey);
+    }
+
+    public event EventHandler<TranslationKey>? OnEditTranslationRequested;
 }
