@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -297,6 +299,70 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         StatusMessage = $"Exported {allKeys.Count} translation key(s) to {outputPath}.";
+
+        // Prompt user for next action after export
+        await PromptAfterExport(window);
+    }
+
+    private async Task PromptAfterExport(Window window)
+    {
+        var dialog = new Window
+        {
+            Title = "Export Complete",
+            Width = 450,
+            Height = 200,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        var panel = new StackPanel
+        {
+            Margin = new Avalonia.Thickness(20),
+            Spacing = 20
+        };
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Files exported successfully! What would you like to do next?",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            FontWeight = Avalonia.Media.FontWeight.SemiBold
+        });
+
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Avalonia.Layout.Orientation.Horizontal,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+            Spacing = 10
+        };
+
+        var continueButton = new Button { Content = "Continue Working", Width = 150 };
+        var startOverButton = new Button { Content = "Start Over", Width = 150 };
+
+        bool startOver = false;
+
+        continueButton.Click += (s, args) => { startOver = false; dialog.Close(); };
+        startOverButton.Click += (s, args) => { startOver = true; dialog.Close(); };
+
+        buttonPanel.Children.Add(continueButton);
+        buttonPanel.Children.Add(startOverButton);
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Continue Working: Keep current translations to make more changes\nStart Over: Clear everything and import new files",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            FontSize = 11,
+            Foreground = Avalonia.Media.Brushes.Gray
+        });
+
+        panel.Children.Add(buttonPanel);
+        dialog.Content = panel;
+
+        await dialog.ShowDialog(window);
+
+        if (startOver)
+        {
+            StartOver();
+        }
     }
 
     private string ExtractBaseFileName(string filePath, FileType fileType)
