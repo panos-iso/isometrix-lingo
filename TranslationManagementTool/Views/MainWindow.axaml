@@ -13,6 +13,7 @@
 
     <Window.Resources>
         <converters:SourceFileConverter x:Key="SourceFileConverter"/>
+        <converters:SourceFileDisplayConverter x:Key="SourceFileDisplayConverter"/>
     </Window.Resources>
 
     <Design.DataContext>
@@ -56,21 +57,19 @@
                        VerticalAlignment="Center" 
                        Margin="0,0,10,0"
                        FontWeight="SemiBold"/>
-            <ItemsControl ItemsSource="{Binding FileFilters}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
+            <ComboBox ItemsSource="{Binding AvailableSourceFiles}"
+                      SelectedItem="{Binding SelectedSourceFile}"
+                      Width="250"
+                      Margin="0,0,10,0">
+                <ComboBox.ItemTemplate>
                     <DataTemplate>
-                        <ToggleButton Content="{Binding DisplayName}"
-                                      IsChecked="{Binding IsSelected}"
-                                      Margin="0,0,5,0"
-                                      Padding="10,5"/>
+                        <TextBlock Text="{Binding Converter={StaticResource SourceFileDisplayConverter}}"/>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Content="Reset Filters"
+                    Command="{Binding ResetFiltersCommand}"
+                    Padding="10,5"/>
         </StackPanel>
 
         <!-- Bottom Status Bar -->
