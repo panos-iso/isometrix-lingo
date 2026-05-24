@@ -11,8 +11,8 @@ public class LanguageValueConverter : IValueConverter
     {
         if (value is Dictionary<string, string> languageValues && parameter is string languageCode)
         {
-            return languageValues.TryGetValue(languageCode, out var translationValue) 
-                ? translationValue 
+            return languageValues.TryGetValue(languageCode, out var translationValue)
+                ? translationValue
                 : string.Empty;
         }
         return string.Empty;

@@ -9,7 +9,7 @@ public partial class TranslationKey : ObservableObject
     private string _key = string.Empty;
 
     [ObservableProperty]
-    private string _sourceFile = string.Empty;
+    private SourceFile _source = new(string.Empty, FileType.Json);
 
     [ObservableProperty]
     private Dictionary<string, string> _languageValues = new();

@@ -26,7 +26,7 @@ public class JsonTranslationFileWriter
         }
 
         // Group keys by source file
-        var groupedByFile = keys.GroupBy(k => k.SourceFile);
+        var groupedByFile = keys.GroupBy(k => k.Source.Name);
 
         foreach (var fileGroup in groupedByFile)
         {

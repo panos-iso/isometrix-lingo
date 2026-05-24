@@ -88,7 +88,7 @@
                                         MinWidth="150" 
                                         MaxWidth="400"/>
                     <DataGridTextColumn Header="Source File" 
-                                        Binding="{Binding SourceFile}" 
+                                        Binding="{Binding Source.Name}" 
                                         Width="Auto" 
                                         MinWidth="100" 
                                         MaxWidth="200"/>

@@ -30,8 +30,8 @@ public static class LanguageHelper
 
     public static string GetLanguageName(string languageCode)
     {
-        return LanguageNames.TryGetValue(languageCode.ToLowerInvariant(), out var name) 
-            ? name 
+        return LanguageNames.TryGetValue(languageCode.ToLowerInvariant(), out var name)
+            ? name
             : languageCode.ToUpperInvariant();
     }
 }

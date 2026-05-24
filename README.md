@@ -28,12 +28,14 @@ Download the latest release for your platform:
 ### Installation
 
 **macOS:**
+
 ```bash
 tar -xzf TranslationTool-macOS-arm64.tar.gz
 ./TranslationManagementTool
 ```
 
 **Windows:**
+
 1. Extract `TranslationTool-Windows-x64.zip`
 2. Run `TranslationManagementTool.exe`
 
@@ -54,6 +56,7 @@ No .NET runtime installation required - fully self-contained!
 Files must follow the pattern: `basename_language.json`
 
 Examples:
+
 - `forms_en.json` → English translations for "forms"
 - `forms_es.json` → Spanish translations for "forms"
 - `errors_fr.json` → French translations for "errors"
@@ -112,12 +115,14 @@ TranslationManagementTool.Tests/    # Unit tests (xUnit)
 ### Build Platform-Specific Executables
 
 **macOS (Apple Silicon):**
+
 ```bash
 chmod +x publish-macos.sh
 ./publish-macos.sh
 ```
 
 **Windows (x64):**
+
 ```bash
 chmod +x publish-windows.sh
 ./publish-windows.sh
@@ -129,15 +134,17 @@ Executables will be in `publish/macos/` and `publish/windows/`.
 
 1. **Build executables** using the publish scripts above
 2. **Create archives**:
+
    ```bash
    # macOS
    cd publish/macos
    tar -czf TranslationTool-macOS-arm64.tar.gz TranslationManagementTool
-   
+
    # Windows
    cd publish/windows
    zip -r TranslationTool-Windows-x64.zip TranslationManagementTool.exe
    ```
+
 3. **Create GitHub Release**:
    - Go to repository → Releases → "Draft a new release"
    - Tag version: `v1.0.0` (on `main` branch)

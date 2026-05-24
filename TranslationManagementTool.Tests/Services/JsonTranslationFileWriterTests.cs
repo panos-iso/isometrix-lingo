@@ -37,7 +37,7 @@ public class JsonTranslationFileWriterTests : IDisposable
             new()
             {
                 Key = "hello",
-                SourceFile = "forms",
+                Source = new SourceFile("forms", FileType.Json),
                 LanguageValues = new() { { "en", "Hello" }, { "es", "Hola" } }
             }
         };
@@ -59,7 +59,7 @@ public class JsonTranslationFileWriterTests : IDisposable
             new()
             {
                 Key = "greeting",
-                SourceFile = "messages",
+                Source = new SourceFile("messages", FileType.Json),
                 LanguageValues = new() { { "en", "Hello World" } }
             }
         };
@@ -84,13 +84,13 @@ public class JsonTranslationFileWriterTests : IDisposable
             new()
             {
                 Key = "login.username",
-                SourceFile = "forms",
+                Source = new SourceFile("forms", FileType.Json),
                 LanguageValues = new() { { "en", "Username" } }
             },
             new()
             {
                 Key = "login.password",
-                SourceFile = "forms",
+                Source = new SourceFile("forms", FileType.Json),
                 LanguageValues = new() { { "en", "Password" } }
             }
         };
@@ -117,13 +117,13 @@ public class JsonTranslationFileWriterTests : IDisposable
             new()
             {
                 Key = "key1",
-                SourceFile = "file1",
+                Source = new SourceFile("file1", FileType.Json),
                 LanguageValues = new() { { "en", "Value1" } }
             },
             new()
             {
                 Key = "key2",
-                SourceFile = "file2",
+                Source = new SourceFile("file2", FileType.Json),
                 LanguageValues = new() { { "en", "Value2" } }
             }
         };
@@ -146,7 +146,7 @@ public class JsonTranslationFileWriterTests : IDisposable
             new()
             {
                 Key = "test",
-                SourceFile = "file",
+                Source = new SourceFile("file", FileType.Json),
                 LanguageValues = new() { { "en", "Test" } }
             }
         };
@@ -168,7 +168,7 @@ public class JsonTranslationFileWriterTests : IDisposable
             new()
             {
                 Key = "key",
-                SourceFile = "file",
+                Source = new SourceFile("file", FileType.Json),
                 LanguageValues = new() { { "en", "Value" } }
             }
         };
@@ -191,7 +191,7 @@ public class JsonTranslationFileWriterTests : IDisposable
             new()
             {
                 Key = "modified",
-                SourceFile = "forms",
+                Source = new SourceFile("forms", FileType.Json),
                 LanguageValues = new() { { "en", "Modified Value" } },
                 IsModified = true
             }

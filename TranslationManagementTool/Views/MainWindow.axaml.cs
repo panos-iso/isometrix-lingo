@@ -16,7 +16,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        
+
         DataContextChanged += OnDataContextChanged;
     }
 
@@ -41,16 +41,16 @@ public partial class MainWindow : Window
         };
 
         var result = await dialog.ShowDialog<bool>(this);
-        
+
         if (result)
         {
             // Refresh UI to show updated values
             mainViewModel.TranslationStore.RefreshUI();
-            
+
             // Update status message to show modified count
             var modifiedCount = mainViewModel.TranslationStore.GetModifiedKeys().Count;
             mainViewModel.HasModifiedKeys = modifiedCount > 0;
-            
+
             if (modifiedCount > 0)
             {
                 var currentStatus = mainViewModel.StatusMessage.Split('.')[0];

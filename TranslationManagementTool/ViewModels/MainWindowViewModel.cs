@@ -18,7 +18,9 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly TranslationStore _translationStore;
     private readonly JsonTranslationFileReader _jsonReader;
+    private readonly ResxTranslationFileReader _resxReader;
     private readonly JsonTranslationFileWriter _jsonWriter;
+    private readonly ResxTranslationFileWriter _resxWriter;
 
     [ObservableProperty]
     private string _statusMessage = "Ready. Click Import to load translation files.";
@@ -38,7 +40,9 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _translationStore = new TranslationStore();
         _jsonReader = new JsonTranslationFileReader();
+        _resxReader = new ResxTranslationFileReader();
         _jsonWriter = new JsonTranslationFileWriter();
+        _resxWriter = new ResxTranslationFileWriter();
     }
 
     public TranslationStore TranslationStore => _translationStore;
@@ -56,7 +60,7 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 new FilePickerFileType("Translation Files")
                 {
-                    Patterns = new[] { "*.json" }
+                    Patterns = new[] { "*.json", "*.resx" }
                 }
             }
         });
@@ -66,14 +70,23 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        var loadedFiles = new List<string>();
+        var translationFiles = new List<TranslationFile>();
+        
         foreach (var file in files)
         {
             try
             {
                 var filePath = file.Path.LocalPath;
-                var translationFile = _jsonReader.ReadFile(filePath);
-                loadedFiles.Add(filePath);
+                var extension = Path.GetExtension(filePath).ToLower();
+                
+                TranslationFile translationFile = extension switch
+                {
+                    ".json" => _jsonReader.ReadFile(filePath),
+                    ".resx" => _resxReader.ReadFile(filePath),
+                    _ => throw new NotSupportedException($"Unsupported file type: {extension}")
+                };
+                
+                translationFiles.Add(translationFile);
             }
             catch
             {
@@ -81,15 +94,17 @@ public partial class MainWindowViewModel : ViewModelBase
             }
         }
 
-        // Group files by base name and consolidate
-        var groupedFiles = files
-            .Select(f => _jsonReader.ReadFile(f.Path.LocalPath))
-            .GroupBy(tf => _jsonReader.ExtractBaseFileName(tf.FilePath))
+        // Group files by base name and file type, then consolidate
+        var groupedFiles = translationFiles
+            .GroupBy(tf => (ExtractBaseFileName(tf.FilePath, tf.FileType), tf.FileType))
             .ToList();
 
         foreach (var group in groupedFiles)
         {
-            var consolidated = _jsonReader.ConsolidateKeys(group.ToList());
+            var consolidated = group.Key.FileType == FileType.Json
+                ? _jsonReader.ConsolidateKeys(group.ToList())
+                : _resxReader.ConsolidateKeys(group.ToList());
+            
             _translationStore.AddTranslations(consolidated);
         }
 
@@ -144,7 +159,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private void UpdateStatusMessage()
     {
         var filteredCount = _translationStore.FilteredKeys.Count;
-        
+
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
             StatusMessage = $"Found {filteredCount} translation key(s) matching '{SearchText}'.";
@@ -174,7 +189,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private async Task ExportModifiedFiles(Window window)
     {
         var modifiedKeys = _translationStore.GetModifiedKeys();
-        
+
         if (modifiedKeys.Count == 0)
         {
             StatusMessage = "No modified translations to export.";
@@ -183,13 +198,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
         // Default to output directory in current working directory
         var defaultOutputPath = Path.Combine(Directory.GetCurrentDirectory(), "output");
-        
+
         // Ensure the default directory exists for the folder picker
         if (!Directory.Exists(defaultOutputPath))
         {
             Directory.CreateDirectory(defaultOutputPath);
         }
-        
+
         var folder = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = "Select Export Destination",
@@ -203,10 +218,23 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         var outputPath = folder[0].Path.LocalPath;
-        _jsonWriter.WriteFiles(modifiedKeys, outputPath);
+        
+        // Group modified keys by file type and export using appropriate writer
+        var jsonKeys = modifiedKeys.Where(k => k.Source.Type == FileType.Json).ToList();
+        var resxKeys = modifiedKeys.Where(k => k.Source.Type == FileType.Resx).ToList();
+
+        if (jsonKeys.Count > 0)
+        {
+            _jsonWriter.WriteFiles(jsonKeys, outputPath);
+        }
+
+        if (resxKeys.Count > 0)
+        {
+            _resxWriter.WriteFiles(resxKeys, outputPath);
+        }
 
         StatusMessage = $"Exported {modifiedKeys.Count} modified key(s) to {outputPath}. Modifications cleared.";
-        
+
         // Clear modification flags after successful export
         foreach (var key in modifiedKeys)
         {
@@ -215,5 +243,13 @@ public partial class MainWindowViewModel : ViewModelBase
         HasModifiedKeys = false;
     }
 
+    private string ExtractBaseFileName(string filePath, FileType fileType)
+    {
+        return fileType == FileType.Json
+            ? _jsonReader.ExtractBaseFileName(filePath)
+            : _resxReader.ExtractBaseFileName(filePath);
+    }
+
     public event EventHandler<TranslationKey>? OnEditTranslationRequested;
 }
+
