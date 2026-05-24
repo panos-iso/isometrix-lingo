@@ -127,6 +127,9 @@ public partial class MainWindow : Window
                 var currentStatus = mainViewModel.StatusMessage.Split('.')[0];
                 mainViewModel.StatusMessage = $"{currentStatus}. {modifiedCount} key(s) modified.";
             }
+            
+            // Auto-save after editing
+            mainViewModel.SaveProgressCommand.Execute(null);
         }
     }
 
