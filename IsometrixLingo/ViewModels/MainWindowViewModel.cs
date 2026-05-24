@@ -548,23 +548,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var usernameBox = new TextBox
         {
-            Text = Username,
-            IsEnabled = CanImport
+            Text = Username
         };
         contentPanel.Children.Add(usernameBox);
-
-        if (!CanImport)
-        {
-            var warningText = new TextBlock
-            {
-                Text = "Username cannot be changed while files are loaded",
-                FontSize = 11,
-                Foreground = Brushes.Gray,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 5, 0, 0)
-            };
-            contentPanel.Children.Add(warningText);
-        }
 
         DockPanel.SetDock(contentPanel, Dock.Top);
         mainPanel.Children.Add(contentPanel);
