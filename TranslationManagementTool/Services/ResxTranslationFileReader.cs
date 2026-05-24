@@ -62,6 +62,12 @@ public class ResxTranslationFileReader
             return match.Groups[1].Value.ToLower();
         }
 
+        // If no language code found, assume it's the default/English file
+        if (fileName.EndsWith(".resx", StringComparison.OrdinalIgnoreCase))
+        {
+            return "en";
+        }
+
         throw new ArgumentException($"Could not extract language code from file name: {fileName}");
     }
 
@@ -72,9 +78,11 @@ public class ResxTranslationFileReader
         
         if (match.Success)
         {
+            // Remove language suffix (e.g., "FormTranslations_es" → "FormTranslations")
             return fileName.Substring(0, fileName.Length - 3);
         }
 
+        // No language suffix found, this is the base file (e.g., "FormTranslations.resx")
         return fileName;
     }
 
@@ -110,6 +118,17 @@ public class ResxTranslationFileReader
         }
 
         return consolidatedKeys.Values.OrderBy(k => k.Key).ToList();
+    }
+
+    /// <summary>
+    /// Extract the RESX template preserving all structure including data elements
+    /// </summary>
+    public XDocument ExtractTemplate(string filePath)
+    {
+        var xdoc = XDocument.Load(filePath);
+        
+        // Return the entire document - we'll update data elements in place during export
+        return new XDocument(xdoc);
     }
 }
 

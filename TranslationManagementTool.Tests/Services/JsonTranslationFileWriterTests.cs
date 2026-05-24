@@ -46,8 +46,8 @@ public class JsonTranslationFileWriterTests : IDisposable
         _writer.WriteFiles(keys, _testDirectory);
 
         // Assert
-        Assert.True(File.Exists(Path.Combine(_testDirectory, "forms_en.json")));
-        Assert.True(File.Exists(Path.Combine(_testDirectory, "forms_es.json")));
+        Assert.True(File.Exists(Path.Combine(_testDirectory, "forms.en.json")));
+        Assert.True(File.Exists(Path.Combine(_testDirectory, "forms.es.json")));
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class JsonTranslationFileWriterTests : IDisposable
         _writer.WriteFiles(keys, _testDirectory);
 
         // Assert
-        var filePath = Path.Combine(_testDirectory, "messages_en.json");
+        var filePath = Path.Combine(_testDirectory, "messages.en.json");
         var json = File.ReadAllText(filePath);
         var doc = JsonDocument.Parse(json);
         
@@ -99,7 +99,7 @@ public class JsonTranslationFileWriterTests : IDisposable
         _writer.WriteFiles(keys, _testDirectory);
 
         // Assert
-        var filePath = Path.Combine(_testDirectory, "forms_en.json");
+        var filePath = Path.Combine(_testDirectory, "forms.en.json");
         var json = File.ReadAllText(filePath);
         var doc = JsonDocument.Parse(json);
         
@@ -132,8 +132,8 @@ public class JsonTranslationFileWriterTests : IDisposable
         _writer.WriteFiles(keys, _testDirectory);
 
         // Assert
-        Assert.True(File.Exists(Path.Combine(_testDirectory, "file1_en.json")));
-        Assert.True(File.Exists(Path.Combine(_testDirectory, "file2_en.json")));
+        Assert.True(File.Exists(Path.Combine(_testDirectory, "file1.en.json")));
+        Assert.True(File.Exists(Path.Combine(_testDirectory, "file2.en.json")));
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class JsonTranslationFileWriterTests : IDisposable
 
         // Assert
         Assert.True(Directory.Exists(newDir));
-        Assert.True(File.Exists(Path.Combine(newDir, "file_en.json")));
+        Assert.True(File.Exists(Path.Combine(newDir, "file.en.json")));
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public class JsonTranslationFileWriterTests : IDisposable
         _writer.WriteFiles(keys, _testDirectory);
 
         // Assert
-        var json = File.ReadAllText(Path.Combine(_testDirectory, "file_en.json"));
+        var json = File.ReadAllText(Path.Combine(_testDirectory, "file.en.json"));
         Assert.Contains("\n", json); // Indented JSON contains newlines
         Assert.Contains("  ", json); // Indented JSON contains spaces
     }
@@ -201,7 +201,7 @@ public class JsonTranslationFileWriterTests : IDisposable
         _writer.WriteFiles(keys, _testDirectory);
 
         // Assert
-        var filePath = Path.Combine(_testDirectory, "forms_en.json");
+        var filePath = Path.Combine(_testDirectory, "forms.en.json");
         var json = File.ReadAllText(filePath);
         var doc = JsonDocument.Parse(json);
         

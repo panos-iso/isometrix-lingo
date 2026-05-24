@@ -1,0 +1,15 @@
+{
+  "Forms_Button_Submit": "Submit",
+  "Forms_Button_Cancel": "Cancel",
+  "Forms_Button_Save": "Save",
+  "Forms_Label_Username": "Username",
+  "Forms_Label_Password": "Password",
+  "Forms_Title_Login": "Login",
+  "Forms_Message_Welcome": "Welcome back!",
+  "Forms_Message_Error": "An error occurred",
+  "Forms_Message_Success": "Operation completed successfully",
+  "Forms_Navigation_Home": "Home",
+  "Forms_Navigation_Profile": "Profile",
+  "Forms_Navigation_Settings": "Settings",
+  "Forms_Navigation_Logout": "Logout"
+}

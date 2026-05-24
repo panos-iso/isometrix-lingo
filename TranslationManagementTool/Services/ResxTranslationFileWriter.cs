@@ -15,7 +15,10 @@ public class ResxTranslationFileWriter
     /// <summary>
     /// Writes translation keys to RESX files, grouped by language and source file
     /// </summary>
-    public void WriteFiles(List<TranslationKey> keys, string outputDirectory)
+    /// <param name="keys">Translation keys to write</param>
+    /// <param name="outputDirectory">Output directory for files</param>
+    /// <param name="templateProvider">Optional function to provide RESX template for a given source file name</param>
+    public void WriteFiles(List<TranslationKey> keys, string outputDirectory, Func<string, XDocument?>? templateProvider = null)
     {
         if (!Directory.Exists(outputDirectory))
         {
@@ -39,30 +42,92 @@ public class ResxTranslationFileWriter
             // Write a file for each language
             foreach (var language in languages)
             {
-                var fileName = $"{sourceFile}_{language}.resx";
+                // For English, use base filename without language code; for others, add underscore + language
+                var fileName = language == "en" 
+                    ? $"{sourceFile}.resx" 
+                    : $"{sourceFile}_{language}.resx";
                 var filePath = Path.Combine(outputDirectory, fileName);
 
-                WriteLanguageFile(filePath, fileKeys, language);
+                // Get template for this source file if available
+                var template = templateProvider?.Invoke(sourceFile);
+                
+                WriteLanguageFile(filePath, fileKeys, language, template);
             }
         }
     }
 
-    private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language)
+    private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, XDocument? template)
     {
-        var root = CreateResxDocument();
-
-        // Add data elements for each key
-        foreach (var key in keys.OrderBy(k => k.Key))
+        XElement root;
+        
+        if (template != null)
         {
-            if (key.LanguageValues.TryGetValue(language, out var value))
+            // Use the provided template (clone it to avoid modifying the original)
+            var clonedTemplate = new XDocument(template);
+            root = clonedTemplate.Root ?? throw new InvalidOperationException("Template root is null");
+            
+            // Update existing data elements and track which keys we've processed
+            var processedKeys = new HashSet<string>();
+            var existingDataElements = root.Elements("data").ToList();
+            
+            foreach (var dataElement in existingDataElements)
             {
-                var dataElement = new XElement("data",
-                    new XAttribute("name", key.Key),
-                    new XAttribute(XNamespace.Xml + "space", "preserve"),
-                    new XElement("value", value)
-                );
+                var keyName = dataElement.Attribute("name")?.Value;
+                if (keyName != null)
+                {
+                    // Find the translation key for this data element
+                    var translationKey = keys.FirstOrDefault(k => k.Key == keyName);
+                    
+                    if (translationKey != null && translationKey.LanguageValues.TryGetValue(language, out var value))
+                    {
+                        // Update the value in the existing data element
+                        var valueElement = dataElement.Element("value");
+                        if (valueElement != null)
+                        {
+                            valueElement.Value = value;
+                        }
+                        else
+                        {
+                            dataElement.Add(new XElement("value", value));
+                        }
+                        processedKeys.Add(keyName);
+                    }
+                }
+            }
+            
+            // Add new data elements for keys that weren't in the template
+            foreach (var key in keys.OrderBy(k => k.Key))
+            {
+                if (!processedKeys.Contains(key.Key) && key.LanguageValues.TryGetValue(language, out var value))
+                {
+                    var dataElement = new XElement("data",
+                        new XAttribute("name", key.Key),
+                        new XAttribute(XNamespace.Xml + "space", "preserve"),
+                        new XElement("value", value)
+                    );
+                    
+                    root.Add(dataElement);
+                }
+            }
+        }
+        else
+        {
+            // Fall back to creating a new RESX structure
+            root = CreateResxDocument();
+            
+            // Add data elements for each key
+            foreach (var key in keys.OrderBy(k => k.Key))
+            {
+                if (key.LanguageValues.TryGetValue(language, out var value))
+                {
+                    var dataElement = new XElement("data",
+                        new XAttribute("name", key.Key),
+                        new XAttribute(XNamespace.Xml + "space", "preserve"),
+                        new XElement("value", value)
+                    );
 
-                root.Add(dataElement);
+                    root.Add(dataElement);
+                }
             }
         }
 

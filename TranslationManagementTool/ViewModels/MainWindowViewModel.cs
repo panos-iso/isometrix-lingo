@@ -133,6 +133,22 @@ public partial class MainWindowViewModel : ViewModelBase
                 : _resxReader.ConsolidateKeys(group.ToList());
 
             _translationStore.AddTranslations(consolidated);
+
+            // Extract and store the template from the first file in the group
+            if (group.Any())
+            {
+                var firstFile = group.First();
+                if (group.Key.FileType == FileType.Resx)
+                {
+                    var template = _resxReader.ExtractTemplate(firstFile.FilePath);
+                    _translationStore.SetResxTemplate(group.Key.Item1, template);
+                }
+                else if (group.Key.FileType == FileType.Json)
+                {
+                    var template = _jsonReader.ExtractTemplate(firstFile.FilePath);
+                    _translationStore.SetJsonTemplate(group.Key.Item1, template);
+                }
+            }
         }
 
         UpdateFileFilters();
@@ -298,12 +314,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (jsonKeys.Count > 0)
         {
-            _jsonWriter.WriteFiles(jsonKeys, outputPath);
+            // Provide template provider function to preserve original JSON structure
+            _jsonWriter.WriteFiles(jsonKeys, outputPath, sourceFileName => _translationStore.GetJsonTemplate(sourceFileName));
         }
 
         if (resxKeys.Count > 0)
         {
-            _resxWriter.WriteFiles(resxKeys, outputPath);
+            // Provide template provider function to preserve original RESX structure
+            _resxWriter.WriteFiles(resxKeys, outputPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName));
         }
 
         StatusMessage = $"Exported {allKeys.Count} translation key(s) to {outputPath}.";
