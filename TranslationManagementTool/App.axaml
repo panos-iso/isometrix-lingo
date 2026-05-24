@@ -12,5 +12,19 @@
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+        
+        <!-- Custom charcoal background for dark mode only -->
+        <Style Selector="Window:dark">
+            <Setter Property="Background" Value="#1E1E1E"/>
+        </Style>
+        <Style Selector="DockPanel:dark">
+            <Setter Property="Background" Value="#1E1E1E"/>
+        </Style>
+        
+        <!-- Improve button readability in light mode -->
+        <Style Selector="Button:light">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#000000"/>
+        </Style>
     </Application.Styles>
 </Application>
