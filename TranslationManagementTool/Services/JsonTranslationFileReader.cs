@@ -77,7 +77,7 @@ public class JsonTranslationFileReader
                     consolidatedKeys[key.Key] = new TranslationKey
                     {
                         Key = key.Key,
-                        SourceFile = baseName,
+                        Source = new SourceFile(baseName, FileType.Json),
                         LanguageValues = new Dictionary<string, string>()
                     };
                 }
@@ -138,7 +138,7 @@ public class JsonTranslationFileReader
                     keys.Add(new TranslationKey
                     {
                         Key = currentKey,
-                        SourceFile = baseFileName,
+                        Source = new SourceFile(baseFileName, FileType.Json),
                         LanguageValues = new Dictionary<string, string>
                         {
                             { language, property.Value.GetString() ?? string.Empty }

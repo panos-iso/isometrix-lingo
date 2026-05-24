@@ -15,8 +15,8 @@ public class TranslationStoreTests
         var store = new TranslationStore();
         var keys = new List<TranslationKey>
         {
-            new() { Key = "key1", SourceFile = "file1", LanguageValues = new() { { "en", "Value1" } } },
-            new() { Key = "key2", SourceFile = "file2", LanguageValues = new() { { "en", "Value2" } } }
+            new() { Key = "key1", Source = new SourceFile("file1", FileType.Json), LanguageValues = new() { { "en", "Value1" } } },
+            new() { Key = "key2", Source = new SourceFile("file2", FileType.Json), LanguageValues = new() { { "en", "Value2" } } }
         };
 
         // Act
@@ -36,8 +36,8 @@ public class TranslationStoreTests
         var store = new TranslationStore();
         var keys = new List<TranslationKey>
         {
-            new() { Key = "key1", SourceFile = "file1", LanguageValues = new() },
-            new() { Key = "key2", SourceFile = "file2", LanguageValues = new() }
+            new() { Key = "key1", Source = new SourceFile("file1", FileType.Json), LanguageValues = new() },
+            new() { Key = "key2", Source = new SourceFile("file2", FileType.Json), LanguageValues = new() }
         };
         store.AddTranslations(keys);
 
@@ -55,9 +55,9 @@ public class TranslationStoreTests
         var store = new TranslationStore();
         var keys = new List<TranslationKey>
         {
-            new() { Key = "key1", SourceFile = "file1", LanguageValues = new() },
-            new() { Key = "key2", SourceFile = "file2", LanguageValues = new() },
-            new() { Key = "key3", SourceFile = "file1", LanguageValues = new() }
+            new() { Key = "key1", Source = new SourceFile("file1", FileType.Json), LanguageValues = new() },
+            new() { Key = "key2", Source = new SourceFile("file2", FileType.Json), LanguageValues = new() },
+            new() { Key = "key3", Source = new SourceFile("file1", FileType.Json), LanguageValues = new() }
         };
         store.AddTranslations(keys);
 
@@ -66,7 +66,7 @@ public class TranslationStoreTests
 
         // Assert
         Assert.Equal(2, store.FilteredKeys.Count);
-        Assert.All(store.FilteredKeys, k => Assert.Equal("file1", k.SourceFile));
+        Assert.All(store.FilteredKeys, k => Assert.Equal("file1", k.Source.Name));
     }
 
     [Fact]
@@ -76,8 +76,8 @@ public class TranslationStoreTests
         var store = new TranslationStore();
         var keys = new List<TranslationKey>
         {
-            new() { Key = "hello", SourceFile = "file1", LanguageValues = new() { { "en", "Hello" } } },
-            new() { Key = "goodbye", SourceFile = "file1", LanguageValues = new() { { "en", "Goodbye" } } }
+            new() { Key = "hello", Source = new SourceFile("file1", FileType.Json), LanguageValues = new() { { "en", "Hello" } } },
+            new() { Key = "goodbye", Source = new SourceFile("file1", FileType.Json), LanguageValues = new() { { "en", "Goodbye" } } }
         };
         store.AddTranslations(keys);
 
@@ -96,8 +96,8 @@ public class TranslationStoreTests
         var store = new TranslationStore();
         var keys = new List<TranslationKey>
         {
-            new() { Key = "key1", SourceFile = "file1", LanguageValues = new() { { "en", "Hello" }, { "es", "Hola" } } },
-            new() { Key = "key2", SourceFile = "file1", LanguageValues = new() { { "en", "Goodbye" } } }
+            new() { Key = "key1", Source = new SourceFile("file1", FileType.Json), LanguageValues = new() { { "en", "Hello" }, { "es", "Hola" } } },
+            new() { Key = "key2", Source = new SourceFile("file1", FileType.Json), LanguageValues = new() { { "en", "Goodbye" } } }
         };
         store.AddTranslations(keys);
 
@@ -116,7 +116,7 @@ public class TranslationStoreTests
         var store = new TranslationStore();
         var keys = new List<TranslationKey>
         {
-            new() { Key = "key1", SourceFile = "file1", LanguageValues = new() { { "en", "Original" } } }
+            new() { Key = "key1", Source = new SourceFile("file1", FileType.Json), LanguageValues = new() { { "en", "Original" } } }
         };
         store.AddTranslations(keys);
 
@@ -137,7 +137,7 @@ public class TranslationStoreTests
         var store = new TranslationStore();
         var keys = new List<TranslationKey>
         {
-            new() { Key = "key1", SourceFile = "file1", LanguageValues = new() }
+            new() { Key = "key1", Source = new SourceFile("file1", FileType.Json), LanguageValues = new() }
         };
         store.AddTranslations(keys);
 
@@ -156,8 +156,8 @@ public class TranslationStoreTests
         var store = new TranslationStore();
         var keys = new List<TranslationKey>
         {
-            new() { Key = "key1", SourceFile = "file1", LanguageValues = new() { { "en", "Hello" }, { "es", "Hola" } } },
-            new() { Key = "key2", SourceFile = "file1", LanguageValues = new() { { "en", "Goodbye" }, { "fr", "Au revoir" } } }
+            new() { Key = "key1", Source = new SourceFile("file1", FileType.Json), LanguageValues = new() { { "en", "Hello" }, { "es", "Hola" } } },
+            new() { Key = "key2", Source = new SourceFile("file1", FileType.Json), LanguageValues = new() { { "en", "Goodbye" }, { "fr", "Au revoir" } } }
         };
 
         // Act
@@ -177,7 +177,7 @@ public class TranslationStoreTests
         var store = new TranslationStore();
         var keys = new List<TranslationKey>
         {
-            new() { Key = "key1", SourceFile = "file1", LanguageValues = new() { { "en", "Hello" } } }
+            new() { Key = "key1", Source = new SourceFile("file1", FileType.Json), LanguageValues = new() { { "en", "Hello" } } }
         };
         store.AddTranslations(keys);
 
@@ -195,9 +195,9 @@ public class TranslationStoreTests
         var store = new TranslationStore();
         var keys = new List<TranslationKey>
         {
-            new() { Key = "login.username", SourceFile = "forms", LanguageValues = new() { { "en", "Username" } } },
-            new() { Key = "login.password", SourceFile = "forms", LanguageValues = new() { { "en", "Password" } } },
-            new() { Key = "menu.home", SourceFile = "forms", LanguageValues = new() { { "en", "Home" } } }
+            new() { Key = "login.username", Source = new SourceFile("forms", FileType.Json), LanguageValues = new() { { "en", "Username" } } },
+            new() { Key = "login.password", Source = new SourceFile("forms", FileType.Json), LanguageValues = new() { { "en", "Password" } } },
+            new() { Key = "menu.home", Source = new SourceFile("forms", FileType.Json), LanguageValues = new() { { "en", "Home" } } }
         };
         store.AddTranslations(keys);
 
@@ -216,9 +216,9 @@ public class TranslationStoreTests
         var store = new TranslationStore();
         var keys = new List<TranslationKey>
         {
-            new() { Key = "key1", SourceFile = "forms", LanguageValues = new() { { "en", "Hello World" }, { "es", "Hola Mundo" } } },
-            new() { Key = "key2", SourceFile = "forms", LanguageValues = new() { { "en", "Goodbye" }, { "es", "Adiós" } } },
-            new() { Key = "key3", SourceFile = "forms", LanguageValues = new() { { "en", "Welcome" }, { "es", "Bienvenido" } } }
+            new() { Key = "key1", Source = new SourceFile("forms", FileType.Json), LanguageValues = new() { { "en", "Hello World" }, { "es", "Hola Mundo" } } },
+            new() { Key = "key2", Source = new SourceFile("forms", FileType.Json), LanguageValues = new() { { "en", "Goodbye" }, { "es", "Adiós" } } },
+            new() { Key = "key3", Source = new SourceFile("forms", FileType.Json), LanguageValues = new() { { "en", "Welcome" }, { "es", "Bienvenido" } } }
         };
         store.AddTranslations(keys);
 
@@ -237,9 +237,9 @@ public class TranslationStoreTests
         var store = new TranslationStore();
         var keys = new List<TranslationKey>
         {
-            new() { Key = "login.username", SourceFile = "forms", LanguageValues = new() { { "en", "Username" } } },
-            new() { Key = "login.password", SourceFile = "forms", LanguageValues = new() { { "en", "Password" } } },
-            new() { Key = "menu.login", SourceFile = "menu", LanguageValues = new() { { "en", "Login" } } }
+            new() { Key = "login.username", Source = new SourceFile("forms", FileType.Json), LanguageValues = new() { { "en", "Username" } } },
+            new() { Key = "login.password", Source = new SourceFile("forms", FileType.Json), LanguageValues = new() { { "en", "Password" } } },
+            new() { Key = "menu.login", Source = new SourceFile("menu", FileType.Json), LanguageValues = new() { { "en", "Login" } } }
         };
         store.AddTranslations(keys);
 
@@ -250,7 +250,7 @@ public class TranslationStoreTests
 
         // Assert
         Assert.Equal(2, store.FilteredKeys.Count);
-        Assert.All(store.FilteredKeys, k => Assert.Equal("forms", k.SourceFile));
+        Assert.All(store.FilteredKeys, k => Assert.Equal("forms", k.Source.Name));
         Assert.All(store.FilteredKeys, k => Assert.Contains("login", k.Key));
     }
 
@@ -261,8 +261,8 @@ public class TranslationStoreTests
         var store = new TranslationStore();
         var keys = new List<TranslationKey>
         {
-            new() { Key = "key1", SourceFile = "forms", LanguageValues = new() { { "en", "Value1" } } },
-            new() { Key = "key2", SourceFile = "forms", LanguageValues = new() { { "en", "Value2" } } }
+            new() { Key = "key1", Source = new SourceFile("forms", FileType.Json), LanguageValues = new() { { "en", "Value1" } } },
+            new() { Key = "key2", Source = new SourceFile("forms", FileType.Json), LanguageValues = new() { { "en", "Value2" } } }
         };
         store.AddTranslations(keys);
         store.FilterBySearchTerm("key1"); // Filter first
