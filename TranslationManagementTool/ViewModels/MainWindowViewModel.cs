@@ -115,13 +115,6 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ToggleFileFilter(FileFilterItem filter)
-    {
-        filter.IsSelected = !filter.IsSelected;
-        ApplyFilters();
-    }
-
-    [RelayCommand]
     private async Task AddKey(Window window)
     {
         var addKeyViewModel = new AddKeyViewModel(
@@ -153,6 +146,7 @@ public partial class MainWindowViewModel : ViewModelBase
         foreach (var sourceFile in _translationStore.SourceFiles.OrderBy(f => f.Name).ThenBy(f => f.Type))
         {
             var filterItem = new FileFilterItem { Source = sourceFile, IsSelected = true };
+            filterItem.SelectionChanged += (s, e) => ApplyFilters();
             FileFilters.Add(filterItem);
         }
     }

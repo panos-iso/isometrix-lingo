@@ -66,8 +66,6 @@
                     <DataTemplate>
                         <ToggleButton Content="{Binding DisplayName}"
                                       IsChecked="{Binding IsSelected}"
-                                      Command="{Binding $parent[Window].DataContext.ToggleFileFilterCommand}"
-                                      CommandParameter="{Binding}"
                                       Margin="0,0,5,0"
                                       Padding="10,5"/>
                     </DataTemplate>
