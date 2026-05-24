@@ -23,6 +23,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<FileFilterItem> _fileFilters = new();
 
+    [ObservableProperty]
+    private string _searchText = string.Empty;
+
     public event EventHandler? LanguagesChanged;
 
     public MainWindowViewModel()
@@ -122,6 +125,34 @@ public partial class MainWindowViewModel : ViewModelBase
             _translationStore.FilterBySourceFiles(selectedFiles);
         }
 
-        StatusMessage = $"Showing {_translationStore.FilteredKeys.Count} translation keys from {selectedFiles.Count} file(s).";
+        UpdateStatusMessage();
+    }
+
+    partial void OnSearchTextChanged(string value)
+    {
+        _translationStore.FilterBySearchTerm(value);
+        UpdateStatusMessage();
+    }
+
+    private void UpdateStatusMessage()
+    {
+        var filteredCount = _translationStore.FilteredKeys.Count;
+        
+        if (!string.IsNullOrWhiteSpace(SearchText))
+        {
+            StatusMessage = $"Found {filteredCount} translation key(s) matching '{SearchText}'.";
+        }
+        else
+        {
+            var selectedFileCount = FileFilters.Count(f => f.IsSelected);
+            if (selectedFileCount == 0 || selectedFileCount == FileFilters.Count)
+            {
+                StatusMessage = $"Showing {filteredCount} translation keys.";
+            }
+            else
+            {
+                StatusMessage = $"Showing {filteredCount} translation keys from {selectedFileCount} file(s).";
+            }
+        }
     }
 }

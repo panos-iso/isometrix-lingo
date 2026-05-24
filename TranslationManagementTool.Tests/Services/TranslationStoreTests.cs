@@ -187,4 +187,90 @@ public class TranslationStoreTests
         // Assert
         Assert.Empty(store.Languages);
     }
+
+    [Fact]
+    public void FilterBySearchTerm_FiltersKeysByKeyName()
+    {
+        // Arrange
+        var store = new TranslationStore();
+        var keys = new List<TranslationKey>
+        {
+            new() { Key = "login.username", SourceFile = "forms", LanguageValues = new() { { "en", "Username" } } },
+            new() { Key = "login.password", SourceFile = "forms", LanguageValues = new() { { "en", "Password" } } },
+            new() { Key = "menu.home", SourceFile = "forms", LanguageValues = new() { { "en", "Home" } } }
+        };
+        store.AddTranslations(keys);
+
+        // Act
+        store.FilterBySearchTerm("login");
+
+        // Assert
+        Assert.Equal(2, store.FilteredKeys.Count);
+        Assert.All(store.FilteredKeys, k => Assert.Contains("login", k.Key));
+    }
+
+    [Fact]
+    public void FilterBySearchTerm_FiltersKeysByLanguageValue()
+    {
+        // Arrange
+        var store = new TranslationStore();
+        var keys = new List<TranslationKey>
+        {
+            new() { Key = "key1", SourceFile = "forms", LanguageValues = new() { { "en", "Hello World" }, { "es", "Hola Mundo" } } },
+            new() { Key = "key2", SourceFile = "forms", LanguageValues = new() { { "en", "Goodbye" }, { "es", "Adiós" } } },
+            new() { Key = "key3", SourceFile = "forms", LanguageValues = new() { { "en", "Welcome" }, { "es", "Bienvenido" } } }
+        };
+        store.AddTranslations(keys);
+
+        // Act
+        store.FilterBySearchTerm("mundo");
+
+        // Assert
+        Assert.Single(store.FilteredKeys);
+        Assert.Equal("key1", store.FilteredKeys[0].Key);
+    }
+
+    [Fact]
+    public void FilterBySearchTerm_CombinedWithFileFilter()
+    {
+        // Arrange
+        var store = new TranslationStore();
+        var keys = new List<TranslationKey>
+        {
+            new() { Key = "login.username", SourceFile = "forms", LanguageValues = new() { { "en", "Username" } } },
+            new() { Key = "login.password", SourceFile = "forms", LanguageValues = new() { { "en", "Password" } } },
+            new() { Key = "menu.login", SourceFile = "menu", LanguageValues = new() { { "en", "Login" } } }
+        };
+        store.AddTranslations(keys);
+
+        // Act - filter by file first
+        store.FilterBySourceFiles(new List<string> { "forms" });
+        // Then search
+        store.FilterBySearchTerm("login");
+
+        // Assert
+        Assert.Equal(2, store.FilteredKeys.Count);
+        Assert.All(store.FilteredKeys, k => Assert.Equal("forms", k.SourceFile));
+        Assert.All(store.FilteredKeys, k => Assert.Contains("login", k.Key));
+    }
+
+    [Fact]
+    public void FilterBySearchTerm_EmptySearchShowsAll()
+    {
+        // Arrange
+        var store = new TranslationStore();
+        var keys = new List<TranslationKey>
+        {
+            new() { Key = "key1", SourceFile = "forms", LanguageValues = new() { { "en", "Value1" } } },
+            new() { Key = "key2", SourceFile = "forms", LanguageValues = new() { { "en", "Value2" } } }
+        };
+        store.AddTranslations(keys);
+        store.FilterBySearchTerm("key1"); // Filter first
+
+        // Act - clear search
+        store.FilterBySearchTerm("");
+
+        // Assert
+        Assert.Equal(2, store.FilteredKeys.Count);
+    }
 }

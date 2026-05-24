@@ -11,6 +11,8 @@ public class TranslationStore
     private readonly ObservableCollection<TranslationKey> _filteredKeys = new();
     private readonly HashSet<string> _sourceFiles = new();
     private readonly HashSet<string> _languages = new();
+    private List<string>? _currentFileFilter = null;
+    private string _currentSearchTerm = string.Empty;
 
     public ObservableCollection<TranslationKey> FilteredKeys => _filteredKeys;
     public IReadOnlyCollection<string> SourceFiles => _sourceFiles;
@@ -42,23 +44,45 @@ public class TranslationStore
 
     public void FilterBySourceFiles(List<string>? fileNames)
     {
+        _currentFileFilter = fileNames;
+        ApplyFilters();
+    }
+
+    public void FilterBySearchTerm(string searchTerm)
+    {
+        _currentSearchTerm = searchTerm ?? string.Empty;
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
         _filteredKeys.Clear();
 
-        if (fileNames == null || fileNames.Count == 0)
+        // Start with all keys or file-filtered keys
+        IEnumerable<TranslationKey> keysToShow;
+        
+        if (_currentFileFilter == null || _currentFileFilter.Count == 0)
         {
-            // No filters selected - show all
-            foreach (var key in _allKeys)
-            {
-                _filteredKeys.Add(key);
-            }
+            keysToShow = _allKeys;
         }
         else
         {
-            // Show only keys from selected files
-            foreach (var key in _allKeys.Where(k => fileNames.Contains(k.SourceFile)))
-            {
-                _filteredKeys.Add(key);
-            }
+            keysToShow = _allKeys.Where(k => _currentFileFilter.Contains(k.SourceFile));
+        }
+
+        // Apply search filter if present
+        if (!string.IsNullOrWhiteSpace(_currentSearchTerm))
+        {
+            var term = _currentSearchTerm.ToLowerInvariant();
+            keysToShow = keysToShow.Where(k =>
+                k.Key.ToLowerInvariant().Contains(term) ||
+                k.LanguageValues.Any(lv => lv.Value.ToLowerInvariant().Contains(term))
+            );
+        }
+
+        foreach (var key in keysToShow)
+        {
+            _filteredKeys.Add(key);
         }
     }
 
@@ -93,6 +117,6 @@ public class TranslationStore
 
     private void RefreshFilteredKeys()
     {
-        FilterBySourceFiles(null!); // Show all by default
+        ApplyFilters();
     }
 }
