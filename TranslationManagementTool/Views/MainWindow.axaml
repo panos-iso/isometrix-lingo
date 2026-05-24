@@ -103,26 +103,13 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Key" 
                                         Binding="{Binding Key}" 
-                                        Width="Auto" 
-                                        MinWidth="150" 
-                                        MaxWidth="400"/>
+                                        Width="1.5*" 
+                                        MinWidth="150"/>
                     <DataGridTextColumn Header="Source File" 
                                         Binding="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
-                                        Width="Auto" 
-                                        MinWidth="150" 
-                                        MaxWidth="250"/>
-                    <DataGridTemplateColumn Header="Actions" Width="Auto">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Button Content="Edit"
-                                        Command="{Binding $parent[Window].DataContext.EditTranslationCommand}"
-                                        CommandParameter="{Binding}"
-                                        Margin="5,2"
-                                        Padding="15,5"/>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                    <!-- Language columns will be added dynamically in code-behind -->
+                                        Width="*" 
+                                        MinWidth="150"/>
+                    <!-- Language columns and Actions will be added dynamically in code-behind -->
                 </DataGrid.Columns>
             </DataGrid>
         </Grid>

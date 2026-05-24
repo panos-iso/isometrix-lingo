@@ -142,10 +142,10 @@ public partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel viewModel)
             return;
 
-        // Remove existing language columns (keep Key, Source File, and Actions button)
-        while (TranslationsGrid.Columns.Count > 3)
+        // Remove existing language columns and Actions (keep Key and Source File)
+        while (TranslationsGrid.Columns.Count > 2)
         {
-            TranslationsGrid.Columns.RemoveAt(3);
+            TranslationsGrid.Columns.RemoveAt(2);
         }
 
         // Add a column for each language
@@ -155,15 +155,15 @@ public partial class MainWindow : Window
             var column = new DataGridTemplateColumn
             {
                 Header = languageName,
-                Width = DataGridLength.Auto,
+                Width = new DataGridLength(1, DataGridLengthUnitType.Star),
                 MinWidth = 120,
-                MaxWidth = 300,
                 CellTemplate = new FuncDataTemplate<object>((_, _) =>
                 {
                     var textBlock = new TextBlock
                     {
                         TextWrapping = Avalonia.Media.TextWrapping.NoWrap,
                         TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
+                        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
                         Margin = new Avalonia.Thickness(5, 2)
                     };
                     var binding = new Binding("LanguageValues")
@@ -177,5 +177,30 @@ public partial class MainWindow : Window
             };
             TranslationsGrid.Columns.Add(column);
         }
+
+        // Add Actions column at the end
+        var actionsColumn = new DataGridTemplateColumn
+        {
+            Header = "Actions",
+            Width = DataGridLength.Auto,
+            MinWidth = 60,
+            CellTemplate = new FuncDataTemplate<object>((data, _) =>
+            {
+                var button = new Button
+                {
+                    Content = "📝",
+                    FontSize = 18,
+                    Padding = new Avalonia.Thickness(8, 4),
+                    Margin = new Avalonia.Thickness(5, 2),
+                    HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                    VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                    Command = viewModel.EditTranslationCommand,
+                    CommandParameter = data
+                };
+                ToolTip.SetTip(button, "Edit translation");
+                return button;
+            })
+        };
+        TranslationsGrid.Columns.Add(actionsColumn);
     }
 }
