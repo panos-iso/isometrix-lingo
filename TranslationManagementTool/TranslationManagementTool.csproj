@@ -5,6 +5,9 @@
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationTitle>Isometrix Lingo</ApplicationTitle>
+    <CFBundleName>Isometrix Lingo</CFBundleName>
+    <CFBundleDisplayName>Isometrix Lingo</CFBundleDisplayName>
   </PropertyGroup>
 
   <ItemGroup>

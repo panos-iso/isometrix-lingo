@@ -7,8 +7,8 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="TranslationManagementTool.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="Translation Management Tool"
+        Icon="/Assets/lingo-icon.png"
+        Title="Isometrix Lingo"
         Width="1000" Height="600">
 
     <Window.Resources>

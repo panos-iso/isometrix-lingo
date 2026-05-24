@@ -69,3 +69,6 @@ plans/
 
 # Export output
 output/
+
+# macOS app bundles
+*.app/
