@@ -36,7 +36,6 @@
             <TextBlock Text="Translation Key:" FontWeight="SemiBold" Margin="0,0,0,5"/>
             <TextBox Text="{Binding Key}" 
                      IsReadOnly="True" 
-                     Background="LightGray"
                      Margin="0,0,0,20"/>
 
             <!-- Language Values -->
