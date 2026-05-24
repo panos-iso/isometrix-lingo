@@ -5,6 +5,7 @@ namespace TranslationManagementTool.Models;
 public partial class FileFilterItem : ObservableObject
 {
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayName))]
     private SourceFile _source = null!;
 
     [ObservableProperty]

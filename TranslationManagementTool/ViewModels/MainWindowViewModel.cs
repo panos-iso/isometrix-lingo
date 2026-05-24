@@ -164,9 +164,9 @@ public partial class MainWindowViewModel : ViewModelBase
             .Select(f => f.Source)
             .ToList();
 
-        if (selectedFiles.Count == 0)
+        // If nothing selected or everything selected, show all
+        if (selectedFiles.Count == 0 || selectedFiles.Count == FileFilters.Count)
         {
-            // If nothing selected, show all
             _translationStore.FilterBySourceFiles(null!);
         }
         else
