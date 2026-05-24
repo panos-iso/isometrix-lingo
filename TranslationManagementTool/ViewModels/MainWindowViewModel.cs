@@ -125,7 +125,8 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var addKeyViewModel = new AddKeyViewModel(
             _translationStore.SourceFiles,
-            _translationStore.Languages
+            _translationStore.Languages,
+            SelectedSourceFile  // Pass current filter selection as default
         );
 
         var dialog = new AddKeyDialog

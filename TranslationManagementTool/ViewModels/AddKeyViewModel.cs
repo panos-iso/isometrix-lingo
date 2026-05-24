@@ -19,18 +19,19 @@ public partial class AddKeyViewModel : ViewModelBase
     public ObservableCollection<string> AvailableLanguages { get; } = new();
     public ObservableCollection<LanguageValueItem> LanguageValues { get; } = new();
 
-    public AddKeyViewModel(IEnumerable<SourceFile> sourceFiles, IEnumerable<string> languages)
+    public AddKeyViewModel(IEnumerable<SourceFile> sourceFiles, IEnumerable<string> languages, SourceFile? defaultSourceFile = null)
     {
         foreach (var file in sourceFiles)
         {
             AvailableSourceFiles.Add(file);
         }
 
-        // Select the first source file by default
-        if (AvailableSourceFiles.Count > 0)
+        // Set default source file if provided and it exists in the list
+        if (defaultSourceFile != null && AvailableSourceFiles.Contains(defaultSourceFile))
         {
-            SelectedSourceFile = AvailableSourceFiles[0];
+            SelectedSourceFile = defaultSourceFile;
         }
+        // Otherwise, leave it null (no default selection)
 
         foreach (var lang in languages)
         {

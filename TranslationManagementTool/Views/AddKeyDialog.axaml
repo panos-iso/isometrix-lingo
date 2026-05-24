@@ -32,6 +32,7 @@
                     <TextBlock Text="Source File *" FontWeight="Bold" Margin="0,0,0,5"/>
                     <ComboBox ItemsSource="{Binding AvailableSourceFiles}"
                               SelectedItem="{Binding SelectedSourceFile}"
+                              PlaceholderText="Select a source file"
                               HorizontalAlignment="Stretch">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
