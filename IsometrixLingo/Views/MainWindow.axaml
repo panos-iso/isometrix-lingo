@@ -1,0 +1,119 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:IsometrixLingo.ViewModels"
+        xmlns:converters="using:IsometrixLingo.Converters"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="IsometrixLingo.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/lingo-icon.png"
+        Title="Isometrix Lingo"
+        Width="1000" Height="600">
+
+    <Window.Resources>
+        <converters:SourceFileConverter x:Key="SourceFileConverter"/>
+        <converters:SourceFileDisplayConverter x:Key="SourceFileDisplayConverter"/>
+    </Window.Resources>
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <DockPanel>
+        <!-- Top Toolbar -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10">
+            <Button Content="Import Files"
+                    Command="{Binding ImportFilesCommand}"
+                    CommandParameter="{Binding $parent[Window]}"
+                    IsEnabled="{Binding CanImport}"
+                    Margin="0,0,10,0"/>
+            
+            <Button Content="Export All"
+                    Command="{Binding ExportModifiedFilesCommand}"
+                    CommandParameter="{Binding $parent[Window]}"
+                    IsEnabled="{Binding HasKeys}"
+                    Margin="0,0,10,0"/>
+            
+            <Button Content="Add Key"
+                    Command="{Binding AddKeyCommand}"
+                    CommandParameter="{Binding $parent[Window]}"
+                    IsEnabled="{Binding HasKeys}"
+                    Margin="0,0,10,0"/>
+            
+            <Button Content="Save Progress"
+                    Command="{Binding SaveProgressCommand}"
+                    IsEnabled="{Binding HasUnsavedChanges}"
+                    Margin="0,0,10,0"/>
+            
+            <Button Content="Start Over"
+                    Command="{Binding StartOverCommand}"
+                    IsEnabled="{Binding HasKeys}"
+                    Margin="0,0,10,0"/>
+            
+            <TextBlock Text="Search:" 
+                       VerticalAlignment="Center" 
+                       Margin="20,0,5,0"/>
+            <TextBox Text="{Binding SearchText}"
+                     PlaceholderText="Search keys and values..."
+                     MinWidth="250"
+                     VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- File Filters Panel -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,0,10,10">
+            <TextBlock Text="Filter by file:" 
+                       VerticalAlignment="Center" 
+                       Margin="0,0,10,0"
+                       FontWeight="SemiBold"/>
+            <ComboBox ItemsSource="{Binding AvailableSourceFiles}"
+                      SelectedItem="{Binding SelectedSourceFile}"
+                      Width="250"
+                      Margin="0,0,10,0">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Converter={StaticResource SourceFileDisplayConverter}}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Content="Reset Filters"
+                    Command="{Binding ResetFiltersCommand}"
+                    Padding="10,5"/>
+        </StackPanel>
+
+        <!-- Bottom Status Bar -->
+        <TextBlock DockPanel.Dock="Bottom"
+                   Text="{Binding StatusMessage}"
+                   Background="LightGray"
+                   Padding="10,5"/>
+
+        <!-- Main Content Area -->
+        <Grid Margin="10">
+            <DataGrid x:Name="TranslationsGrid"
+                      ItemsSource="{Binding TranslationStore.FilteredKeys}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      GridLinesVisibility="All"
+                      BorderThickness="1"
+                      BorderBrush="Gray"
+                      CanUserResizeColumns="True"
+                      CanUserReorderColumns="False"
+                      DoubleTapped="OnGridDoubleTapped">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Key" 
+                                        Binding="{Binding Key}" 
+                                        Width="1.5*" 
+                                        MinWidth="150"/>
+                    <DataGridTextColumn Header="Source File" 
+                                        Binding="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
+                                        Width="*" 
+                                        MinWidth="150"/>
+                    <!-- Language columns and Actions will be added dynamically in code-behind -->
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+    </DockPanel>
+
+</Window>

@@ -114,7 +114,7 @@ dotnet restore
 dotnet build
 
 # Run
-dotnet run --project TranslationManagementTool/TranslationManagementTool.csproj
+dotnet run --project IsometrixLingo/IsometrixLingo.csproj
 
 # Run tests
 dotnet test
@@ -123,14 +123,14 @@ dotnet test
 ### Project Structure
 
 ```
-TranslationManagementTool/          # Main application
+IsometrixLingo/          # Main application
 ├── Models/                         # Data models
 ├── Services/                       # Business logic (readers, writers, store)
 ├── ViewModels/                     # MVVM view models
 ├── Views/                          # XAML UI views
 └── Helpers/                        # Utility classes
 
-TranslationManagementTool.Tests/    # Unit tests (xUnit)
+IsometrixLingo.Tests/    # Unit tests (xUnit)
 └── Services/                       # Service tests (90%+ coverage)
 ```
 
@@ -169,11 +169,11 @@ Executables will be in `publish/macos/` and `publish/windows/`.
    ```bash
    # macOS
    cd publish/macos
-   tar -czf TranslationTool-macOS-arm64.tar.gz TranslationManagementTool
+   tar -czf TranslationTool-macOS-arm64.tar.gz isometrix-lingo
 
    # Windows
    cd publish/windows
-   zip -r TranslationTool-Windows-x64.zip TranslationManagementTool.exe
+   zip -r TranslationTool-Windows-x64.zip isometrix-lingo.exe
    ```
 
 3. **Create GitHub Release**:
