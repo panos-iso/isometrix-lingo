@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:TranslationManagementTool.ViewModels"
+        xmlns:converters="using:TranslationManagementTool.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="600"
@@ -9,6 +10,10 @@
         Title="Add New Translation Key"
         Width="500" Height="600"
         WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <converters:SourceFileConverter x:Key="SourceFileConverter"/>
+    </Window.Resources>
 
     <DockPanel Margin="20">
         <!-- Buttons at bottom -->
@@ -30,24 +35,15 @@
                 <!-- Source File -->
                 <StackPanel>
                     <TextBlock Text="Source File *" FontWeight="Bold" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding SourceFileName}" 
-                             PlaceholderText="e.g., forms or messages"/>
-                    <TextBlock Text="Existing files:" FontSize="11" Foreground="Gray" Margin="0,5,0,0"/>
-                    <ItemsControl ItemsSource="{Binding ExistingSourceFiles}">
-                        <ItemsControl.ItemTemplate>
+                    <ComboBox ItemsSource="{Binding AvailableSourceFiles}"
+                              SelectedItem="{Binding SelectedSourceFile}"
+                              PlaceholderText="Select a source file"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding}" FontSize="11" Foreground="Gray" Margin="5,2,0,0"/>
+                                <TextBlock Text="{Binding Converter={StaticResource SourceFileConverter}}"/>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-
-                <!-- File Type -->
-                <StackPanel>
-                    <TextBlock Text="File Type *" FontWeight="Bold" Margin="0,0,0,5"/>
-                    <ComboBox SelectedItem="{Binding FileType}" Width="200" HorizontalAlignment="Left">
-                        <ComboBoxItem Content="JSON" Tag="Json"/>
-                        <ComboBoxItem Content="RESX" Tag="Resx"/>
+                        </ComboBox.ItemTemplate>
                     </ComboBox>
                 </StackPanel>
 

@@ -33,9 +33,13 @@ public partial class EditTranslationViewModel : ViewModelBase
         _originalKey = translationKey.Key;
         Key = translationKey.Key;
 
-        // Populate language values for editing
-        foreach (var (language, value) in translationKey.LanguageValues.OrderBy(kv => kv.Key))
+        // Always show all supported languages (en and es)
+        foreach (var language in translationStore.Languages.OrderBy(l => l))
         {
+            var value = translationKey.LanguageValues.TryGetValue(language, out var existingValue) 
+                ? existingValue 
+                : string.Empty;
+            
             LanguageValues.Add(new LanguageValueItem
             {
                 LanguageCode = language,

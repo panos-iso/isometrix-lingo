@@ -26,13 +26,19 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _statusMessage = "Ready. Click Import to load translation files.";
 
     [ObservableProperty]
-    private ObservableCollection<FileFilterItem> _fileFilters = new();
+    private ObservableCollection<SourceFile?> _availableSourceFiles = new();
+
+    [ObservableProperty]
+    private SourceFile? _selectedSourceFile;
 
     [ObservableProperty]
     private string _searchText = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanImport))]
     private bool _hasKeys;
+
+    public bool CanImport => !HasKeys;
 
     public event EventHandler? LanguagesChanged;
 
@@ -43,6 +49,9 @@ public partial class MainWindowViewModel : ViewModelBase
         _resxReader = new ResxTranslationFileReader();
         _jsonWriter = new JsonTranslationFileWriter();
         _resxWriter = new ResxTranslationFileWriter();
+        
+        // Add "All Files" as first option (null value)
+        AvailableSourceFiles.Add(null);
     }
 
     public TranslationStore TranslationStore => _translationStore;
@@ -115,18 +124,12 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ToggleFileFilter(FileFilterItem filter)
-    {
-        filter.IsSelected = !filter.IsSelected;
-        ApplyFilters();
-    }
-
-    [RelayCommand]
     private async Task AddKey(Window window)
     {
         var addKeyViewModel = new AddKeyViewModel(
             _translationStore.SourceFiles,
-            _translationStore.Languages
+            _translationStore.Languages,
+            SelectedSourceFile  // Pass current filter selection as default
         );
 
         var dialog = new AddKeyDialog
@@ -149,31 +152,54 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void UpdateFileFilters()
     {
-        FileFilters.Clear();
-        foreach (var sourceFile in _translationStore.SourceFiles.OrderBy(f => f))
+        // Keep the selected file if it still exists
+        var currentSelection = SelectedSourceFile;
+        
+        AvailableSourceFiles.Clear();
+        
+        // Add "All Files" option (null)
+        AvailableSourceFiles.Add(null);
+        
+        // Add all source files
+        foreach (var sourceFile in _translationStore.SourceFiles.OrderBy(f => f.Name).ThenBy(f => f.Type))
         {
-            var filterItem = new FileFilterItem { FileName = sourceFile, IsSelected = true };
-            FileFilters.Add(filterItem);
+            AvailableSourceFiles.Add(sourceFile);
+        }
+        
+        // Restore selection if it still exists, otherwise select "All Files"
+        if (currentSelection != null && _translationStore.SourceFiles.Contains(currentSelection))
+        {
+            SelectedSourceFile = currentSelection;
+        }
+        else
+        {
+            SelectedSourceFile = null;
         }
     }
 
-    private void ApplyFilters()
+    partial void OnSelectedSourceFileChanged(SourceFile? value)
     {
-        var selectedFiles = FileFilters
-            .Where(f => f.IsSelected)
-            .Select(f => f.FileName)
-            .ToList();
-
-        if (selectedFiles.Count == 0)
+        if (value == null)
         {
-            // If nothing selected, show all
+            // Show all files
             _translationStore.FilterBySourceFiles(null!);
         }
         else
         {
-            _translationStore.FilterBySourceFiles(selectedFiles);
+            // Show only selected file
+            _translationStore.FilterBySourceFiles(new List<SourceFile> { value });
         }
+        
+        UpdateStatusMessage();
+    }
 
+    [RelayCommand]
+    private void ResetFilters()
+    {
+        SelectedSourceFile = null;
+        SearchText = string.Empty;
+        _translationStore.FilterBySourceFiles(null!);
+        _translationStore.FilterBySearchTerm(string.Empty);
         UpdateStatusMessage();
     }
 
@@ -191,17 +217,13 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             StatusMessage = $"Found {filteredCount} translation key(s) matching '{SearchText}'.";
         }
+        else if (SelectedSourceFile != null)
+        {
+            StatusMessage = $"Showing {filteredCount} translation keys from {SelectedSourceFile.Name} ({SelectedSourceFile.Type}).";
+        }
         else
         {
-            var selectedFileCount = FileFilters.Count(f => f.IsSelected);
-            if (selectedFileCount == 0 || selectedFileCount == FileFilters.Count)
-            {
-                StatusMessage = $"Showing {filteredCount} translation keys.";
-            }
-            else
-            {
-                StatusMessage = $"Showing {filteredCount} translation keys from {selectedFileCount} file(s).";
-            }
+            StatusMessage = $"Showing {filteredCount} translation keys.";
         }
     }
 

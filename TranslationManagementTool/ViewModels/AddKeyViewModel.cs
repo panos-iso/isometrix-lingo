@@ -13,21 +13,25 @@ public partial class AddKeyViewModel : ViewModelBase
     private string _keyName = string.Empty;
 
     [ObservableProperty]
-    private string _sourceFileName = string.Empty;
+    private SourceFile? _selectedSourceFile;
 
-    [ObservableProperty]
-    private FileType _fileType = FileType.Json;
-
-    public ObservableCollection<string> ExistingSourceFiles { get; } = new();
+    public ObservableCollection<SourceFile> AvailableSourceFiles { get; } = new();
     public ObservableCollection<string> AvailableLanguages { get; } = new();
     public ObservableCollection<LanguageValueItem> LanguageValues { get; } = new();
 
-    public AddKeyViewModel(IEnumerable<string> sourceFiles, IEnumerable<string> languages)
+    public AddKeyViewModel(IEnumerable<SourceFile> sourceFiles, IEnumerable<string> languages, SourceFile? defaultSourceFile = null)
     {
         foreach (var file in sourceFiles)
         {
-            ExistingSourceFiles.Add(file);
+            AvailableSourceFiles.Add(file);
         }
+
+        // Set default source file if provided and it exists in the list
+        if (defaultSourceFile != null && AvailableSourceFiles.Contains(defaultSourceFile))
+        {
+            SelectedSourceFile = defaultSourceFile;
+        }
+        // Otherwise, leave it null (no default selection)
 
         foreach (var lang in languages)
         {
@@ -38,7 +42,7 @@ public partial class AddKeyViewModel : ViewModelBase
 
     public bool IsValid()
     {
-        return !string.IsNullOrWhiteSpace(KeyName) && !string.IsNullOrWhiteSpace(SourceFileName);
+        return !string.IsNullOrWhiteSpace(KeyName) && SelectedSourceFile != null;
     }
 
     public TranslationKey CreateTranslationKey()
@@ -46,7 +50,7 @@ public partial class AddKeyViewModel : ViewModelBase
         var translationKey = new TranslationKey
         {
             Key = KeyName.Trim(),
-            Source = new SourceFile(SourceFileName.Trim(), FileType),
+            Source = SelectedSourceFile!,
             LanguageValues = new Dictionary<string, string>()
         };
 
