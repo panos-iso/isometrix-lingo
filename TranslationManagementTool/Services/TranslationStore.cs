@@ -126,6 +126,25 @@ public class TranslationStore
         return _allKeys.Where(k => k.IsModified).ToList();
     }
 
+    public List<TranslationKey> GetAllKeys()
+    {
+        return _allKeys.ToList();
+    }
+
+    public void AddKey(TranslationKey key)
+    {
+        _allKeys.Add(key);
+        _sourceFiles.Add(key.Source.Name);
+
+        // Track all languages in this key
+        foreach (var language in key.LanguageValues.Keys)
+        {
+            _languages.Add(language);
+        }
+
+        RefreshFilteredKeys();
+    }
+
     private void RefreshFilteredKeys()
     {
         ApplyFilters();

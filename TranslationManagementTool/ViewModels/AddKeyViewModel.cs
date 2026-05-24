@@ -1,0 +1,60 @@
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using TranslationManagementTool.Models;
+
+namespace TranslationManagementTool.ViewModels;
+
+public partial class AddKeyViewModel : ViewModelBase
+{
+    [ObservableProperty]
+    private string _keyName = string.Empty;
+
+    [ObservableProperty]
+    private string _sourceFileName = string.Empty;
+
+    [ObservableProperty]
+    private FileType _fileType = FileType.Json;
+
+    public ObservableCollection<string> ExistingSourceFiles { get; } = new();
+    public ObservableCollection<string> AvailableLanguages { get; } = new();
+    public ObservableCollection<LanguageValueItem> LanguageValues { get; } = new();
+
+    public AddKeyViewModel(IEnumerable<string> sourceFiles, IEnumerable<string> languages)
+    {
+        foreach (var file in sourceFiles)
+        {
+            ExistingSourceFiles.Add(file);
+        }
+
+        foreach (var lang in languages)
+        {
+            AvailableLanguages.Add(lang);
+            LanguageValues.Add(new LanguageValueItem { LanguageCode = lang, LanguageName = lang, Value = string.Empty });
+        }
+    }
+
+    public bool IsValid()
+    {
+        return !string.IsNullOrWhiteSpace(KeyName) && !string.IsNullOrWhiteSpace(SourceFileName);
+    }
+
+    public TranslationKey CreateTranslationKey()
+    {
+        var translationKey = new TranslationKey
+        {
+            Key = KeyName.Trim(),
+            Source = new SourceFile(SourceFileName.Trim(), FileType),
+            LanguageValues = new Dictionary<string, string>()
+        };
+
+        foreach (var langValue in LanguageValues.Where(lv => !string.IsNullOrWhiteSpace(lv.Value)))
+        {
+            translationKey.LanguageValues[langValue.LanguageCode] = langValue.Value;
+        }
+
+        return translationKey;
+    }
+}

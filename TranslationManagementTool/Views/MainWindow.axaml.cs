@@ -49,7 +49,6 @@ public partial class MainWindow : Window
 
             // Update status message to show modified count
             var modifiedCount = mainViewModel.TranslationStore.GetModifiedKeys().Count;
-            mainViewModel.HasModifiedKeys = modifiedCount > 0;
 
             if (modifiedCount > 0)
             {

@@ -32,7 +32,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _searchText = string.Empty;
 
     [ObservableProperty]
-    private bool _hasModifiedKeys;
+    private bool _hasKeys;
 
     public event EventHandler? LanguagesChanged;
 
@@ -110,6 +110,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         UpdateFileFilters();
         StatusMessage = $"Imported {files.Count} file(s) with {_translationStore.FilteredKeys.Count} translation keys.";
+        HasKeys = _translationStore.GetAllKeys().Count > 0;
         LanguagesChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -118,6 +119,32 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         filter.IsSelected = !filter.IsSelected;
         ApplyFilters();
+    }
+
+    [RelayCommand]
+    private async Task AddKey(Window window)
+    {
+        var addKeyViewModel = new AddKeyViewModel(
+            _translationStore.SourceFiles,
+            _translationStore.Languages
+        );
+
+        var dialog = new AddKeyDialog
+        {
+            DataContext = addKeyViewModel
+        };
+
+        var result = await dialog.ShowDialog<bool>(window);
+
+        if (result)
+        {
+            var newKey = addKeyViewModel.CreateTranslationKey();
+            _translationStore.AddKey(newKey);
+            HasKeys = true;
+            UpdateFileFilters();
+            StatusMessage = $"Added new key '{newKey.Key}' to {newKey.Source.Name}.";
+            LanguagesChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private void UpdateFileFilters()
@@ -188,11 +215,11 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task ExportModifiedFiles(Window window)
     {
-        var modifiedKeys = _translationStore.GetModifiedKeys();
+        var allKeys = _translationStore.GetAllKeys();
 
-        if (modifiedKeys.Count == 0)
+        if (allKeys.Count == 0)
         {
-            StatusMessage = "No modified translations to export.";
+            StatusMessage = "No translations to export. Import files first.";
             return;
         }
 
@@ -218,10 +245,10 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         var outputPath = folder[0].Path.LocalPath;
-        
-        // Group modified keys by file type and export using appropriate writer
-        var jsonKeys = modifiedKeys.Where(k => k.Source.Type == FileType.Json).ToList();
-        var resxKeys = modifiedKeys.Where(k => k.Source.Type == FileType.Resx).ToList();
+
+        // Group all keys by file type and export using appropriate writer
+        var jsonKeys = allKeys.Where(k => k.Source.Type == FileType.Json).ToList();
+        var resxKeys = allKeys.Where(k => k.Source.Type == FileType.Resx).ToList();
 
         if (jsonKeys.Count > 0)
         {
@@ -233,14 +260,7 @@ public partial class MainWindowViewModel : ViewModelBase
             _resxWriter.WriteFiles(resxKeys, outputPath);
         }
 
-        StatusMessage = $"Exported {modifiedKeys.Count} modified key(s) to {outputPath}. Modifications cleared.";
-
-        // Clear modification flags after successful export
-        foreach (var key in modifiedKeys)
-        {
-            key.IsModified = false;
-        }
-        HasModifiedKeys = false;
+        StatusMessage = $"Exported {allKeys.Count} translation key(s) to {outputPath}.";
     }
 
     private string ExtractBaseFileName(string filePath, FileType fileType)
