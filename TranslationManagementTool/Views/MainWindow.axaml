@@ -24,6 +24,12 @@
                     CommandParameter="{Binding $parent[Window]}"
                     Margin="0,0,10,0"/>
             
+            <Button Content="Export Modified"
+                    Command="{Binding ExportModifiedFilesCommand}"
+                    CommandParameter="{Binding $parent[Window]}"
+                    IsEnabled="{Binding HasModifiedKeys}"
+                    Margin="0,0,10,0"/>
+            
             <TextBlock Text="Search:" 
                        VerticalAlignment="Center" 
                        Margin="20,0,5,0"/>
