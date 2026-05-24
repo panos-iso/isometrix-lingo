@@ -1,0 +1,19 @@
+{
+  "login": {
+    "title": "Iniciar Sesión",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "submit": "Entrar"
+  },
+  "navigation": {
+    "home": "Inicio",
+    "profile": "Perfil",
+    "settings": "Configuración",
+    "logout": "Cerrar Sesión"
+  },
+  "messages": {
+    "welcome": "¡Bienvenido de nuevo!",
+    "error": "Ocurrió un error",
+    "success": "Operación completada exitosamente"
+  }
+}

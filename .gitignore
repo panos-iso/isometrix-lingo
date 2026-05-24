@@ -66,3 +66,6 @@ artifacts/
 # Project workflow folders
 specs/
 plans/
+
+# Export output
+output/
