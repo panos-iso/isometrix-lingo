@@ -36,10 +36,10 @@ public partial class EditTranslationViewModel : ViewModelBase
         // Always show all supported languages (en and es)
         foreach (var language in translationStore.Languages.OrderBy(l => l))
         {
-            var value = translationKey.LanguageValues.TryGetValue(language, out var existingValue) 
-                ? existingValue 
+            var value = translationKey.LanguageValues.TryGetValue(language, out var existingValue)
+                ? existingValue
                 : string.Empty;
-            
+
             LanguageValues.Add(new LanguageValueItem
             {
                 LanguageCode = language,

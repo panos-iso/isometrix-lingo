@@ -49,7 +49,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _resxReader = new ResxTranslationFileReader();
         _jsonWriter = new JsonTranslationFileWriter();
         _resxWriter = new ResxTranslationFileWriter();
-        
+
         // Add "All Files" as first option (null value)
         AvailableSourceFiles.Add(null);
     }
@@ -80,21 +80,21 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         var translationFiles = new List<TranslationFile>();
-        
+
         foreach (var file in files)
         {
             try
             {
                 var filePath = file.Path.LocalPath;
                 var extension = Path.GetExtension(filePath).ToLower();
-                
+
                 TranslationFile translationFile = extension switch
                 {
                     ".json" => _jsonReader.ReadFile(filePath),
                     ".resx" => _resxReader.ReadFile(filePath),
                     _ => throw new NotSupportedException($"Unsupported file type: {extension}")
                 };
-                
+
                 translationFiles.Add(translationFile);
             }
             catch
@@ -113,7 +113,7 @@ public partial class MainWindowViewModel : ViewModelBase
             var consolidated = group.Key.FileType == FileType.Json
                 ? _jsonReader.ConsolidateKeys(group.ToList())
                 : _resxReader.ConsolidateKeys(group.ToList());
-            
+
             _translationStore.AddTranslations(consolidated);
         }
 
@@ -154,18 +154,18 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         // Keep the selected file if it still exists
         var currentSelection = SelectedSourceFile;
-        
+
         AvailableSourceFiles.Clear();
-        
+
         // Add "All Files" option (null)
         AvailableSourceFiles.Add(null);
-        
+
         // Add all source files
         foreach (var sourceFile in _translationStore.SourceFiles.OrderBy(f => f.Name).ThenBy(f => f.Type))
         {
             AvailableSourceFiles.Add(sourceFile);
         }
-        
+
         // Restore selection if it still exists, otherwise select "All Files"
         if (currentSelection != null && _translationStore.SourceFiles.Contains(currentSelection))
         {
@@ -189,7 +189,7 @@ public partial class MainWindowViewModel : ViewModelBase
             // Show only selected file
             _translationStore.FilterBySourceFiles(new List<SourceFile> { value });
         }
-        
+
         UpdateStatusMessage();
     }
 

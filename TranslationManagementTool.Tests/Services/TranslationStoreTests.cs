@@ -167,7 +167,7 @@ public class TranslationStoreTests
         Assert.Equal(2, store.Languages.Count);
         Assert.Contains("en", store.Languages);
         Assert.Contains("es", store.Languages);
-        
+
         // Verify that unsupported language (fr) was filtered out
         var key2 = store.FilteredKeys.First(k => k.Key == "key2");
         Assert.DoesNotContain("fr", key2.LanguageValues.Keys);
@@ -191,7 +191,7 @@ public class TranslationStoreTests
         Assert.Equal(2, store.Languages.Count);
         Assert.Contains("en", store.Languages);
         Assert.Contains("es", store.Languages);
-        
+
         // But keys and source files are cleared
         Assert.Empty(store.FilteredKeys);
         Assert.Empty(store.SourceFiles);

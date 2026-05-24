@@ -23,7 +23,7 @@ public class TranslationStore
         foreach (var key in keys)
         {
             _allKeys.Add(key);
-            
+
             // Add source file if not already tracked
             if (!_sourceFiles.Any(sf => sf.Name == key.Source.Name && sf.Type == key.Source.Type))
             {
@@ -34,7 +34,7 @@ public class TranslationStore
             var unsupportedLanguages = key.LanguageValues.Keys
                 .Where(lang => !_supportedLanguages.Contains(lang))
                 .ToList();
-            
+
             foreach (var lang in unsupportedLanguages)
             {
                 key.LanguageValues.Remove(lang);
@@ -75,7 +75,7 @@ public class TranslationStore
         }
         else
         {
-            keysToShow = _allKeys.Where(k => _currentFileFilter.Any(sf => 
+            keysToShow = _allKeys.Where(k => _currentFileFilter.Any(sf =>
                 sf.Name == k.Source.Name && sf.Type == k.Source.Type));
         }
 
@@ -143,7 +143,7 @@ public class TranslationStore
     public void AddKey(TranslationKey key)
     {
         _allKeys.Add(key);
-        
+
         // Add source file if not already tracked
         if (!_sourceFiles.Any(sf => sf.Name == key.Source.Name && sf.Type == key.Source.Type))
         {
