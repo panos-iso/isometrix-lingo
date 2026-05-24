@@ -203,4 +203,13 @@ public partial class MainWindow : Window
         };
         TranslationsGrid.Columns.Add(actionsColumn);
     }
+
+    private void OnGridDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        if (TranslationsGrid.SelectedItem is TranslationKey selectedKey && 
+            DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.EditTranslationCommand.Execute(selectedKey);
+        }
+    }
 }

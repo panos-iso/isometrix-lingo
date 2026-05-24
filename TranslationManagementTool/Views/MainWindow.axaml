@@ -99,7 +99,8 @@
                       BorderThickness="1"
                       BorderBrush="Gray"
                       CanUserResizeColumns="True"
-                      CanUserReorderColumns="False">
+                      CanUserReorderColumns="False"
+                      DoubleTapped="OnGridDoubleTapped">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Key" 
                                         Binding="{Binding Key}" 
