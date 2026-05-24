@@ -155,7 +155,7 @@ public partial class MainWindowViewModel : ViewModelBase
         StatusMessage = $"Imported {files.Count} file(s) with {_translationStore.FilteredKeys.Count} translation keys.";
         HasKeys = _translationStore.GetAllKeys().Count > 0;
         LanguagesChanged?.Invoke(this, EventArgs.Empty);
-        
+
         // Auto-save imported progress
         SaveProgress();
     }
@@ -184,7 +184,7 @@ public partial class MainWindowViewModel : ViewModelBase
             UpdateFileFilters();
             StatusMessage = $"Added new key '{newKey.Key}' to {newKey.Source.Name}.";
             LanguagesChanged?.Invoke(this, EventArgs.Empty);
-            
+
             // Auto-save after adding key
             SaveProgress();
         }

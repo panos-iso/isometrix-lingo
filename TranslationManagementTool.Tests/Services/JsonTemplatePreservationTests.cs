@@ -98,13 +98,13 @@ public class JsonTemplatePreservationTests : IDisposable
 
         var outputJson = File.ReadAllText(outputFile);
         var doc = JsonDocument.Parse(outputJson);
-        
+
         // Existing key should be updated
         Assert.Equal("Updated Value", doc.RootElement.GetProperty("ExistingKey").GetString());
-        
+
         // Nested key should be updated
         Assert.Equal("Updated Nested Value", doc.RootElement.GetProperty("nested").GetProperty("AnotherKey").GetString());
-        
+
         // New key should be added
         Assert.Equal("New Value", doc.RootElement.GetProperty("NewKey").GetString());
     }
@@ -138,7 +138,7 @@ public class JsonTemplatePreservationTests : IDisposable
 
         var outputJson = File.ReadAllText(outputFile);
         var doc = JsonDocument.Parse(outputJson);
-        
+
         Assert.Equal("Test Value", doc.RootElement.GetProperty("TestKey").GetString());
         Assert.Equal("Nested Value", doc.RootElement.GetProperty("nested").GetProperty("NestedKey").GetString());
     }
@@ -181,12 +181,12 @@ public class JsonTemplatePreservationTests : IDisposable
         // Assert
         var outputFile = Path.Combine(_testDirectory, "test.en.json");
         var outputJson = File.ReadAllText(outputFile);
-        
+
         // Verify order is preserved (zebra should appear before apple in the JSON text)
         var zebraIndex = outputJson.IndexOf("\"zebra\"");
         var appleIndex = outputJson.IndexOf("\"apple\"");
         var middleIndex = outputJson.IndexOf("\"middle\"");
-        
+
         Assert.True(zebraIndex < appleIndex, "zebra should appear before apple");
         Assert.True(appleIndex < middleIndex, "apple should appear before middle");
     }

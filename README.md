@@ -59,19 +59,24 @@ No .NET runtime installation required - fully self-contained!
 ### Supported File Formats
 
 #### JSON Files (Frontend)
+
 Files must follow the pattern: `BaseName.language.json`
 
 Examples:
+
 - `Settings.en.json` → English translations for "Settings"
 - `Settings.es.json` → Spanish translations for "Settings"
 - `Forms.en.json` → English translations for "Forms"
 
 #### RESX Files (Backend)
+
 Files must follow the pattern:
+
 - English: `BaseName.resx` (no language code)
 - Spanish: `BaseName_es.resx` (underscore + language code)
 
 Examples:
+
 - `FormTranslations.resx` → English translations
 - `FormTranslations_es.resx` → Spanish translations
 - `CommonTranslations.resx` → English translations
@@ -84,6 +89,7 @@ Currently supports: **English (en)** and **Spanish (es)**
 ### Template Preservation
 
 The tool preserves the original structure of your files:
+
 - **JSON**: Maintains key order and nested structure
 - **RESX**: Preserves all `<resheader>` elements and data element order
 - **Updates**: Existing keys are updated in place, new keys are appended

@@ -65,12 +65,12 @@ public class JsonTranslationFileWriter
             // Parse the template to preserve structure and order
             try
             {
-                jsonObject = JsonSerializer.Deserialize<Dictionary<string, object>>(template, _options) 
+                jsonObject = JsonSerializer.Deserialize<Dictionary<string, object>>(template, _options)
                     ?? new Dictionary<string, object>();
-                
+
                 // Update existing values and track processed keys
                 var processedKeys = new HashSet<string>();
-                
+
                 foreach (var key in keys)
                 {
                     if (key.LanguageValues.TryGetValue(language, out var value))
@@ -81,7 +81,7 @@ public class JsonTranslationFileWriter
                         }
                     }
                 }
-                
+
                 // Add new keys that weren't in the template
                 foreach (var key in keys)
                 {
@@ -133,7 +133,7 @@ public class JsonTranslationFileWriter
         for (int i = 0; i < parts.Length - 1; i++)
         {
             var part = parts[i];
-            
+
             if (!current.ContainsKey(part))
             {
                 return false; // Path doesn't exist in template
@@ -142,7 +142,7 @@ public class JsonTranslationFileWriter
             if (current[part] is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Object)
             {
                 // Convert JsonElement to Dictionary for modification
-                var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonElement.GetRawText(), _options) 
+                var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonElement.GetRawText(), _options)
                     ?? new Dictionary<string, object>();
                 current[part] = dict;
                 current = dict;
@@ -175,7 +175,7 @@ public class JsonTranslationFileWriter
         for (int i = 0; i < parts.Length - 1; i++)
         {
             var part = parts[i];
-            
+
             if (!current.ContainsKey(part))
             {
                 current[part] = new Dictionary<string, object>();

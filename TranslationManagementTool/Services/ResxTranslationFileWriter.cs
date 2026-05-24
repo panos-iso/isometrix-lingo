@@ -43,14 +43,14 @@ public class ResxTranslationFileWriter
             foreach (var language in languages)
             {
                 // For English, use base filename without language code; for others, add underscore + language
-                var fileName = language == "en" 
-                    ? $"{sourceFile}.resx" 
+                var fileName = language == "en"
+                    ? $"{sourceFile}.resx"
                     : $"{sourceFile}_{language}.resx";
                 var filePath = Path.Combine(outputDirectory, fileName);
 
                 // Get template for this source file if available
                 var template = templateProvider?.Invoke(sourceFile);
-                
+
                 WriteLanguageFile(filePath, fileKeys, language, template);
             }
         }
@@ -59,17 +59,17 @@ public class ResxTranslationFileWriter
     private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, XDocument? template)
     {
         XElement root;
-        
+
         if (template != null)
         {
             // Use the provided template (clone it to avoid modifying the original)
             var clonedTemplate = new XDocument(template);
             root = clonedTemplate.Root ?? throw new InvalidOperationException("Template root is null");
-            
+
             // Update existing data elements and track which keys we've processed
             var processedKeys = new HashSet<string>();
             var existingDataElements = root.Elements("data").ToList();
-            
+
             foreach (var dataElement in existingDataElements)
             {
                 var keyName = dataElement.Attribute("name")?.Value;
@@ -77,7 +77,7 @@ public class ResxTranslationFileWriter
                 {
                     // Find the translation key for this data element
                     var translationKey = keys.FirstOrDefault(k => k.Key == keyName);
-                    
+
                     if (translationKey != null && translationKey.LanguageValues.TryGetValue(language, out var value))
                     {
                         // Update the value in the existing data element
@@ -94,7 +94,7 @@ public class ResxTranslationFileWriter
                     }
                 }
             }
-            
+
             // Add new data elements for keys that weren't in the template
             foreach (var key in keys.OrderBy(k => k.Key))
             {
@@ -105,7 +105,7 @@ public class ResxTranslationFileWriter
                         new XAttribute(XNamespace.Xml + "space", "preserve"),
                         new XElement("value", value)
                     );
-                    
+
                     root.Add(dataElement);
                 }
             }
@@ -114,7 +114,7 @@ public class ResxTranslationFileWriter
         {
             // Fall back to creating a new RESX structure
             root = CreateResxDocument();
-            
+
             // Add data elements for each key
             foreach (var key in keys.OrderBy(k => k.Key))
             {

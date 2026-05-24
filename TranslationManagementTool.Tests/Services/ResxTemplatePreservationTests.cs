@@ -47,7 +47,7 @@ public class ResxTemplatePreservationTests : IDisposable
         Assert.NotEmpty(resHeaders);
         Assert.Contains(resHeaders, rh => rh.Attribute("name")?.Value == "resmimetype");
         Assert.Contains(resHeaders, rh => rh.Attribute("name")?.Value == "version");
-        
+
         // Template should preserve data elements for updating during export
         var dataElements = template.Descendants("data").ToList();
         Assert.NotEmpty(dataElements);
@@ -110,20 +110,20 @@ public class ResxTemplatePreservationTests : IDisposable
 
         var outputDoc = XDocument.Load(outputFile);
         var dataElements = outputDoc.Descendants("data").ToList();
-        
+
         // Should have 3 data elements total
         Assert.Equal(3, dataElements.Count);
-        
+
         // Existing key should be updated
         var existingData = dataElements.FirstOrDefault(d => d.Attribute("name")?.Value == "ExistingKey");
         Assert.NotNull(existingData);
         Assert.Equal("Updated Value", existingData.Element("value")?.Value);
-        
+
         // Another key should remain unchanged
         var anotherData = dataElements.FirstOrDefault(d => d.Attribute("name")?.Value == "AnotherKey");
         Assert.NotNull(anotherData);
         Assert.Equal("Another Old Value", anotherData.Element("value")?.Value);
-        
+
         // New key should be added
         var newData = dataElements.FirstOrDefault(d => d.Attribute("name")?.Value == "NewKey");
         Assert.NotNull(newData);
@@ -152,11 +152,11 @@ public class ResxTemplatePreservationTests : IDisposable
         Assert.True(File.Exists(outputFile));
 
         var outputDoc = XDocument.Load(outputFile);
-        
+
         // Should have standard resheaders
         var resHeaders = outputDoc.Descendants("resheader").ToList();
         Assert.NotEmpty(resHeaders);
-        
+
         // Should have the data element
         var dataElement = outputDoc.Descendants("data")
             .FirstOrDefault(d => d.Attribute("name")?.Value == "TestKey");

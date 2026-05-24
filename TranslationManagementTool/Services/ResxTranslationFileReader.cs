@@ -56,7 +56,7 @@ public class ResxTranslationFileReader
     {
         var fileName = Path.GetFileName(filePath);
         var match = _languagePattern.Match(fileName);
-        
+
         if (match.Success)
         {
             return match.Groups[1].Value.ToLower();
@@ -75,7 +75,7 @@ public class ResxTranslationFileReader
     {
         var fileName = Path.GetFileNameWithoutExtension(filePath);
         var match = _languagePattern.Match(Path.GetFileName(filePath));
-        
+
         if (match.Success)
         {
             // Remove language suffix (e.g., "FormTranslations_es" → "FormTranslations")
@@ -126,7 +126,7 @@ public class ResxTranslationFileReader
     public XDocument ExtractTemplate(string filePath)
     {
         var xdoc = XDocument.Load(filePath);
-        
+
         // Return the entire document - we'll update data elements in place during export
         return new XDocument(xdoc);
     }

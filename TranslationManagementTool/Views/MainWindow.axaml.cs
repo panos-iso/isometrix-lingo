@@ -99,7 +99,7 @@ public partial class MainWindow : Window
         {
             viewModel.LanguagesChanged += OnLanguagesChanged;
             viewModel.OnEditTranslationRequested += OnEditTranslationRequested;
-            
+
             // Initialize language columns immediately
             OnLanguagesChanged(this, EventArgs.Empty);
         }
@@ -131,7 +131,7 @@ public partial class MainWindow : Window
                 var currentStatus = mainViewModel.StatusMessage.Split('.')[0];
                 mainViewModel.StatusMessage = $"{currentStatus}. {modifiedCount} key(s) modified.";
             }
-            
+
             // Auto-save after editing
             mainViewModel.SaveProgressCommand.Execute(null);
         }
@@ -206,7 +206,7 @@ public partial class MainWindow : Window
 
     private void OnGridDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
     {
-        if (TranslationsGrid.SelectedItem is TranslationKey selectedKey && 
+        if (TranslationsGrid.SelectedItem is TranslationKey selectedKey &&
             DataContext is MainWindowViewModel viewModel)
         {
             viewModel.EditTranslationCommand.Execute(selectedKey);

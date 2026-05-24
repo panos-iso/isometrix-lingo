@@ -71,7 +71,7 @@ public class JsonTranslationFileWriterTests : IDisposable
         var filePath = Path.Combine(_testDirectory, "messages.en.json");
         var json = File.ReadAllText(filePath);
         var doc = JsonDocument.Parse(json);
-        
+
         Assert.Equal("Hello World", doc.RootElement.GetProperty("greeting").GetString());
     }
 
@@ -102,7 +102,7 @@ public class JsonTranslationFileWriterTests : IDisposable
         var filePath = Path.Combine(_testDirectory, "forms.en.json");
         var json = File.ReadAllText(filePath);
         var doc = JsonDocument.Parse(json);
-        
+
         var login = doc.RootElement.GetProperty("login");
         Assert.Equal("Username", login.GetProperty("username").GetString());
         Assert.Equal("Password", login.GetProperty("password").GetString());
@@ -204,7 +204,7 @@ public class JsonTranslationFileWriterTests : IDisposable
         var filePath = Path.Combine(_testDirectory, "forms.en.json");
         var json = File.ReadAllText(filePath);
         var doc = JsonDocument.Parse(json);
-        
+
         Assert.Equal("Modified Value", doc.RootElement.GetProperty("modified").GetString());
     }
 }
