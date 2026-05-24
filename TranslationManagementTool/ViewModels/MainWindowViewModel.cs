@@ -4,7 +4,9 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
@@ -361,7 +363,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (startOver)
         {
-            StartOver();
+            await StartOver();
         }
     }
 
@@ -382,8 +384,63 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void StartOver()
+    private async Task StartOver()
     {
+        var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+
+        if (window == null) return;
+
+        // Show confirmation dialog
+        var dialog = new Window
+        {
+            Title = "Confirm Start Over",
+            Width = 400,
+            Height = 180,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        var panel = new StackPanel
+        {
+            Margin = new Thickness(20),
+            Spacing = 20
+        };
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Are you sure you want to start over? This will clear all translations and delete saved progress.",
+            TextWrapping = TextWrapping.Wrap,
+            FontWeight = FontWeight.SemiBold
+        });
+
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Spacing = 10
+        };
+
+        var confirmButton = new Button { Content = "Yes, Start Over", Width = 130 };
+        var cancelButton = new Button { Content = "Cancel", Width = 100 };
+
+        bool confirmed = false;
+
+        confirmButton.Click += (s, args) => { confirmed = true; dialog.Close(); };
+        cancelButton.Click += (s, args) => { confirmed = false; dialog.Close(); };
+
+        buttonPanel.Children.Add(confirmButton);
+        buttonPanel.Children.Add(cancelButton);
+
+        panel.Children.Add(buttonPanel);
+        dialog.Content = panel;
+
+        await dialog.ShowDialog(window);
+
+        if (!confirmed) return;
+
+        // Proceed with start over
         _translationStore.Clear();
         _progressService.ClearProgress();
         HasKeys = false;
