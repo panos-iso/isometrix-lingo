@@ -30,24 +30,21 @@
                 <!-- Source File -->
                 <StackPanel>
                     <TextBlock Text="Source File *" FontWeight="Bold" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding SourceFileName}" 
-                             PlaceholderText="e.g., forms or messages"/>
-                    <TextBlock Text="Existing files:" FontSize="11" Foreground="Gray" Margin="0,5,0,0"/>
-                    <ItemsControl ItemsSource="{Binding ExistingSourceFiles}">
-                        <ItemsControl.ItemTemplate>
+                    <ComboBox ItemsSource="{Binding AvailableSourceFiles}"
+                              SelectedItem="{Binding SelectedSourceFile}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding}" FontSize="11" Foreground="Gray" Margin="5,2,0,0"/>
+                                <TextBlock>
+                                    <TextBlock.Text>
+                                        <MultiBinding StringFormat="{}{0} ({1})">
+                                            <Binding Path="Name"/>
+                                            <Binding Path="Type"/>
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-
-                <!-- File Type -->
-                <StackPanel>
-                    <TextBlock Text="File Type *" FontWeight="Bold" Margin="0,0,0,5"/>
-                    <ComboBox SelectedItem="{Binding FileType}" Width="200" HorizontalAlignment="Left">
-                        <ComboBoxItem Content="JSON" Tag="Json"/>
-                        <ComboBoxItem Content="RESX" Tag="Resx"/>
+                        </ComboBox.ItemTemplate>
                     </ComboBox>
                 </StackPanel>
 

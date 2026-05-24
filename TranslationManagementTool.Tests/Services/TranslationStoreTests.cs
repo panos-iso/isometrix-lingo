@@ -25,8 +25,8 @@ public class TranslationStoreTests
         // Assert
         Assert.Equal(2, store.FilteredKeys.Count);
         Assert.Equal(2, store.SourceFiles.Count);
-        Assert.Contains("file1", store.SourceFiles);
-        Assert.Contains("file2", store.SourceFiles);
+        Assert.Contains(store.SourceFiles, sf => sf.Name == "file1" && sf.Type == FileType.Json);
+        Assert.Contains(store.SourceFiles, sf => sf.Name == "file2" && sf.Type == FileType.Json);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class TranslationStoreTests
         store.AddTranslations(keys);
 
         // Act
-        store.FilterBySourceFiles(new List<string> { "file1" });
+        store.FilterBySourceFiles(new List<SourceFile> { new SourceFile("file1", FileType.Json) });
 
         // Assert
         Assert.Equal(2, store.FilteredKeys.Count);
@@ -163,15 +163,18 @@ public class TranslationStoreTests
         // Act
         store.AddTranslations(keys);
 
-        // Assert
-        Assert.Equal(3, store.Languages.Count);
+        // Assert - Only supported languages (en and es) are tracked
+        Assert.Equal(2, store.Languages.Count);
         Assert.Contains("en", store.Languages);
         Assert.Contains("es", store.Languages);
-        Assert.Contains("fr", store.Languages);
+        
+        // Verify that unsupported language (fr) was filtered out
+        var key2 = store.FilteredKeys.First(k => k.Key == "key2");
+        Assert.DoesNotContain("fr", key2.LanguageValues.Keys);
     }
 
     [Fact]
-    public void Clear_RemovesLanguages()
+    public void Clear_RemovesKeysAndSourceFiles()
     {
         // Arrange
         var store = new TranslationStore();
@@ -184,8 +187,14 @@ public class TranslationStoreTests
         // Act
         store.Clear();
 
-        // Assert
-        Assert.Empty(store.Languages);
+        // Assert - Languages remain static (en and es)
+        Assert.Equal(2, store.Languages.Count);
+        Assert.Contains("en", store.Languages);
+        Assert.Contains("es", store.Languages);
+        
+        // But keys and source files are cleared
+        Assert.Empty(store.FilteredKeys);
+        Assert.Empty(store.SourceFiles);
     }
 
     [Fact]
@@ -244,7 +253,7 @@ public class TranslationStoreTests
         store.AddTranslations(keys);
 
         // Act - filter by file first
-        store.FilterBySourceFiles(new List<string> { "forms" });
+        store.FilterBySourceFiles(new List<SourceFile> { new SourceFile("forms", FileType.Json) });
         // Then search
         store.FilterBySearchTerm("login");
 

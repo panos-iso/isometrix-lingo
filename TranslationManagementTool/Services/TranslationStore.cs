@@ -9,26 +9,35 @@ public class TranslationStore
 {
     private readonly List<TranslationKey> _allKeys = new();
     private readonly ObservableCollection<TranslationKey> _filteredKeys = new();
-    private readonly HashSet<string> _sourceFiles = new();
-    private readonly HashSet<string> _languages = new();
-    private List<string>? _currentFileFilter = null;
+    private readonly List<SourceFile> _sourceFiles = new();
+    private static readonly List<string> _supportedLanguages = new() { "en", "es" };
+    private List<SourceFile>? _currentFileFilter = null;
     private string _currentSearchTerm = string.Empty;
 
     public ObservableCollection<TranslationKey> FilteredKeys => _filteredKeys;
-    public IReadOnlyCollection<string> SourceFiles => _sourceFiles;
-    public IReadOnlyCollection<string> Languages => _languages;
+    public IReadOnlyCollection<SourceFile> SourceFiles => _sourceFiles;
+    public IReadOnlyCollection<string> Languages => _supportedLanguages;
 
     public void AddTranslations(List<TranslationKey> keys)
     {
         foreach (var key in keys)
         {
             _allKeys.Add(key);
-            _sourceFiles.Add(key.Source.Name);
-
-            // Track all languages found in this key
-            foreach (var language in key.LanguageValues.Keys)
+            
+            // Add source file if not already tracked
+            if (!_sourceFiles.Any(sf => sf.Name == key.Source.Name && sf.Type == key.Source.Type))
             {
-                _languages.Add(language);
+                _sourceFiles.Add(key.Source);
+            }
+
+            // Filter out unsupported languages from the key
+            var unsupportedLanguages = key.LanguageValues.Keys
+                .Where(lang => !_supportedLanguages.Contains(lang))
+                .ToList();
+            
+            foreach (var lang in unsupportedLanguages)
+            {
+                key.LanguageValues.Remove(lang);
             }
         }
         RefreshFilteredKeys();
@@ -39,12 +48,11 @@ public class TranslationStore
         _allKeys.Clear();
         _filteredKeys.Clear();
         _sourceFiles.Clear();
-        _languages.Clear();
     }
 
-    public void FilterBySourceFiles(List<string>? fileNames)
+    public void FilterBySourceFiles(List<SourceFile>? sourceFiles)
     {
-        _currentFileFilter = fileNames;
+        _currentFileFilter = sourceFiles;
         ApplyFilters();
     }
 
@@ -67,7 +75,8 @@ public class TranslationStore
         }
         else
         {
-            keysToShow = _allKeys.Where(k => _currentFileFilter.Contains(k.Source.Name));
+            keysToShow = _allKeys.Where(k => _currentFileFilter.Any(sf => 
+                sf.Name == k.Source.Name && sf.Type == k.Source.Type));
         }
 
         // Apply search filter if present
@@ -134,12 +143,11 @@ public class TranslationStore
     public void AddKey(TranslationKey key)
     {
         _allKeys.Add(key);
-        _sourceFiles.Add(key.Source.Name);
-
-        // Track all languages in this key
-        foreach (var language in key.LanguageValues.Keys)
+        
+        // Add source file if not already tracked
+        if (!_sourceFiles.Any(sf => sf.Name == key.Source.Name && sf.Type == key.Source.Type))
         {
-            _languages.Add(language);
+            _sourceFiles.Add(key.Source);
         }
 
         RefreshFilteredKeys();

@@ -150,9 +150,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private void UpdateFileFilters()
     {
         FileFilters.Clear();
-        foreach (var sourceFile in _translationStore.SourceFiles.OrderBy(f => f))
+        foreach (var sourceFile in _translationStore.SourceFiles.OrderBy(f => f.Name).ThenBy(f => f.Type))
         {
-            var filterItem = new FileFilterItem { FileName = sourceFile, IsSelected = true };
+            var filterItem = new FileFilterItem { Source = sourceFile, IsSelected = true };
             FileFilters.Add(filterItem);
         }
     }
@@ -161,7 +161,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var selectedFiles = FileFilters
             .Where(f => f.IsSelected)
-            .Select(f => f.FileName)
+            .Select(f => f.Source)
             .ToList();
 
         if (selectedFiles.Count == 0)
