@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -98,6 +99,9 @@ public partial class MainWindow : Window
         {
             viewModel.LanguagesChanged += OnLanguagesChanged;
             viewModel.OnEditTranslationRequested += OnEditTranslationRequested;
+            
+            // Initialize language columns immediately
+            OnLanguagesChanged(this, EventArgs.Empty);
         }
     }
 
