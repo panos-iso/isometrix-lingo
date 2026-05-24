@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
@@ -26,9 +27,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly JsonTranslationFileWriter _jsonWriter;
     private readonly ResxTranslationFileWriter _resxWriter;
     private readonly ProgressService _progressService;
+    private readonly UserSettingsService _settingsService;
 
     [ObservableProperty]
     private string _statusMessage = "Ready. Click Import to load translation files.";
+
+    [ObservableProperty]
+    private string _username = "User";
 
     [ObservableProperty]
     private ObservableCollection<SourceFile?> _availableSourceFiles = new();
@@ -58,6 +63,10 @@ public partial class MainWindowViewModel : ViewModelBase
         _jsonWriter = new JsonTranslationFileWriter();
         _resxWriter = new ResxTranslationFileWriter();
         _progressService = new ProgressService();
+        _settingsService = new UserSettingsService();
+
+        // Load username from settings
+        LoadUserSettings();
 
         // Add "All Files" as first option (null value)
         AvailableSourceFiles.Add(null);
@@ -496,5 +505,111 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     public event EventHandler<TranslationKey>? OnEditTranslationRequested;
+
+    private void LoadUserSettings()
+    {
+        var settings = _settingsService.Load();
+        if (settings != null && !string.IsNullOrWhiteSpace(settings.Username))
+        {
+            Username = settings.Username;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ShowProfile(Window window)
+    {
+        // Create profile dialog
+        var dialog = new Window
+        {
+            Title = "User Profile",
+            Width = 400,
+            Height = 180,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        var mainPanel = new DockPanel
+        {
+            Margin = new Thickness(20),
+            LastChildFill = true
+        };
+
+        // Username section
+        var contentPanel = new StackPanel
+        {
+            Spacing = 10
+        };
+
+        contentPanel.Children.Add(new TextBlock
+        {
+            Text = "Username",
+            FontWeight = FontWeight.SemiBold
+        });
+
+        var usernameBox = new TextBox
+        {
+            Text = Username
+        };
+        contentPanel.Children.Add(usernameBox);
+
+        DockPanel.SetDock(contentPanel, Dock.Top);
+        mainPanel.Children.Add(contentPanel);
+
+        // Buttons at bottom right
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = 10,
+            Margin = new Thickness(0, 15, 0, 0)
+        };
+        DockPanel.SetDock(buttonPanel, Dock.Bottom);
+
+        var saveButton = new Button
+        {
+            Content = "Save",
+            Width = 80,
+            IsEnabled = false,
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
+
+        var cancelButton = new Button
+        {
+            Content = "Cancel",
+            Width = 80,
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
+
+        // Enable save button only when username changes
+        usernameBox.TextChanged += (s, e) =>
+        {
+            var newText = usernameBox.Text?.Trim() ?? "";
+            saveButton.IsEnabled = !string.IsNullOrWhiteSpace(newText) && newText != Username;
+        };
+
+        saveButton.Click += (s, args) =>
+        {
+            var newUsername = usernameBox.Text?.Trim();
+            if (!string.IsNullOrWhiteSpace(newUsername) && newUsername != Username)
+            {
+                Username = newUsername;
+                var settings = new UserSettings { Username = newUsername };
+                _settingsService.Save(settings);
+                StatusMessage = $"Username updated to '{newUsername}'.";
+            }
+            dialog.Close();
+        };
+
+        cancelButton.Click += (s, args) => { dialog.Close(); };
+
+        buttonPanel.Children.Add(cancelButton);
+        buttonPanel.Children.Add(saveButton);
+
+        mainPanel.Children.Add(buttonPanel);
+        mainPanel.Children.Add(new Border()); // Filler
+
+        dialog.Content = mainPanel;
+        await dialog.ShowDialog(window);
+    }
 }
 
