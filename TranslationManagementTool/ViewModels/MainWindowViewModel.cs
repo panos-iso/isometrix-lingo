@@ -35,7 +35,10 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _searchText = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanImport))]
     private bool _hasKeys;
+
+    public bool CanImport => !HasKeys;
 
     public event EventHandler? LanguagesChanged;
 

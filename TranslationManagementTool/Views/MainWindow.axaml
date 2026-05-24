@@ -28,6 +28,7 @@
             <Button Content="Import Files"
                     Command="{Binding ImportFilesCommand}"
                     CommandParameter="{Binding $parent[Window]}"
+                    IsEnabled="{Binding CanImport}"
                     Margin="0,0,10,0"/>
             
             <Button Content="Export All"
