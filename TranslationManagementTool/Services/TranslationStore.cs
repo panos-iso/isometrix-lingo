@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Xml.Linq;
 using TranslationManagementTool.Models;
 
 namespace TranslationManagementTool.Services;
@@ -11,6 +12,8 @@ public class TranslationStore
     private readonly List<TranslationKey> _allKeys = new();
     private readonly ObservableCollection<TranslationKey> _filteredKeys = new();
     private readonly List<SourceFile> _sourceFiles = new();
+    private readonly Dictionary<string, XDocument> _resxTemplates = new();
+    private readonly Dictionary<string, string> _jsonTemplates = new();
     private static readonly List<string> _supportedLanguages = new() { "en", "es" };
     private List<SourceFile>? _currentFileFilter = null;
     private string _currentSearchTerm = string.Empty;
@@ -53,6 +56,28 @@ public class TranslationStore
         _allKeys.Clear();
         _filteredKeys.Clear();
         _sourceFiles.Clear();
+        _resxTemplates.Clear();
+        _jsonTemplates.Clear();
+    }
+
+    public void SetResxTemplate(string sourceFileName, XDocument template)
+    {
+        _resxTemplates[sourceFileName] = template;
+    }
+
+    public XDocument? GetResxTemplate(string sourceFileName)
+    {
+        return _resxTemplates.TryGetValue(sourceFileName, out var template) ? template : null;
+    }
+
+    public void SetJsonTemplate(string sourceFileName, string template)
+    {
+        _jsonTemplates[sourceFileName] = template;
+    }
+
+    public string? GetJsonTemplate(string sourceFileName)
+    {
+        return _jsonTemplates.TryGetValue(sourceFileName, out var template) ? template : null;
     }
 
     public void FilterBySourceFiles(List<SourceFile>? sourceFiles)

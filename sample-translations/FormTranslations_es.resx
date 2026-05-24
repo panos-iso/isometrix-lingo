@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+    <resheader name="resmimetype">
+        <value>text/microsoft-resx</value>
+    </resheader>
+    <resheader name="version">
+        <value>2.0</value>
+    </resheader>
+    <resheader name="reader">
+        <value>System.Resources.ResXResourceReader, System.Windows.Forms, ...</value>
+    </resheader>
+    <resheader name="writer">
+        <value>System.Resources.ResXResourceWriter, System.Windows.Forms, ...</value>
+    </resheader>
+    <data name="FormStatus" xml:space="preserve">
+    <value>Estado del Formulario</value>
+  </data>
+    <data name="CompletedOn" xml:space="preserve">
+    <value>Completado el</value>
+  </data>
+    <data name="DueOn" xml:space="preserve">
+    <value>Vence el</value>
+  </data>
+    <data name="Question" xml:space="preserve">
+    <value>Pregunta</value>
+  </data>
+    <data name="Answer" xml:space="preserve">
+    <value>Respuesta</value>
+  </data>
+    <data name="StartDate" xml:space="preserve">
+    <value>Fecha de Inicio</value>
+  </data>
+    <data name="EndDate" xml:space="preserve">
+    <value>Fecha de Fin</value>
+  </data>
+    <data name="Submit" xml:space="preserve">
+    <value>Enviar</value>
+  </data>
+    <data name="Cancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+</root>

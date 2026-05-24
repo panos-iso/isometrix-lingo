@@ -1,18 +1,21 @@
-# Translation Management Tool
+# Isometrix Lingo
 
-Cross-platform desktop application for managing translation files (JSON and RESX).
+Cross-platform desktop application for managing translation files (JSON and RESX) for the Isometrix Lumina platform.
 
 Built with **Avalonia UI** and **.NET 10** for macOS and Windows.
 
 ## Features
 
-- 📂 **Import JSON translation files** with automatic language detection
+- 📂 **Import JSON and RESX files** with automatic language detection
 - 🔍 **Search** across keys and all language values
-- 🎯 **Filter** by source file with toggle buttons
-- ✏️ **Edit translations** for all languages in one dialog
-- 💾 **Export modified translations** to JSON files
-- 🌍 **Multi-language support** with dynamic column generation
-- 🔄 **Key consolidation** - automatically merges keys from multiple files
+- 🎯 **Filter** by source file with dropdown selector
+- ✏️ **Edit translations** - double-click rows or use edit icon
+- ➕ **Add new keys** with the "Add Key" button
+- 💾 **Export all translations** preserving original file structure
+- 🌍 **Multi-language support** (English and Spanish)
+- 🔄 **Save/Load progress** - resume your work anytime
+- 📋 **Template preservation** - maintains original file structure and order
+- 🎨 **Theme-aware UI** - adapts to system dark/light mode
 
 ## Download
 
@@ -31,37 +34,65 @@ Download the latest release for your platform:
 
 ```bash
 tar -xzf TranslationTool-macOS-arm64.tar.gz
-./TranslationManagementTool
+./isometrix-lingo
 ```
 
 **Windows:**
 
 1. Extract `TranslationTool-Windows-x64.zip`
-2. Run `TranslationManagementTool.exe`
+2. Run `isometrix-lingo.exe`
 
 No .NET runtime installation required - fully self-contained!
 
 ## Usage
 
-1. **First Run**: Enter your name when prompted
-2. **Import Files**: Click "Import Files" and select JSON translation files (e.g., `forms_en.json`, `forms_es.json`)
-3. **View Translations**: Browse all keys with values for each language
-4. **Filter**: Toggle file filters to show specific translation files
-5. **Search**: Type to search across keys and all language values
-6. **Edit**: Click "Edit" to modify translation values for all languages
-7. **Export**: Click "Export Modified" to save changes (default: `output/` directory)
+1. **Import Files**: Click "Import Files" and select translation files (JSON or RESX)
+2. **View Translations**: Browse all keys with values for each language
+3. **Filter**: Use dropdown to filter by source file
+4. **Search**: Type to search across keys and all language values
+5. **Edit**: Double-click a row or click the edit icon to modify translations
+6. **Add Key**: Click "Add Key" to create new translation entries
+7. **Export**: Click "Export All" to save changes (default: `output/` directory)
+8. **Save Progress**: Save your work in progress to continue later
+9. **Start Over**: Clear all data and import fresh files
 
-### File Naming Convention
+### Supported File Formats
 
-Files must follow the pattern: `basename_language.json`
+#### JSON Files (Frontend)
+
+Files must follow the pattern: `BaseName.language.json`
 
 Examples:
 
-- `forms_en.json` → English translations for "forms"
-- `forms_es.json` → Spanish translations for "forms"
-- `errors_fr.json` → French translations for "errors"
+- `Settings.en.json` → English translations for "Settings"
+- `Settings.es.json` → Spanish translations for "Settings"
+- `Forms.en.json` → English translations for "Forms"
 
-The tool automatically detects the language code and groups files by their base name.
+#### RESX Files (Backend)
+
+Files must follow the pattern:
+
+- English: `BaseName.resx` (no language code)
+- Spanish: `BaseName_es.resx` (underscore + language code)
+
+Examples:
+
+- `FormTranslations.resx` → English translations
+- `FormTranslations_es.resx` → Spanish translations
+- `CommonTranslations.resx` → English translations
+- `CommonTranslations_es.resx` → Spanish translations
+
+### Supported Languages
+
+Currently supports: **English (en)** and **Spanish (es)**
+
+### Template Preservation
+
+The tool preserves the original structure of your files:
+
+- **JSON**: Maintains key order and nested structure
+- **RESX**: Preserves all `<resheader>` elements and data element order
+- **Updates**: Existing keys are updated in place, new keys are appended
 
 ## Development
 

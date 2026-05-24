@@ -1,0 +1,15 @@
+{
+  "Forms_Button_Submit": "Enviar",
+  "Forms_Button_Cancel": "Cancelar",
+  "Forms_Button_Save": "Guardar",
+  "Forms_Label_Username": "Nombre de usuario",
+  "Forms_Label_Password": "Contraseña",
+  "Forms_Title_Login": "Iniciar Sesión",
+  "Forms_Message_Welcome": "¡Bienvenido de nuevo!",
+  "Forms_Message_Error": "Ocurrió un error",
+  "Forms_Message_Success": "Operación completada exitosamente",
+  "Forms_Navigation_Home": "Inicio",
+  "Forms_Navigation_Profile": "Perfil",
+  "Forms_Navigation_Settings": "Configuración",
+  "Forms_Navigation_Logout": "Cerrar Sesión"
+}
