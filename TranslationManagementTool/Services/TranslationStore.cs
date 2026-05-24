@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -13,10 +14,14 @@ public class TranslationStore
     private static readonly List<string> _supportedLanguages = new() { "en", "es" };
     private List<SourceFile>? _currentFileFilter = null;
     private string _currentSearchTerm = string.Empty;
+    private bool _hasUnsavedChanges = false;
 
     public ObservableCollection<TranslationKey> FilteredKeys => _filteredKeys;
     public IReadOnlyCollection<SourceFile> SourceFiles => _sourceFiles;
     public IReadOnlyCollection<string> Languages => _supportedLanguages;
+    public bool HasUnsavedChanges => _hasUnsavedChanges;
+
+    public event EventHandler? UnsavedChangesChanged;
 
     public void AddTranslations(List<TranslationKey> keys)
     {
@@ -116,6 +121,7 @@ public class TranslationStore
         {
             translationKey.LanguageValues[language] = newValue;
             translationKey.IsModified = true;
+            SetUnsavedChanges(true);
 
             // Trigger property change notification for the dictionary
             // This is a workaround: we reassign to trigger INotifyPropertyChanged
@@ -150,7 +156,22 @@ public class TranslationStore
             _sourceFiles.Add(key.Source);
         }
 
+        SetUnsavedChanges(true);
         RefreshFilteredKeys();
+    }
+
+    public void MarkAllChangesSaved()
+    {
+        SetUnsavedChanges(false);
+    }
+
+    private void SetUnsavedChanges(bool value)
+    {
+        if (_hasUnsavedChanges != value)
+        {
+            _hasUnsavedChanges = value;
+            UnsavedChangesChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private void RefreshFilteredKeys()

@@ -21,6 +21,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly ResxTranslationFileReader _resxReader;
     private readonly JsonTranslationFileWriter _jsonWriter;
     private readonly ResxTranslationFileWriter _resxWriter;
+    private readonly ProgressService _progressService;
 
     [ObservableProperty]
     private string _statusMessage = "Ready. Click Import to load translation files.";
@@ -38,6 +39,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(CanImport))]
     private bool _hasKeys;
 
+    [ObservableProperty]
+    private bool _hasUnsavedChanges;
+
     public bool CanImport => !HasKeys;
 
     public event EventHandler? LanguagesChanged;
@@ -49,9 +53,19 @@ public partial class MainWindowViewModel : ViewModelBase
         _resxReader = new ResxTranslationFileReader();
         _jsonWriter = new JsonTranslationFileWriter();
         _resxWriter = new ResxTranslationFileWriter();
+        _progressService = new ProgressService();
 
         // Add "All Files" as first option (null value)
         AvailableSourceFiles.Add(null);
+
+        // Subscribe to unsaved changes
+        _translationStore.UnsavedChangesChanged += (s, e) =>
+        {
+            HasUnsavedChanges = _translationStore.HasUnsavedChanges;
+        };
+
+        // Auto-load saved progress on startup
+        LoadProgress();
     }
 
     public TranslationStore TranslationStore => _translationStore;
@@ -290,6 +304,48 @@ public partial class MainWindowViewModel : ViewModelBase
         return fileType == FileType.Json
             ? _jsonReader.ExtractBaseFileName(filePath)
             : _resxReader.ExtractBaseFileName(filePath);
+    }
+
+    [RelayCommand]
+    private void SaveProgress()
+    {
+        var allKeys = _translationStore.GetAllKeys();
+        _progressService.SaveProgress(allKeys);
+        _translationStore.MarkAllChangesSaved();
+        StatusMessage = "Progress saved successfully.";
+    }
+
+    [RelayCommand]
+    private void StartOver()
+    {
+        _translationStore.Clear();
+        _progressService.ClearProgress();
+        HasKeys = false;
+        HasUnsavedChanges = false;
+        UpdateFileFilters();
+        StatusMessage = "Ready. Click Import to load translation files.";
+    }
+
+    private void LoadProgress()
+    {
+        var savedKeys = _progressService.LoadProgress();
+        if (savedKeys != null && savedKeys.Count > 0)
+        {
+            _translationStore.AddTranslations(savedKeys);
+            UpdateFileFilters();
+            HasKeys = true;
+            // Don't mark as unsaved since we just loaded
+            HasUnsavedChanges = false;
+            StatusMessage = $"Loaded {savedKeys.Count} translation keys from saved progress.";
+            LanguagesChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    public bool PromptToSaveChanges()
+    {
+        // Return true if it's safe to close (no unsaved changes or user chose to discard)
+        // Return false if user wants to cancel closing
+        return !HasUnsavedChanges;
     }
 
     public event EventHandler<TranslationKey>? OnEditTranslationRequested;
