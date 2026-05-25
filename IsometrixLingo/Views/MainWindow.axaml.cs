@@ -179,9 +179,9 @@ public partial class MainWindow : Window
         {
             var indicatorColumn = new DataGridTemplateColumn
             {
-                Header = "",
+                Header = "💡",
                 Width = DataGridLength.Auto,
-                MinWidth = 30,
+                MinWidth = 35,
                 CellTemplate = new FuncDataTemplate<object>((data, _) =>
                 {
                     var textBlock = new TextBlock
