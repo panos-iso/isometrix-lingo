@@ -18,6 +18,11 @@
     </Window.Resources>
     
     <Window.Styles>
+        <!-- Global button style for centered content -->
+        <Style Selector="Button">
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+        
         <Style Selector="Button.ImportButton">
             <Setter Property="Background" Value="#2196F3"/>
             <Setter Property="Foreground" Value="White"/>
@@ -125,83 +130,112 @@
                     </StackPanel>
 
                     <!-- Main content -->
-                    <StackPanel Spacing="15">
-                        <TextBlock Text="Step 1: Import Translation Files"
-                                   FontSize="20"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                                   Margin="0,0,0,5"/>
-                        
-                        <TextBlock Text="Import your translation files (JSON or RESX format). You can select multiple files."
-                                   TextWrapping="Wrap"
-                                   FontSize="14"
-                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                   Margin="0,0,0,10"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="15">
+                            <TextBlock Text="Step 1: Import Translation Files"
+                                       FontSize="20"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                       Margin="0,0,0,5"/>
+                            
+                            <TextBlock Text="Import your translation files (JSON or RESX format). You can select multiple files."
+                                       TextWrapping="Wrap"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                       Margin="0,0,0,10"/>
 
-                        <Border BorderBrush="#2196F3"
-                                BorderThickness="3"
-                                Background="{DynamicResource SystemControlAcrylicWindowBrush}"
-                                CornerRadius="8"
-                                MinHeight="120"
-                                MaxHeight="280"
-                                Padding="20"
-                                x:Name="DropZone">
-                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
-                                <TextBlock Text="📁" FontSize="42" HorizontalAlignment="Center"/>
-                                <TextBlock Text="Select files to import" 
-                                           FontSize="16" 
-                                           FontWeight="Bold"
-                                           HorizontalAlignment="Center"
-                                           Foreground="#2196F3"/>
-                                <TextBlock Text="Click the button below to browse for JSON or RESX files" 
-                                           FontSize="12" 
-                                           HorizontalAlignment="Center"
-                                           TextAlignment="Center"
-                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                           MaxWidth="300"
-                                           TextWrapping="Wrap"
-                                           Margin="0,0,0,5"/>
-                                <Button Content="Browse Files..."
-                                        Classes="ImportButton"
-                                        Command="{Binding ImportFilesCommand}"
-                                        CommandParameter="{Binding $parent[Window]}"
-                                        HorizontalAlignment="Center"
-                                        Padding="20,8"
-                                        FontSize="14"
-                                        FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Imported Files Display -->
-                        <ItemsControl ItemsSource="{Binding ImportedFileNames}" 
-                                      IsVisible="{Binding HasKeys}"
-                                      Margin="0,10,0,0">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" Spacing="8"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="#E3F2FD"
-                                            BorderBrush="#90CAF9"
-                                            BorderThickness="1"
-                                            CornerRadius="3"
-                                            Padding="8,5"
-                                            Margin="0">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <TextBlock Text="📎" FontSize="12" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding}" 
-                                                       FontSize="12"
-                                                       Foreground="#0D47A1"
-                                                       VerticalAlignment="Center"
-                                                       FontWeight="Medium"/>
+                            <!-- Two-column layout: Drop zone + File list -->
+                            <Grid ColumnDefinitions="*,300" ColumnSpacing="15">
+                                <!-- Left Column: Drop Zone -->
+                                <Border Grid.Column="0"
+                                        BorderBrush="#2196F3"
+                                        BorderThickness="3"
+                                        Background="{DynamicResource SystemControlAcrylicWindowBrush}"
+                                        CornerRadius="8"
+                                        MinHeight="250"
+                                        Padding="20"
+                                        x:Name="DropZone">
+                                    <Grid>
+                                        <!-- Invisible overlay to capture drag events across entire area -->
+                                        <Border Background="Transparent" x:Name="DropOverlay"/>
+                                        
+                                        <!-- Content -->
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
+                                            <TextBlock Text="📁" FontSize="42" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="Drag &amp; drop files here" 
+                                                       FontSize="16" 
+                                                       FontWeight="Bold"
+                                                       HorizontalAlignment="Center"
+                                                       Foreground="#2196F3"/>
+                                            <TextBlock Text="or click the button below to browse for JSON or RESX files" 
+                                                       FontSize="12" 
+                                                       HorizontalAlignment="Center"
+                                                       TextAlignment="Center"
+                                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                       MaxWidth="300"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,0,0,5"/>
+                                            <Button Content="Browse Files..."
+                                                    Classes="ImportButton"
+                                                    Command="{Binding ImportFilesCommand}"
+                                                    CommandParameter="{Binding $parent[Window]}"
+                                                    HorizontalAlignment="Center"
+                                                    Padding="20,8"
+                                                    FontSize="14"
+                                                    FontWeight="SemiBold"/>
                                         </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Right Column: Imported Files List -->
+                                <Border Grid.Column="1"
+                                        BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                        BorderThickness="1"
+                                        Background="{DynamicResource SystemControlAcrylicWindowBrush}"
+                                        CornerRadius="8"
+                                        Padding="10"
+                                        Height="250"
+                                        IsVisible="{Binding HasKeys}">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Top"
+                                                   Text="Imported Files"
+                                                   FontSize="14"
+                                                   FontWeight="SemiBold"
+                                                   Margin="0,0,0,10"/>
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                      HorizontalScrollBarVisibility="Disabled">
+                                            <ItemsControl ItemsSource="{Binding ImportedFileNames}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Spacing="6"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Background="#E3F2FD"
+                                                                BorderBrush="#90CAF9"
+                                                                BorderThickness="1"
+                                                                CornerRadius="3"
+                                                                Padding="8,6">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <TextBlock Text="📎" FontSize="12" VerticalAlignment="Center"/>
+                                                                <TextBlock Text="{Binding}" 
+                                                                           FontSize="12"
+                                                                           Foreground="#0D47A1"
+                                                                           VerticalAlignment="Center"
+                                                                           FontWeight="Medium"
+                                                                           TextWrapping="Wrap"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </DockPanel>
+                                </Border>
+                            </Grid>
                     </StackPanel>
+                    </ScrollViewer>
                 </DockPanel>
 
             <!-- Step 2: Edit Translations -->

@@ -199,7 +199,8 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         var translationFiles = new List<TranslationFile>();
-        ImportedFileNames.Clear();
+        // Don't clear existing files - we want to accumulate multiple imports
+        // ImportedFileNames.Clear(); // REMOVED to allow multiple imports
 
         foreach (var file in files)
         {
@@ -235,6 +236,118 @@ public partial class MainWindowViewModel : ViewModelBase
             var consolidated = group.Key.FileType == FileType.Json
                 ? _jsonReader.ConsolidateKeys(group.ToList())
                 : _resxReader.ConsolidateKeys(group.ToList());
+
+            _translationStore.AddTranslations(consolidated);
+
+            // Extract and store the template from the first file in the group
+            if (group.Any())
+            {
+                var firstFile = group.First();
+                if (group.Key.FileType == FileType.Resx)
+                {
+                    var template = _resxReader.ExtractTemplate(firstFile.FilePath);
+                    _translationStore.SetResxTemplate(group.Key.Item1, template);
+                }
+                else if (group.Key.FileType == FileType.Json)
+                {
+                    var template = _jsonReader.ExtractTemplate(firstFile.FilePath);
+                    _translationStore.SetJsonTemplate(group.Key.Item1, template);
+                }
+            }
+        }
+
+        UpdateFileFilters();
+        StatusMessage = $"Imported {files.Count} file(s). Review the imported files below and click 'Confirm & Continue' to proceed.";
+        HasKeys = _translationStore.GetAllKeys().Count > 0;
+        ImportStepStatus = StepStatus.InProgress;
+        LanguagesChanged?.Invoke(this, EventArgs.Empty);
+
+        // Auto-save imported progress
+        SaveProgress();
+    }
+
+    public async Task ImportDroppedFiles(IEnumerable<IStorageItem> storageItems)
+    {
+        var files = storageItems.ToList();
+        
+        if (files.Count == 0)
+        {
+            return;
+        }
+
+        var translationFiles = new List<TranslationFile>();
+        // Don't clear existing files - we want to accumulate multiple drops
+        // ImportedFileNames.Clear(); // REMOVED to allow multiple drops
+
+        foreach (var item in files)
+        {
+            if (item is not IStorageFile file)
+                continue;
+
+            try
+            {
+                var filePath = file.Path.LocalPath;
+                var fileName = Path.GetFileName(filePath);
+                var extension = Path.GetExtension(filePath).ToLower();
+
+                // Only process JSON and RESX files
+                if (extension != ".json" && extension != ".resx")
+                    continue;
+
+                TranslationFile translationFile = extension switch
+                {
+                    ".json" => _jsonReader.ReadFile(filePath),
+                    ".resx" => _resxReader.ReadFile(filePath),
+                    _ => throw new NotSupportedException($"Unsupported file type: {extension}")
+                };
+
+                translationFiles.Add(translationFile);
+                ImportedFileNames.Add(fileName);
+            }
+            catch
+            {
+                // Skip invalid files
+            }
+        }
+
+        if (translationFiles.Count == 0)
+        {
+            StatusMessage = "No valid translation files found. Please drop JSON or RESX files.";
+            return;
+        }
+
+        // Group by base file name and type
+        var grouped = translationFiles
+            .GroupBy(tf => (Path.GetFileNameWithoutExtension(tf.FilePath.Replace("_en", "").Replace("_es", "")), tf.FileType));
+
+        foreach (var group in grouped)
+        {
+            // Consolidate all keys from the same source file across languages
+            var consolidated = new List<TranslationKey>();
+            var allKeys = group.SelectMany(tf => tf.Keys.Select(k => k.Key)).Distinct();
+
+            foreach (var keyName in allKeys)
+            {
+                var translationKey = new TranslationKey
+                {
+                    Key = keyName,
+                    Source = new SourceFile(group.Key.Item1, group.Key.FileType)
+                };
+
+                foreach (var tf in group)
+                {
+                    var matchingKey = tf.Keys.FirstOrDefault(k => k.Key == keyName);
+                    if (matchingKey != null)
+                    {
+                        foreach (var langValue in matchingKey.LanguageValues)
+                        {
+                            translationKey.LanguageValues[langValue.Key] = langValue.Value;
+                        }
+                    }
+                }
+
+                consolidated.Add(translationKey);
+            }
 
             _translationStore.AddTranslations(consolidated);
 
@@ -562,8 +675,18 @@ public partial class MainWindowViewModel : ViewModelBase
             Spacing = 10
         };
 
-        var confirmButton = new Button { Content = "Yes, Start Over", Width = 130 };
-        var cancelButton = new Button { Content = "Cancel", Width = 100 };
+        var confirmButton = new Button 
+        { 
+            Content = "Yes, Start Over", 
+            Width = 130,
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
+        var cancelButton = new Button 
+        { 
+            Content = "Cancel", 
+            Width = 100,
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
 
         bool confirmed = false;
 
@@ -774,6 +897,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             Content = OperatingSystem.IsMacOS() ? "📁 View in Finder" : "📁 View in Explorer",
             HorizontalAlignment = HorizontalAlignment.Center,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
             Padding = new Thickness(15, 8),
             Margin = new Thickness(0, 0, 0, 10)
         };
@@ -842,8 +966,18 @@ public partial class MainWindowViewModel : ViewModelBase
             Spacing = 10
         };
 
-        var startOverButton = new Button { Content = "Start New Session", Width = 150 };
-        var continueButton = new Button { Content = "Stay Here", Width = 120 };
+        var startOverButton = new Button 
+        { 
+            Content = "Start New Session", 
+            Width = 150,
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
+        var continueButton = new Button 
+        { 
+            Content = "Stay Here", 
+            Width = 120,
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
 
         bool shouldStartOver = false;
 
