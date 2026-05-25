@@ -24,6 +24,7 @@
         <converters:IsEditModeConverter x:Key="IsEditModeConverter"/>
         <converters:IsSuggestModeConverter x:Key="IsSuggestModeConverter"/>
         <converters:ModeSelectionBorderColorConverter x:Key="ModeSelectionBorderColorConverter"/>
+        <converters:ModeSelectionBorderThicknessConverter x:Key="ModeSelectionBorderThicknessConverter"/>
     </Application.Resources>
   
     <Application.Styles>

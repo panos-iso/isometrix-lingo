@@ -439,17 +439,18 @@
                         <!-- Edit Mode Box -->
                         <Border Grid.Column="0"
                                 Background="#E3F2FD"
-                                BorderThickness="2"
+                                BorderThickness="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderThicknessConverter}, ConverterParameter=Edit}"
                                 CornerRadius="10"
                                 Padding="30"
                                 Cursor="Hand"
-                                Tapped="OnEditModeBoxTapped">
+                                Tapped="OnEditModeBoxTapped"
+                                BoxShadow="0 4 8 0 #40000000">
                             <Border.BorderBrush>
                                 <SolidColorBrush Color="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderColorConverter}, ConverterParameter=Edit}"/>
                             </Border.BorderBrush>
                             <Border.Styles>
                                 <Style Selector="Border:pointerover">
-                                    <Setter Property="BorderThickness" Value="3"/>
+                                    <Setter Property="BoxShadow" Value="0 6 16 0 #60000000"/>
                                 </Style>
                             </Border.Styles>
                             <StackPanel Spacing="15">
@@ -490,17 +491,18 @@
                         <!-- Suggest Mode Box -->
                         <Border Grid.Column="2"
                                 Background="#F3E5F5"
-                                BorderThickness="2"
+                                BorderThickness="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderThicknessConverter}, ConverterParameter=Suggest}"
                                 CornerRadius="10"
                                 Padding="30"
                                 Cursor="Hand"
-                                Tapped="OnSuggestModeBoxTapped">
+                                Tapped="OnSuggestModeBoxTapped"
+                                BoxShadow="0 4 8 0 #40000000">
                             <Border.BorderBrush>
                                 <SolidColorBrush Color="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderColorConverter}, ConverterParameter=Suggest}"/>
                             </Border.BorderBrush>
                             <Border.Styles>
                                 <Style Selector="Border:pointerover">
-                                    <Setter Property="BorderThickness" Value="3"/>
+                                    <Setter Property="BoxShadow" Value="0 6 16 0 #60000000"/>
                                 </Style>
                             </Border.Styles>
                             <StackPanel Spacing="15">
