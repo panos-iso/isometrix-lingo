@@ -103,70 +103,107 @@
                    Padding="10,5"/>
 
         <!-- Main Content Area - Changes based on current step -->
-        <Grid Margin="20">
-            <!-- Step 1: Import Files -->
-            <StackPanel IsVisible="{Binding ShowImportStep}" Spacing="20">
-                <TextBlock Text="Step 1: Import Translation Files"
-                           FontSize="20"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                           Margin="0,0,0,10"/>
-                
-                <TextBlock Text="Import your translation files (JSON or RESX format). You can select multiple files."
-                           TextWrapping="Wrap"
-                           FontSize="14"
-                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                           Margin="0,0,0,20"/>
-
-                <Border BorderBrush="#2196F3"
-                        BorderThickness="3"
-                        Background="{DynamicResource SystemControlAcrylicWindowBrush}"
-                        CornerRadius="8"
-                        MinHeight="300"
-                        Padding="40"
-                        x:Name="DropZone">
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="25">
-                        <TextBlock Text="📁" FontSize="72" HorizontalAlignment="Center"/>
-                        <TextBlock Text="Select files to import" 
-                                   FontSize="20" 
-                                   FontWeight="Bold"
-                                   HorizontalAlignment="Center"
-                                   Foreground="#2196F3"/>
-                        <TextBlock Text="Click the button below to browse for JSON or RESX files" 
-                                   FontSize="14" 
-                                   HorizontalAlignment="Center"
-                                   TextAlignment="Center"
-                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                   MaxWidth="350"
-                                   TextWrapping="Wrap"
-                                   Margin="0,0,0,10"/>
-                        <Button Content="Browse Files..."
-                                Classes="ImportButton"
-                                Command="{Binding ImportFilesCommand}"
-                                CommandParameter="{Binding $parent[Window]}"
-                                HorizontalAlignment="Center"
-                                Padding="30,12"
-                                FontSize="16"
+        <ScrollViewer Margin="20" VerticalScrollBarVisibility="Auto">
+            <Grid>
+                <!-- Step 1: Import Files -->
+                <DockPanel IsVisible="{Binding ShowImportStep}" LastChildFill="True">
+                    <!-- Buttons at bottom -->
+                    <StackPanel DockPanel.Dock="Bottom"
+                                Orientation="Horizontal" 
+                                HorizontalAlignment="Right" 
+                                Spacing="10"
+                                Margin="0,15,0,0">
+                        <Button Content="Start Over"
+                                Command="{Binding StartOverCommand}"
+                                IsEnabled="{Binding HasKeys}"
+                                Padding="15,8"/>
+                        <Button Content="Confirm &amp; Continue to Edit →"
+                                Classes="PrimaryButton"
+                                Command="{Binding ConfirmImportCommand}"
+                                IsEnabled="{Binding HasKeys}"
+                                Padding="15,8"
                                 FontWeight="SemiBold"/>
                     </StackPanel>
-                </Border>
 
-                <StackPanel Orientation="Horizontal" 
-                            HorizontalAlignment="Right" 
-                            Spacing="10"
-                            Margin="0,20,0,0">
-                    <Button Content="Start Over"
-                            Command="{Binding StartOverCommand}"
-                            IsEnabled="{Binding HasKeys}"
-                            Padding="15,8"/>
-                    <Button Content="Confirm &amp; Continue to Edit →"
-                            Classes="PrimaryButton"
-                            Command="{Binding ConfirmImportCommand}"
-                            IsEnabled="{Binding HasKeys}"
-                            Padding="15,8"
-                            FontWeight="SemiBold"/>
-                </StackPanel>
-            </StackPanel>
+                    <!-- Main content -->
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="Step 1: Import Translation Files"
+                                   FontSize="20"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                   Margin="0,0,0,5"/>
+                        
+                        <TextBlock Text="Import your translation files (JSON or RESX format). You can select multiple files."
+                                   TextWrapping="Wrap"
+                                   FontSize="14"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                   Margin="0,0,0,10"/>
+
+                        <Border BorderBrush="#2196F3"
+                                BorderThickness="3"
+                                Background="{DynamicResource SystemControlAcrylicWindowBrush}"
+                                CornerRadius="8"
+                                MinHeight="120"
+                                MaxHeight="280"
+                                Padding="20"
+                                x:Name="DropZone">
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
+                                <TextBlock Text="📁" FontSize="42" HorizontalAlignment="Center"/>
+                                <TextBlock Text="Select files to import" 
+                                           FontSize="16" 
+                                           FontWeight="Bold"
+                                           HorizontalAlignment="Center"
+                                           Foreground="#2196F3"/>
+                                <TextBlock Text="Click the button below to browse for JSON or RESX files" 
+                                           FontSize="12" 
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                           MaxWidth="300"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,5"/>
+                                <Button Content="Browse Files..."
+                                        Classes="ImportButton"
+                                        Command="{Binding ImportFilesCommand}"
+                                        CommandParameter="{Binding $parent[Window]}"
+                                        HorizontalAlignment="Center"
+                                        Padding="20,8"
+                                        FontSize="14"
+                                        FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Imported Files Display -->
+                        <ItemsControl ItemsSource="{Binding ImportedFileNames}" 
+                                      IsVisible="{Binding HasKeys}"
+                                      Margin="0,10,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="8"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#E3F2FD"
+                                            BorderBrush="#90CAF9"
+                                            BorderThickness="1"
+                                            CornerRadius="3"
+                                            Padding="8,5"
+                                            Margin="0">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="📎" FontSize="12" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding}" 
+                                                       FontSize="12"
+                                                       Foreground="#0D47A1"
+                                                       VerticalAlignment="Center"
+                                                       FontWeight="Medium"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </DockPanel>
 
             <!-- Step 2: Edit Translations -->
             <Grid IsVisible="{Binding ShowEditStep}" RowDefinitions="Auto,Auto,*,Auto">
@@ -250,57 +287,64 @@
             </Grid>
 
             <!-- Step 3: Export Files -->
-            <StackPanel IsVisible="{Binding ShowExportStep}" Spacing="20">
-                <TextBlock Text="Step 3: Export Translations"
-                           FontSize="20"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                           Margin="0,0,0,10"/>
-                
-                <TextBlock Text="Your translations are ready to export. They will be packaged into a ZIP file with a timestamp."
-                           TextWrapping="Wrap"
-                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                           Margin="0,0,0,10"/>
-
-                <Border BorderBrush="#4CAF50"
-                        BorderThickness="2"
-                        Background="{DynamicResource SystemControlAcrylicWindowBrush}"
-                        CornerRadius="8"
-                        Padding="30"
-                        MinHeight="250">
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="20">
-                        <TextBlock Text="✓" FontSize="64" HorizontalAlignment="Center" Foreground="#4CAF50"/>
-                        <TextBlock Text="Translations Ready for Export" 
-                                   FontSize="18" 
-                                   FontWeight="SemiBold"
-                                   HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding StatusMessage}" 
-                                   FontSize="13" 
-                                   Opacity="0.8"
-                                   HorizontalAlignment="Center"
-                                   TextWrapping="Wrap"
-                                   TextAlignment="Center"
-                                   MaxWidth="400"/>
-                        <Button Content="Export as ZIP"
-                                Classes="ExportButton"
-                                Command="{Binding ExportToZipCommand}"
-                                HorizontalAlignment="Center"
-                                Padding="30,12"
-                                FontWeight="SemiBold"
-                                Margin="0,10,0,0"/>
-                    </StackPanel>
-                </Border>
-
-                <StackPanel Orientation="Horizontal" 
+            <DockPanel IsVisible="{Binding ShowExportStep}" LastChildFill="True">
+                <!-- Back button at bottom -->
+                <StackPanel DockPanel.Dock="Bottom"
+                            Orientation="Horizontal" 
                             HorizontalAlignment="Right" 
                             Spacing="10"
-                            Margin="0,20,0,0">
+                            Margin="0,15,0,0">
                     <Button Content="← Back to Edit"
                             Command="{Binding GoBackToEditCommand}"
                             Padding="15,8"/>
                 </StackPanel>
-            </StackPanel>
-        </Grid>
+
+                <!-- Main content -->
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Step 3: Export Translations"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                               Margin="0,0,0,5"/>
+                    
+                    <TextBlock Text="Your translations are ready to export. They will be packaged into a ZIP file with a timestamp."
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                               Margin="0,0,0,10"/>
+
+                    <Border BorderBrush="#4CAF50"
+                            BorderThickness="2"
+                            Background="{DynamicResource SystemControlAcrylicWindowBrush}"
+                            CornerRadius="8"
+                            Padding="30"
+                            MinHeight="180"
+                            MaxHeight="350">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="18">
+                            <TextBlock Text="✓" FontSize="56" HorizontalAlignment="Center" Foreground="#4CAF50"/>
+                            <TextBlock Text="Translations Ready for Export" 
+                                       FontSize="17" 
+                                       FontWeight="SemiBold"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding StatusMessage}" 
+                                       FontSize="13" 
+                                       Opacity="0.8"
+                                       HorizontalAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"
+                                       MaxWidth="350"/>
+                            <Button Content="Export as ZIP"
+                                    Classes="ExportButton"
+                                    Command="{Binding ExportToZipCommand}"
+                                    HorizontalAlignment="Center"
+                                    Padding="28,11"
+                                    FontWeight="SemiBold"
+                                    Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </DockPanel>
+            </Grid>
+        </ScrollViewer>
     </DockPanel>
 
 </Window>

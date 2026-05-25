@@ -52,6 +52,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hasUnsavedChanges;
 
+    [ObservableProperty]
+    private ObservableCollection<string> _importedFileNames = new();
+
     // Workflow state properties
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowEditStep), nameof(ShowExportStep), 
@@ -191,12 +194,14 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         var translationFiles = new List<TranslationFile>();
+        ImportedFileNames.Clear();
 
         foreach (var file in files)
         {
             try
             {
                 var filePath = file.Path.LocalPath;
+                var fileName = Path.GetFileName(filePath);
                 var extension = Path.GetExtension(filePath).ToLower();
 
                 TranslationFile translationFile = extension switch
@@ -207,6 +212,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 };
 
                 translationFiles.Add(translationFile);
+                ImportedFileNames.Add(fileName);
             }
             catch
             {
@@ -245,7 +251,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         UpdateFileFilters();
-        StatusMessage = $"Imported {files.Count} file(s) with {_translationStore.FilteredKeys.Count} translation keys. Click 'Confirm & Continue' to proceed.";
+        StatusMessage = $"Imported {files.Count} file(s). Review the imported files below and click 'Confirm & Continue' to proceed.";
         HasKeys = _translationStore.GetAllKeys().Count > 0;
         ImportStepStatus = StepStatus.InProgress;
         LanguagesChanged?.Invoke(this, EventArgs.Empty);
@@ -561,6 +567,7 @@ public partial class MainWindowViewModel : ViewModelBase
         // Proceed with start over
         _translationStore.Clear();
         _progressService.ClearProgress();
+        ImportedFileNames.Clear();
         HasKeys = false;
         HasUnsavedChanges = false;
         UpdateFileFilters();
