@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private static readonly ModifiedCellBorderConverter ModifiedBorderConverter = new();
     private static readonly ShowOriginalTooltipConverter ShowOriginalTooltipConverter = new();
     private static readonly RowToggleEnabledConverter RowToggleEnabledConverter = new();
+    private static readonly EditButtonTooltipConverter EditButtonTooltipConverter = new();
 
     public MainWindow()
     {
@@ -468,7 +469,14 @@ public partial class MainWindow : Window
                     Command = viewModel.EditTranslationCommand,
                     CommandParameter = data
                 };
-                ToolTip.SetTip(editButton, "Edit translation");
+                
+                // Bind tooltip to CurrentMode for context-aware text
+                var editTooltipBinding = new Binding("CurrentMode")
+                {
+                    Source = viewModel,
+                    Converter = EditButtonTooltipConverter
+                };
+                editButton.Bind(ToolTip.TipProperty, editTooltipBinding);
 
                 panel.Children.Add(toggleButton);
                 panel.Children.Add(editButton);
