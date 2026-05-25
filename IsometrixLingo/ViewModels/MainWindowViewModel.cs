@@ -218,7 +218,12 @@ public partial class MainWindowViewModel : ViewModelBase
                 };
 
                 translationFiles.Add(translationFile);
-                ImportedFileNames.Add(fileName);
+                
+                // Only add unique file names
+                if (!ImportedFileNames.Contains(fileName))
+                {
+                    ImportedFileNames.Add(fileName);
+                }
             }
             catch
             {
@@ -302,7 +307,12 @@ public partial class MainWindowViewModel : ViewModelBase
                 };
 
                 translationFiles.Add(translationFile);
-                ImportedFileNames.Add(fileName);
+                
+                // Only add unique file names
+                if (!ImportedFileNames.Contains(fileName))
+                {
+                    ImportedFileNames.Add(fileName);
+                }
             }
             catch
             {
