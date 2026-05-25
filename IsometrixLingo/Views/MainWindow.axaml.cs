@@ -557,4 +557,20 @@ public partial class MainWindow : Window
             }
         }
     }
+
+    private void OnEditModeBoxTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.SelectModeCommand.Execute(EditMode.Edit);
+        }
+    }
+
+    private void OnSuggestModeBoxTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.SelectModeCommand.Execute(EditMode.Suggest);
+        }
+    }
 }

@@ -413,6 +413,11 @@
                     <Button Content="{Binding StartOverButtonText}"
                             Command="{Binding StartOverCommand}"
                             Padding="15,8"/>
+                    <Button Content="Next →"
+                            Classes="PrimaryButton"
+                            Command="{Binding ConfirmModeSelectionCommand}"
+                            Padding="15,8"
+                            FontWeight="SemiBold"/>
                 </StackPanel>
 
                 <!-- Main content -->
@@ -434,14 +439,16 @@
                         <!-- Edit Mode Box -->
                         <Border Grid.Column="0"
                                 Background="#E3F2FD"
-                                BorderBrush="#2196F3"
                                 BorderThickness="2"
                                 CornerRadius="10"
                                 Padding="30"
-                                Cursor="Hand">
+                                Cursor="Hand"
+                                Tapped="OnEditModeBoxTapped">
+                            <Border.BorderBrush>
+                                <SolidColorBrush Color="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderColorConverter}, ConverterParameter=Edit}"/>
+                            </Border.BorderBrush>
                             <Border.Styles>
                                 <Style Selector="Border:pointerover">
-                                    <Setter Property="BorderBrush" Value="#1976D2"/>
                                     <Setter Property="BorderThickness" Value="3"/>
                                 </Style>
                             </Border.Styles>
@@ -465,29 +472,34 @@
                                     <Run Text="• Review and accept/reject suggestions"/><LineBreak/>
                                     <Run Text="• Full control over all translations"/>
                                 </TextBlock>
-                                <Button Content="Select Edit Mode"
-                                        Command="{Binding SelectModeCommand}"
-                                        CommandParameter="{x:Static models:EditMode.Edit}"
-                                        Classes="PrimaryButton"
-                                        HorizontalAlignment="Stretch"
-                                        Padding="15,10"
-                                        FontSize="16"
-                                        FontWeight="SemiBold"
-                                        Margin="0,10,0,0"/>
+                                <!-- Selected indicator -->
+                                <Border Background="#1976D2"
+                                        CornerRadius="5"
+                                        Padding="10,5"
+                                        HorizontalAlignment="Center"
+                                        IsVisible="{Binding CurrentMode, Converter={StaticResource IsEditModeConverter}}"
+                                        Margin="0,10,0,0">
+                                    <TextBlock Text="✓ SELECTED"
+                                               Foreground="White"
+                                               FontWeight="Bold"
+                                               FontSize="14"/>
+                                </Border>
                             </StackPanel>
                         </Border>
 
                         <!-- Suggest Mode Box -->
                         <Border Grid.Column="2"
                                 Background="#F3E5F5"
-                                BorderBrush="#9C27B0"
                                 BorderThickness="2"
                                 CornerRadius="10"
                                 Padding="30"
-                                Cursor="Hand">
+                                Cursor="Hand"
+                                Tapped="OnSuggestModeBoxTapped">
+                            <Border.BorderBrush>
+                                <SolidColorBrush Color="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderColorConverter}, ConverterParameter=Suggest}"/>
+                            </Border.BorderBrush>
                             <Border.Styles>
                                 <Style Selector="Border:pointerover">
-                                    <Setter Property="BorderBrush" Value="#7B1FA2"/>
                                     <Setter Property="BorderThickness" Value="3"/>
                                 </Style>
                             </Border.Styles>
@@ -511,15 +523,18 @@
                                     <Run Text="• Cannot modify actual values"/><LineBreak/>
                                     <Run Text="• Suggestions include your username"/>
                                 </TextBlock>
-                                <Button Content="Select Suggest Mode"
-                                        Command="{Binding SelectModeCommand}"
-                                        CommandParameter="{x:Static models:EditMode.Suggest}"
-                                        Classes="SuccessButton"
-                                        HorizontalAlignment="Stretch"
-                                        Padding="15,10"
-                                        FontSize="16"
-                                        FontWeight="SemiBold"
-                                        Margin="0,10,0,0"/>
+                                <!-- Selected indicator -->
+                                <Border Background="#7B1FA2"
+                                        CornerRadius="5"
+                                        Padding="10,5"
+                                        HorizontalAlignment="Center"
+                                        IsVisible="{Binding CurrentMode, Converter={StaticResource IsSuggestModeConverter}}"
+                                        Margin="0,10,0,0">
+                                    <TextBlock Text="✓ SELECTED"
+                                               Foreground="White"
+                                               FontWeight="Bold"
+                                               FontSize="14"/>
+                                </Border>
                             </StackPanel>
                         </Border>
                     </Grid>

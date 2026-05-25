@@ -1029,8 +1029,10 @@ public partial class MainWindowViewModel : ViewModelBase
         CurrentStep = WorkflowStep.Import;
         ImportStepStatus = StepStatus.InProgress;
         FileMappingStepStatus = StepStatus.NotStarted;
+        ModeSelectionStepStatus = StepStatus.NotStarted;
         EditStepStatus = StepStatus.NotStarted;
         ExportStepStatus = StepStatus.NotStarted;
+        CurrentMode = EditMode.Edit;
 
         UpdateFileFilters();
         StatusMessage = "Ready. Click Import to load translation files.";
@@ -1587,11 +1589,18 @@ public partial class MainWindowViewModel : ViewModelBase
     private void SelectMode(EditMode mode)
     {
         CurrentMode = mode;
+        var modeText = mode == EditMode.Edit ? "Edit" : "Suggest";
+        StatusMessage = $"{modeText} mode selected. Click Next to continue.";
+    }
+
+    [RelayCommand]
+    private void ConfirmModeSelection()
+    {
         ModeSelectionStepStatus = StepStatus.Completed;
         EditStepStatus = StepStatus.InProgress;
         CurrentStep = WorkflowStep.Edit;
         
-        var modeText = mode == EditMode.Edit ? "Edit" : "Suggest";
+        var modeText = CurrentMode == EditMode.Edit ? "Edit" : "Suggest";
         StatusMessage = $"{modeText} mode selected. You can now {modeText.ToLower()} translations.";
 
         // Auto-save progress

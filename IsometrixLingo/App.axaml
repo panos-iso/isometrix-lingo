@@ -23,6 +23,7 @@
         <converters:EditDialogLabelConverter x:Key="EditDialogLabelConverter"/>
         <converters:IsEditModeConverter x:Key="IsEditModeConverter"/>
         <converters:IsSuggestModeConverter x:Key="IsSuggestModeConverter"/>
+        <converters:ModeSelectionBorderColorConverter x:Key="ModeSelectionBorderColorConverter"/>
     </Application.Resources>
   
     <Application.Styles>
