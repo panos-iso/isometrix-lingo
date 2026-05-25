@@ -63,9 +63,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     // Workflow state properties
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowFileMappingStep), nameof(ShowEditStep), nameof(ShowExportStep),
-                               nameof(Step1Background), nameof(Step2Background), nameof(Step3Background), nameof(Step4Background),
-                               nameof(Step1Status), nameof(Step2Status), nameof(Step3Status), nameof(Step4Status))]
+    [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowFileMappingStep), nameof(ShowModeSelectionStep), nameof(ShowEditStep), nameof(ShowExportStep),
+                               nameof(Step1Background), nameof(Step2Background), nameof(Step3Background), nameof(Step4Background), nameof(Step5Background),
+                               nameof(Step1Status), nameof(Step2Status), nameof(Step3Status), nameof(Step4Status), nameof(Step5Status))]
     private WorkflowStep _currentStep = WorkflowStep.Import;
 
     [ObservableProperty]
@@ -78,10 +78,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Step3Background), nameof(Step3Foreground), nameof(Step3Status))]
+    private StepStatus _modeSelectionStepStatus = StepStatus.NotStarted;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Step4Background), nameof(Step4Foreground), nameof(Step4Status))]
     private StepStatus _editStepStatus = StepStatus.NotStarted;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Step4Background), nameof(Step4Foreground), nameof(Step4Status), nameof(StartOverButtonText))]
+    [NotifyPropertyChangedFor(nameof(Step5Background), nameof(Step5Foreground), nameof(Step5Status), nameof(StartOverButtonText))]
     private StepStatus _exportStepStatus = StepStatus.NotStarted;
 
     [ObservableProperty]
@@ -96,8 +100,12 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<FilePair> _filePairs = new();
 
+    [ObservableProperty]
+    private EditMode _currentMode = EditMode.Edit;
+
     public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
     public bool ShowFileMappingStep => CurrentStep == WorkflowStep.FileMapping;
+    public bool ShowModeSelectionStep => CurrentStep == WorkflowStep.ModeSelection;
     public bool ShowEditStep => CurrentStep == WorkflowStep.Edit;
     public bool ShowExportStep => CurrentStep == WorkflowStep.Export;
 
@@ -117,14 +125,21 @@ public partial class MainWindowViewModel : ViewModelBase
         _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
     };
 
-    public SolidColorBrush Step3Background => EditStepStatus switch
+    public SolidColorBrush Step3Background => ModeSelectionStepStatus switch
     {
         StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
         StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
         _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
     };
 
-    public SolidColorBrush Step4Background => ExportStepStatus switch
+    public SolidColorBrush Step4Background => EditStepStatus switch
+    {
+        StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
+        StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
+        _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
+    };
+
+    public SolidColorBrush Step5Background => ExportStepStatus switch
     {
         StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
         StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
@@ -143,13 +158,19 @@ public partial class MainWindowViewModel : ViewModelBase
         _ => new SolidColorBrush(Colors.White)
     };
 
-    public SolidColorBrush Step3Foreground => EditStepStatus switch
+    public SolidColorBrush Step3Foreground => ModeSelectionStepStatus switch
     {
         StepStatus.NotStarted => new SolidColorBrush(Colors.White),
         _ => new SolidColorBrush(Colors.White)
     };
 
-    public SolidColorBrush Step4Foreground => ExportStepStatus switch
+    public SolidColorBrush Step4Foreground => EditStepStatus switch
+    {
+        StepStatus.NotStarted => new SolidColorBrush(Colors.White),
+        _ => new SolidColorBrush(Colors.White)
+    };
+
+    public SolidColorBrush Step5Foreground => ExportStepStatus switch
     {
         StepStatus.NotStarted => new SolidColorBrush(Colors.White),
         _ => new SolidColorBrush(Colors.White)
@@ -169,14 +190,21 @@ public partial class MainWindowViewModel : ViewModelBase
         _ => "Not Started"
     };
 
-    public string Step3Status => EditStepStatus switch
+    public string Step3Status => ModeSelectionStepStatus switch
     {
         StepStatus.Completed => "✓ Complete",
         StepStatus.InProgress => "In Progress",
         _ => "Not Started"
     };
 
-    public string Step4Status => ExportStepStatus switch
+    public string Step4Status => EditStepStatus switch
+    {
+        StepStatus.Completed => "✓ Complete",
+        StepStatus.InProgress => "In Progress",
+        _ => "Not Started"
+    };
+
+    public string Step5Status => ExportStepStatus switch
     {
         StepStatus.Completed => "✓ Complete",
         StepStatus.InProgress => "In Progress",
@@ -1510,9 +1538,9 @@ public partial class MainWindowViewModel : ViewModelBase
             }
 
             FileMappingStepStatus = StepStatus.Completed;
-            EditStepStatus = StepStatus.InProgress;
-            CurrentStep = WorkflowStep.Edit;
-            StatusMessage = "File mapping confirmed. You can now edit translations or proceed to export.";
+            ModeSelectionStepStatus = StepStatus.InProgress;
+            CurrentStep = WorkflowStep.ModeSelection;
+            StatusMessage = "File mapping confirmed. Please select your editing mode.";
 
             // Auto-save progress
             SaveProgress();
@@ -1522,6 +1550,21 @@ public partial class MainWindowViewModel : ViewModelBase
             StatusMessage = $"Error confirming file mapping: {ex.Message}";
             // Don't re-throw - keep the app running
         }
+    }
+
+    [RelayCommand]
+    private void SelectMode(EditMode mode)
+    {
+        CurrentMode = mode;
+        ModeSelectionStepStatus = StepStatus.Completed;
+        EditStepStatus = StepStatus.InProgress;
+        CurrentStep = WorkflowStep.Edit;
+        
+        var modeText = mode == EditMode.Edit ? "Edit" : "Suggest";
+        StatusMessage = $"{modeText} mode selected. You can now {modeText.ToLower()} translations.";
+
+        // Auto-save progress
+        SaveProgress();
     }
 
     private async Task CreateMissingFile(FilePair pair, string language)

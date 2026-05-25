@@ -402,7 +402,131 @@
                 </ScrollViewer>
             </DockPanel>
 
-            <!-- Step 3: Edit Translations -->
+            <!-- Step 3: Mode Selection -->
+            <DockPanel IsVisible="{Binding ShowModeSelectionStep}" LastChildFill="True">
+                <!-- Buttons at bottom -->
+                <StackPanel DockPanel.Dock="Bottom"
+                            Orientation="Horizontal" 
+                            HorizontalAlignment="Right" 
+                            Spacing="10"
+                            Margin="0,15,0,0">
+                    <Button Content="{Binding StartOverButtonText}"
+                            Command="{Binding StartOverCommand}"
+                            Padding="15,8"/>
+                </StackPanel>
+
+                <!-- Main content -->
+                <StackPanel Spacing="20">
+                    <!-- Header -->
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Step 3: Choose Your Mode"
+                                   FontSize="20"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                        <TextBlock Text="Select how you want to work with translations. You cannot change modes during this session."
+                                   TextWrapping="Wrap"
+                                   FontSize="14"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                    </StackPanel>
+
+                    <!-- Mode Selection Boxes -->
+                    <Grid ColumnDefinitions="*,20,*" Margin="0,20,0,0">
+                        <!-- Edit Mode Box -->
+                        <Border Grid.Column="0"
+                                Background="#E3F2FD"
+                                BorderBrush="#2196F3"
+                                BorderThickness="2"
+                                CornerRadius="10"
+                                Padding="30"
+                                Cursor="Hand">
+                            <Border.Styles>
+                                <Style Selector="Border:pointerover">
+                                    <Setter Property="BorderBrush" Value="#1976D2"/>
+                                    <Setter Property="BorderThickness" Value="3"/>
+                                </Style>
+                            </Border.Styles>
+                            <StackPanel Spacing="15">
+                                <TextBlock Text="✏️ Edit Mode"
+                                           FontSize="24"
+                                           FontWeight="Bold"
+                                           Foreground="#0D47A1"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="Directly modify translation values"
+                                           FontSize="16"
+                                           TextWrapping="Wrap"
+                                           HorizontalAlignment="Center"
+                                           Foreground="#1976D2"/>
+                                <Border Height="2" Background="#BBDEFB" Margin="0,5,0,5"/>
+                                <TextBlock TextWrapping="Wrap"
+                                           FontSize="14"
+                                           Foreground="#424242">
+                                    <Run Text="• Edit actual translation values"/><LineBreak/>
+                                    <Run Text="• Add new translation keys"/><LineBreak/>
+                                    <Run Text="• Review and accept/reject suggestions"/><LineBreak/>
+                                    <Run Text="• Full control over all translations"/>
+                                </TextBlock>
+                                <Button Content="Select Edit Mode"
+                                        Command="{Binding SelectModeCommand}"
+                                        CommandParameter="{x:Static models:EditMode.Edit}"
+                                        Classes="PrimaryButton"
+                                        HorizontalAlignment="Stretch"
+                                        Padding="15,10"
+                                        FontSize="16"
+                                        FontWeight="SemiBold"
+                                        Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Suggest Mode Box -->
+                        <Border Grid.Column="2"
+                                Background="#F3E5F5"
+                                BorderBrush="#9C27B0"
+                                BorderThickness="2"
+                                CornerRadius="10"
+                                Padding="30"
+                                Cursor="Hand">
+                            <Border.Styles>
+                                <Style Selector="Border:pointerover">
+                                    <Setter Property="BorderBrush" Value="#7B1FA2"/>
+                                    <Setter Property="BorderThickness" Value="3"/>
+                                </Style>
+                            </Border.Styles>
+                            <StackPanel Spacing="15">
+                                <TextBlock Text="💡 Suggest Mode"
+                                           FontSize="24"
+                                           FontWeight="Bold"
+                                           Foreground="#6A1B9A"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="Propose translation changes for review"
+                                           FontSize="16"
+                                           TextWrapping="Wrap"
+                                           HorizontalAlignment="Center"
+                                           Foreground="#8E24AA"/>
+                                <Border Height="2" Background="#E1BEE7" Margin="0,5,0,5"/>
+                                <TextBlock TextWrapping="Wrap"
+                                           FontSize="14"
+                                           Foreground="#424242">
+                                    <Run Text="• Suggest updates to existing values"/><LineBreak/>
+                                    <Run Text="• Suggest translations for new keys"/><LineBreak/>
+                                    <Run Text="• Cannot modify actual values"/><LineBreak/>
+                                    <Run Text="• Suggestions include your username"/>
+                                </TextBlock>
+                                <Button Content="Select Suggest Mode"
+                                        Command="{Binding SelectModeCommand}"
+                                        CommandParameter="{x:Static models:EditMode.Suggest}"
+                                        Classes="SuccessButton"
+                                        HorizontalAlignment="Stretch"
+                                        Padding="15,10"
+                                        FontSize="16"
+                                        FontWeight="SemiBold"
+                                        Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </DockPanel>
+
+            <!-- Step 4: Edit/Suggest Translations -->
             <DockPanel IsVisible="{Binding ShowEditStep}" LastChildFill="True">
                 <!-- Bottom buttons with Save Progress on left, workflow buttons on right -->
                 <Grid DockPanel.Dock="Bottom" Margin="0,15,0,0">
@@ -447,7 +571,7 @@
                         </Grid.ColumnDefinitions>
                         
                         <TextBlock Grid.Column="0"
-                                   Text="Step 2: Edit Translations"
+                                   Text="Step 4: Edit/Suggest Translations"
                                    FontSize="20"
                                    FontWeight="Bold"
                                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
@@ -533,7 +657,7 @@
                 </Grid>
             </DockPanel>
 
-            <!-- Step 4: Export Files -->
+            <!-- Step 5: Export Files -->
             <DockPanel IsVisible="{Binding ShowExportStep}" LastChildFill="True">
                 <!-- Action buttons at bottom -->
                 <StackPanel DockPanel.Dock="Bottom"
@@ -551,7 +675,7 @@
 
                 <!-- Header at top -->
                 <StackPanel DockPanel.Dock="Top" Spacing="5" Margin="0,0,0,15">
-                    <TextBlock Text="Step 4: Export Translations"
+                    <TextBlock Text="Step 5: Export Translations"
                                FontSize="20"
                                FontWeight="Bold"
                                Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
