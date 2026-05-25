@@ -15,6 +15,7 @@ using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using IsometrixLingo.Helpers;
 using IsometrixLingo.Models;
 using IsometrixLingo.Services;
 using IsometrixLingo.Views;
@@ -63,9 +64,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     // Workflow state properties
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowFileMappingStep), nameof(ShowEditStep), nameof(ShowExportStep),
-                               nameof(Step1Background), nameof(Step2Background), nameof(Step3Background), nameof(Step4Background),
-                               nameof(Step1Status), nameof(Step2Status), nameof(Step3Status), nameof(Step4Status))]
+    [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowFileMappingStep), nameof(ShowModeSelectionStep), nameof(ShowEditStep), nameof(ShowExportStep),
+                               nameof(Step1Background), nameof(Step2Background), nameof(Step3Background), nameof(Step4Background), nameof(Step5Background),
+                               nameof(Step1Status), nameof(Step2Status), nameof(Step3Status), nameof(Step4Status), nameof(Step5Status))]
     private WorkflowStep _currentStep = WorkflowStep.Import;
 
     [ObservableProperty]
@@ -78,10 +79,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Step3Background), nameof(Step3Foreground), nameof(Step3Status))]
+    private StepStatus _modeSelectionStepStatus = StepStatus.NotStarted;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Step4Background), nameof(Step4Foreground), nameof(Step4Status))]
     private StepStatus _editStepStatus = StepStatus.NotStarted;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Step4Background), nameof(Step4Foreground), nameof(Step4Status), nameof(StartOverButtonText))]
+    [NotifyPropertyChangedFor(nameof(Step5Background), nameof(Step5Foreground), nameof(Step5Status), nameof(StartOverButtonText))]
     private StepStatus _exportStepStatus = StepStatus.NotStarted;
 
     [ObservableProperty]
@@ -91,13 +96,20 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _showOnlyMissingTranslations;
 
     [ObservableProperty]
+    private bool _showOnlyWithSuggestions;
+
+    [ObservableProperty]
     private bool _showFilters = true;
 
     [ObservableProperty]
     private ObservableCollection<FilePair> _filePairs = new();
 
+    [ObservableProperty]
+    private EditMode _currentMode = EditMode.Edit;
+
     public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
     public bool ShowFileMappingStep => CurrentStep == WorkflowStep.FileMapping;
+    public bool ShowModeSelectionStep => CurrentStep == WorkflowStep.ModeSelection;
     public bool ShowEditStep => CurrentStep == WorkflowStep.Edit;
     public bool ShowExportStep => CurrentStep == WorkflowStep.Export;
 
@@ -117,14 +129,21 @@ public partial class MainWindowViewModel : ViewModelBase
         _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
     };
 
-    public SolidColorBrush Step3Background => EditStepStatus switch
+    public SolidColorBrush Step3Background => ModeSelectionStepStatus switch
     {
         StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
         StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
         _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
     };
 
-    public SolidColorBrush Step4Background => ExportStepStatus switch
+    public SolidColorBrush Step4Background => EditStepStatus switch
+    {
+        StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
+        StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
+        _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
+    };
+
+    public SolidColorBrush Step5Background => ExportStepStatus switch
     {
         StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
         StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
@@ -143,13 +162,19 @@ public partial class MainWindowViewModel : ViewModelBase
         _ => new SolidColorBrush(Colors.White)
     };
 
-    public SolidColorBrush Step3Foreground => EditStepStatus switch
+    public SolidColorBrush Step3Foreground => ModeSelectionStepStatus switch
     {
         StepStatus.NotStarted => new SolidColorBrush(Colors.White),
         _ => new SolidColorBrush(Colors.White)
     };
 
-    public SolidColorBrush Step4Foreground => ExportStepStatus switch
+    public SolidColorBrush Step4Foreground => EditStepStatus switch
+    {
+        StepStatus.NotStarted => new SolidColorBrush(Colors.White),
+        _ => new SolidColorBrush(Colors.White)
+    };
+
+    public SolidColorBrush Step5Foreground => ExportStepStatus switch
     {
         StepStatus.NotStarted => new SolidColorBrush(Colors.White),
         _ => new SolidColorBrush(Colors.White)
@@ -169,14 +194,21 @@ public partial class MainWindowViewModel : ViewModelBase
         _ => "Not Started"
     };
 
-    public string Step3Status => EditStepStatus switch
+    public string Step3Status => ModeSelectionStepStatus switch
     {
         StepStatus.Completed => "✓ Complete",
         StepStatus.InProgress => "In Progress",
         _ => "Not Started"
     };
 
-    public string Step4Status => ExportStepStatus switch
+    public string Step4Status => EditStepStatus switch
+    {
+        StepStatus.Completed => "✓ Complete",
+        StepStatus.InProgress => "In Progress",
+        _ => "Not Started"
+    };
+
+    public string Step5Status => ExportStepStatus switch
     {
         StepStatus.Completed => "✓ Complete",
         StepStatus.InProgress => "In Progress",
@@ -458,6 +490,8 @@ public partial class MainWindowViewModel : ViewModelBase
         var addKeyViewModel = new AddKeyViewModel(
             _translationStore.SourceFiles,
             _translationStore.Languages,
+            CurrentMode,
+            Username,
             SelectedSourceFile  // Pass current filter selection as default
         );
 
@@ -474,7 +508,9 @@ public partial class MainWindowViewModel : ViewModelBase
             _translationStore.AddKey(newKey);
             HasKeys = true;
             UpdateFileFilters();
-            StatusMessage = $"Added new key '{newKey.Key}' to {newKey.Source.Name}.";
+            
+            var modeText = CurrentMode == EditMode.Edit ? "values" : "suggestions";
+            StatusMessage = $"Added new key '{newKey.Key}' with {modeText} to {newKey.Source.Name}.";
             LanguagesChanged?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -529,6 +565,7 @@ public partial class MainWindowViewModel : ViewModelBase
         SearchText = string.Empty;
         ShowOriginalValues = false;
         ShowOnlyMissingTranslations = false;
+        ShowOnlyWithSuggestions = false;
         _translationStore.FilterBySourceFiles(null!);
         _translationStore.FilterBySearchTerm(string.Empty);
         UpdateStatusMessage();
@@ -549,6 +586,12 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnShowOnlyMissingTranslationsChanged(bool value)
     {
         _translationStore.FilterByMissingTranslations(value);
+        UpdateStatusMessage();
+    }
+
+    partial void OnShowOnlyWithSuggestionsChanged(bool value)
+    {
+        _translationStore.FilterBySuggestions(value);
         UpdateStatusMessage();
     }
 
@@ -899,12 +942,15 @@ public partial class MainWindowViewModel : ViewModelBase
                 CurrentStep = CurrentStep,
                 ImportStepStatus = ImportStepStatus,
                 FileMappingStepStatus = FileMappingStepStatus,
+                ModeSelectionStepStatus = ModeSelectionStepStatus,
                 EditStepStatus = EditStepStatus,
-                ExportStepStatus = ExportStepStatus
+                ExportStepStatus = ExportStepStatus,
+                CurrentMode = CurrentMode
             };
 
             _progressService.SaveProgress(sessionState);
             _translationStore.MarkAllChangesSaved();
+            HasUnsavedChanges = false;
             StatusMessage = "Progress saved successfully.";
         }
         catch (Exception ex)
@@ -994,8 +1040,10 @@ public partial class MainWindowViewModel : ViewModelBase
         CurrentStep = WorkflowStep.Import;
         ImportStepStatus = StepStatus.InProgress;
         FileMappingStepStatus = StepStatus.NotStarted;
+        ModeSelectionStepStatus = StepStatus.NotStarted;
         EditStepStatus = StepStatus.NotStarted;
         ExportStepStatus = StepStatus.NotStarted;
+        CurrentMode = EditMode.Edit;
 
         UpdateFileFilters();
         StatusMessage = "Ready. Click Import to load translation files.";
@@ -1036,32 +1084,84 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         try
         {
-            // Check for missing translations
+            // Get the window if not provided
+            if (window == null)
+            {
+                if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                {
+                    window = desktop.MainWindow;
+                }
+            }
+
+            if (window == null)
+            {
+                StatusMessage = "Cannot show dialog - no window available.";
+                return;
+            }
+
+            // Check for unresolved suggestions (only in Edit mode)
+            // In Suggest mode, having suggestions is the whole point - don't warn about them
+            if (CurrentMode == EditMode.Edit)
+            {
+                var keysWithSuggestions = _translationStore.GetAllKeys()
+                    .Where(k => k.HasAnySuggestions)
+                    .ToList();
+
+                if (keysWithSuggestions.Count > 0)
+                {
+                    var totalSuggestions = keysWithSuggestions.Sum(k => k.SuggestedValues.Count);
+                    var message = $"There are {totalSuggestions} unresolved suggestion(s) across {keysWithSuggestions.Count} key(s).\n\n" +
+                                  "These suggestions have not been accepted or rejected.\n\n" +
+                                  "Do you want to stay and review the suggestions, or continue to export anyway?";
+
+                    var dialog = new ConfirmationDialog(
+                        message,
+                        title: "Confirm Export",
+                        header: "⚠️ Unresolved Suggestions Detected");
+                    var result = await dialog.ShowDialog<bool?>(window);
+
+                    if (result != true)
+                    {
+                        StatusMessage = "Review suggestions before exporting.";
+                        return;
+                    }
+                }
+            }
+
+            // Check for missing translations (mode-aware)
+            // Edit Mode: Missing = no actual value for en/es (suggestions don't count)
+            // Suggest Mode: Missing = no value AND no suggestion for en/es
             var keysWithMissingTranslations = _translationStore.GetAllKeys()
-                .Where(k => k.HasMissingTranslations)
+                .Where(k =>
+                {
+                    if (CurrentMode == EditMode.Edit)
+                    {
+                        // In Edit mode, only check if actual values exist (ignore suggestions)
+                        var hasEnglishValue = k.LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue);
+                        var hasSpanishValue = k.LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue);
+                        return !hasEnglishValue || !hasSpanishValue;
+                    }
+                    else
+                    {
+                        // In Suggest mode, check if value OR suggestion exists
+                        var hasEnglish = (k.LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue)) 
+                                        || k.SuggestedValues.ContainsKey("en");
+                        var hasSpanish = (k.LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue))
+                                        || k.SuggestedValues.ContainsKey("es");
+                        return !hasEnglish || !hasSpanish;
+                    }
+                })
                 .ToList();
 
             if (keysWithMissingTranslations.Count > 0)
             {
-                // Get the window if not provided
-                if (window == null)
-                {
-                    if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-                    {
-                        window = desktop.MainWindow;
-                    }
-                }
-
-                if (window == null)
-                {
-                    StatusMessage = "Cannot show dialog - no window available.";
-                    return;
-                }
-
                 var message = $"There are {keysWithMissingTranslations.Count} translation key(s) with missing terms.\n\n" +
                               "Do you want to stay and add the missing translations, or continue to export anyway?";
 
-                var dialog = new ConfirmationDialog(message);
+                var dialog = new ConfirmationDialog(
+                    message,
+                    title: "Confirm Export",
+                    header: "⚠️ Missing Translations Detected");
                 var result = await dialog.ShowDialog<bool?>(window);
 
                 // If result is null (dialog closed) or false (stay clicked), don't proceed
@@ -1376,8 +1476,10 @@ public partial class MainWindowViewModel : ViewModelBase
             CurrentStep = sessionState.CurrentStep;
             ImportStepStatus = sessionState.ImportStepStatus;
             FileMappingStepStatus = sessionState.FileMappingStepStatus;
+            ModeSelectionStepStatus = sessionState.ModeSelectionStepStatus;
             EditStepStatus = sessionState.EditStepStatus;
             ExportStepStatus = sessionState.ExportStepStatus;
+            CurrentMode = sessionState.CurrentMode;
 
             // Regenerate file pairs if we're on the FileMapping step
             if (CurrentStep == WorkflowStep.FileMapping || FileMappingStepStatus != StepStatus.NotStarted)
@@ -1510,9 +1612,9 @@ public partial class MainWindowViewModel : ViewModelBase
             }
 
             FileMappingStepStatus = StepStatus.Completed;
-            EditStepStatus = StepStatus.InProgress;
-            CurrentStep = WorkflowStep.Edit;
-            StatusMessage = "File mapping confirmed. You can now edit translations or proceed to export.";
+            ModeSelectionStepStatus = StepStatus.InProgress;
+            CurrentStep = WorkflowStep.ModeSelection;
+            StatusMessage = "File mapping confirmed. Please select your editing mode.";
 
             // Auto-save progress
             SaveProgress();
@@ -1522,6 +1624,28 @@ public partial class MainWindowViewModel : ViewModelBase
             StatusMessage = $"Error confirming file mapping: {ex.Message}";
             // Don't re-throw - keep the app running
         }
+    }
+
+    [RelayCommand]
+    private void SelectMode(EditMode mode)
+    {
+        CurrentMode = mode;
+        var modeText = mode == EditMode.Edit ? "Edit" : "Suggest";
+        StatusMessage = $"{modeText} mode selected. Click Next to continue.";
+    }
+
+    [RelayCommand]
+    private void ConfirmModeSelection()
+    {
+        ModeSelectionStepStatus = StepStatus.Completed;
+        EditStepStatus = StepStatus.InProgress;
+        CurrentStep = WorkflowStep.Edit;
+        
+        var modeText = CurrentMode == EditMode.Edit ? "Edit" : "Suggest";
+        StatusMessage = $"{modeText} mode selected. You can now {modeText.ToLower()} translations.";
+
+        // Auto-save progress
+        SaveProgress();
     }
 
     private async Task CreateMissingFile(FilePair pair, string language)
@@ -1678,6 +1802,40 @@ public partial class MainWindowViewModel : ViewModelBase
 
         dialog.Content = mainPanel;
         await dialog.ShowDialog(window);
+    }
+
+    [RelayCommand]
+    private void AcceptSuggestion((TranslationKey key, string language) parameters)
+    {
+        var (key, language) = parameters;
+        
+        // Use the TranslationKey's method to accept the suggestion (handles all state updates and notifications)
+        var acceptedValue = key.AcceptSuggestionForLanguage(language);
+        
+        if (acceptedValue == null)
+            return;
+        
+        // Mark as having unsaved changes
+        HasUnsavedChanges = true;
+        
+        StatusMessage = $"Accepted suggestion for '{key.Key}' in {LanguageHelper.GetLanguageName(language)}.";
+    }
+
+    [RelayCommand]
+    private void RejectSuggestion((TranslationKey key, string language) parameters)
+    {
+        var (key, language) = parameters;
+        
+        // Use the TranslationKey's method to reject the suggestion (handles all state updates and notifications)
+        var wasRejected = key.RejectSuggestionForLanguage(language);
+        
+        if (!wasRejected)
+            return;
+        
+        // Mark as having unsaved changes
+        HasUnsavedChanges = true;
+        
+        StatusMessage = $"Rejected suggestion for '{key.Key}' in {LanguageHelper.GetLanguageName(language)}.";
     }
 }
 

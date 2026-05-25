@@ -74,9 +74,11 @@ public class JsonTranslationFileWriter
 
                 foreach (var key in keys)
                 {
-                    // Use actual value if exists, otherwise empty string
+                    // Get actual value and suggestion
                     var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                    if (UpdateNestedValue(jsonObject, key.Key, value))
+                    var fullValue = AppendSuggestionIfExists(value, key, language);
+                    
+                    if (UpdateNestedValue(jsonObject, key.Key, fullValue))
                     {
                         processedKeys.Add(key.Key);
                     }
@@ -88,7 +90,8 @@ public class JsonTranslationFileWriter
                     if (!processedKeys.Contains(key.Key))
                     {
                         var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                        SetNestedValue(jsonObject, key.Key, value);
+                        var fullValue = AppendSuggestionIfExists(value, key, language);
+                        SetNestedValue(jsonObject, key.Key, fullValue);
                     }
                 }
             }
@@ -99,7 +102,8 @@ public class JsonTranslationFileWriter
                 foreach (var key in keys)
                 {
                     var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                    SetNestedValue(jsonObject, key.Key, value);
+                    var fullValue = AppendSuggestionIfExists(value, key, language);
+                    SetNestedValue(jsonObject, key.Key, fullValue);
                 }
             }
         }
@@ -110,12 +114,26 @@ public class JsonTranslationFileWriter
             foreach (var key in keys)
             {
                 var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                SetNestedValue(jsonObject, key.Key, value);
+                var fullValue = AppendSuggestionIfExists(value, key, language);
+                SetNestedValue(jsonObject, key.Key, fullValue);
             }
         }
 
         var json = jsonObject.ToJsonString(_options);
         File.WriteAllText(filePath, json);
+    }
+
+    /// <summary>
+    /// Append suggestion to value if it exists for the given language
+    /// Format: "actual value SUGGESTION:suggested_value,by:[username],at:[datetime]"
+    /// </summary>
+    private string AppendSuggestionIfExists(string actualValue, TranslationKey key, string language)
+    {
+        if (key.SuggestedValues.TryGetValue(language, out var suggestion))
+        {
+            return $"{actualValue} {suggestion.ToFileFormat()}";
+        }
+        return actualValue;
     }
 
     /// <summary>

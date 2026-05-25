@@ -402,7 +402,148 @@
                 </ScrollViewer>
             </DockPanel>
 
-            <!-- Step 3: Edit Translations -->
+            <!-- Step 3: Mode Selection -->
+            <DockPanel IsVisible="{Binding ShowModeSelectionStep}" LastChildFill="True">
+                <!-- Buttons at bottom -->
+                <StackPanel DockPanel.Dock="Bottom"
+                            Orientation="Horizontal" 
+                            HorizontalAlignment="Right" 
+                            Spacing="10"
+                            Margin="0,15,0,0">
+                    <Button Content="{Binding StartOverButtonText}"
+                            Command="{Binding StartOverCommand}"
+                            Padding="15,8"/>
+                    <Button Content="Next →"
+                            Classes="PrimaryButton"
+                            Command="{Binding ConfirmModeSelectionCommand}"
+                            Padding="15,8"
+                            FontWeight="SemiBold"/>
+                </StackPanel>
+
+                <!-- Main content -->
+                <StackPanel Spacing="20">
+                    <!-- Header -->
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Step 3: Choose Your Mode"
+                                   FontSize="20"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                        <TextBlock Text="Select how you want to work with translations. You cannot change modes during this session."
+                                   TextWrapping="Wrap"
+                                   FontSize="14"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                    </StackPanel>
+
+                    <!-- Mode Selection Boxes -->
+                    <Grid ColumnDefinitions="*,20,*" Margin="0,20,0,0">
+                        <!-- Edit Mode Box -->
+                        <Border Grid.Column="0"
+                                Background="#E3F2FD"
+                                BorderThickness="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderThicknessConverter}, ConverterParameter=Edit}"
+                                CornerRadius="10"
+                                Padding="30"
+                                Cursor="Hand"
+                                Tapped="OnEditModeBoxTapped"
+                                BoxShadow="0 4 8 0 #40000000">
+                            <Border.BorderBrush>
+                                <SolidColorBrush Color="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderColorConverter}, ConverterParameter=Edit}"/>
+                            </Border.BorderBrush>
+                            <Border.Styles>
+                                <Style Selector="Border:pointerover">
+                                    <Setter Property="BoxShadow" Value="0 6 16 0 #60000000"/>
+                                </Style>
+                            </Border.Styles>
+                            <StackPanel Spacing="15">
+                                <TextBlock Text="✏️ Edit Mode"
+                                           FontSize="24"
+                                           FontWeight="Bold"
+                                           Foreground="#0D47A1"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="Directly modify translation values"
+                                           FontSize="16"
+                                           TextWrapping="Wrap"
+                                           HorizontalAlignment="Center"
+                                           Foreground="#1976D2"/>
+                                <Border Height="2" Background="#BBDEFB" Margin="0,5,0,5"/>
+                                <TextBlock TextWrapping="Wrap"
+                                           FontSize="14"
+                                           Foreground="#424242">
+                                    <Run Text="• Edit actual translation values"/><LineBreak/>
+                                    <Run Text="• Add new translation keys"/><LineBreak/>
+                                    <Run Text="• Review and accept/reject suggestions"/><LineBreak/>
+                                    <Run Text="• Full control over all translations"/>
+                                </TextBlock>
+                                <!-- Selected indicator -->
+                                <Border Background="#1976D2"
+                                        CornerRadius="5"
+                                        Padding="10,5"
+                                        HorizontalAlignment="Center"
+                                        IsVisible="{Binding CurrentMode, Converter={StaticResource IsEditModeConverter}}"
+                                        Margin="0,10,0,0">
+                                    <TextBlock Text="✓ SELECTED"
+                                               Foreground="White"
+                                               FontWeight="Bold"
+                                               FontSize="14"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Suggest Mode Box -->
+                        <Border Grid.Column="2"
+                                Background="#F3E5F5"
+                                BorderThickness="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderThicknessConverter}, ConverterParameter=Suggest}"
+                                CornerRadius="10"
+                                Padding="30"
+                                Cursor="Hand"
+                                Tapped="OnSuggestModeBoxTapped"
+                                BoxShadow="0 4 8 0 #40000000">
+                            <Border.BorderBrush>
+                                <SolidColorBrush Color="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderColorConverter}, ConverterParameter=Suggest}"/>
+                            </Border.BorderBrush>
+                            <Border.Styles>
+                                <Style Selector="Border:pointerover">
+                                    <Setter Property="BoxShadow" Value="0 6 16 0 #60000000"/>
+                                </Style>
+                            </Border.Styles>
+                            <StackPanel Spacing="15">
+                                <TextBlock Text="💡 Suggest Mode"
+                                           FontSize="24"
+                                           FontWeight="Bold"
+                                           Foreground="#6A1B9A"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="Propose translation changes for review"
+                                           FontSize="16"
+                                           TextWrapping="Wrap"
+                                           HorizontalAlignment="Center"
+                                           Foreground="#8E24AA"/>
+                                <Border Height="2" Background="#E1BEE7" Margin="0,5,0,5"/>
+                                <TextBlock TextWrapping="Wrap"
+                                           FontSize="14"
+                                           Foreground="#424242">
+                                    <Run Text="• Suggest updates to existing values"/><LineBreak/>
+                                    <Run Text="• Suggest translations for new keys"/><LineBreak/>
+                                    <Run Text="• Cannot modify actual values"/><LineBreak/>
+                                    <Run Text="• Suggestions include your username"/>
+                                </TextBlock>
+                                <!-- Selected indicator -->
+                                <Border Background="#7B1FA2"
+                                        CornerRadius="5"
+                                        Padding="10,5"
+                                        HorizontalAlignment="Center"
+                                        IsVisible="{Binding CurrentMode, Converter={StaticResource IsSuggestModeConverter}}"
+                                        Margin="0,10,0,0">
+                                    <TextBlock Text="✓ SELECTED"
+                                               Foreground="White"
+                                               FontWeight="Bold"
+                                               FontSize="14"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </DockPanel>
+
+            <!-- Step 4: Edit/Suggest Translations -->
             <DockPanel IsVisible="{Binding ShowEditStep}" LastChildFill="True">
                 <!-- Bottom buttons with Save Progress on left, workflow buttons on right -->
                 <Grid DockPanel.Dock="Bottom" Margin="0,15,0,0">
@@ -446,12 +587,34 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         
-                        <TextBlock Grid.Column="0"
-                                   Text="Step 2: Edit Translations"
-                                   FontSize="20"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                                   VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <TextBlock Text="Step 4: Edit/Suggest Translations"
+                                       FontSize="20"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                       VerticalAlignment="Center"/>
+                            
+                            <!-- Mode Indicator Badge -->
+                            <Border CornerRadius="12"
+                                    Padding="12,4"
+                                    VerticalAlignment="Center">
+                                <Border.Background>
+                                    <SolidColorBrush Color="{Binding CurrentMode, Converter={StaticResource EditModeColorConverter}}" Opacity="0.15"/>
+                                </Border.Background>
+                                <Border.BorderBrush>
+                                    <SolidColorBrush Color="{Binding CurrentMode, Converter={StaticResource EditModeColorConverter}}"/>
+                                </Border.BorderBrush>
+                                <Border.BorderThickness>1.5</Border.BorderThickness>
+                                <TextBlock Text="{Binding CurrentMode, Converter={StaticResource EditModeTextConverter}}"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center">
+                                    <TextBlock.Foreground>
+                                        <SolidColorBrush Color="{Binding CurrentMode, Converter={StaticResource EditModeColorConverter}}"/>
+                                    </TextBlock.Foreground>
+                                </TextBlock>
+                            </Border>
+                        </StackPanel>
                         
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
                             <Button Content="{Binding ShowFilters, Converter={StaticResource ShowFiltersTextConverter}, FallbackValue='Show Filters'}"
@@ -478,12 +641,17 @@
                                 Padding="10,5"/>
                         <CheckBox Content="Show Original Values"
                                   IsChecked="{Binding ShowOriginalValues}"
+                                  IsVisible="{Binding CurrentMode, Converter={StaticResource IsEditModeConverter}}"
                                   VerticalAlignment="Center"
                                   ToolTip.Tip="Toggle between current and original values to see what changed"/>
                         <CheckBox Content="Only Missing Translations"
                                   IsChecked="{Binding ShowOnlyMissingTranslations}"
                                   VerticalAlignment="Center"
                                   ToolTip.Tip="Show only keys with missing translations"/>
+                        <CheckBox Content="Only With Suggestions"
+                                  IsChecked="{Binding ShowOnlyWithSuggestions}"
+                                  VerticalAlignment="Center"
+                                  ToolTip.Tip="Show only keys that have suggestions"/>
                         <TextBox Text="{Binding SearchText}"
                                  PlaceholderText="Search keys and values..."
                                  MinWidth="200"
@@ -512,7 +680,8 @@
                                   GridLinesVisibility="All"
                                   CanUserResizeColumns="True"
                                   CanUserReorderColumns="False"
-                                  DoubleTapped="OnGridDoubleTapped">
+                                  DoubleTapped="OnGridDoubleTapped"
+                                  ToolTip.Tip="{Binding CurrentMode, Converter={StaticResource EditModeTooltipConverter}}">                                  
                             <DataGrid.Styles>
                                 <Style Selector="DataGridRow" x:DataType="models:TranslationKey">
                                     <Setter Property="Background" Value="{Binding HasMissingTranslations, Converter={StaticResource MissingTranslationBorderConverter}}"/>
@@ -533,7 +702,7 @@
                 </Grid>
             </DockPanel>
 
-            <!-- Step 4: Export Files -->
+            <!-- Step 5: Export Files -->
             <DockPanel IsVisible="{Binding ShowExportStep}" LastChildFill="True">
                 <!-- Action buttons at bottom -->
                 <StackPanel DockPanel.Dock="Bottom"
@@ -551,7 +720,7 @@
 
                 <!-- Header at top -->
                 <StackPanel DockPanel.Dock="Top" Spacing="5" Margin="0,0,0,15">
-                    <TextBlock Text="Step 4: Export Translations"
+                    <TextBlock Text="Step 5: Export Translations"
                                FontSize="20"
                                FontWeight="Bold"
                                Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>

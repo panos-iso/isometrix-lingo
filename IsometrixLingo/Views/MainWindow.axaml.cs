@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private static readonly ModifiedCellBorderConverter ModifiedBorderConverter = new();
     private static readonly ShowOriginalTooltipConverter ShowOriginalTooltipConverter = new();
     private static readonly RowToggleEnabledConverter RowToggleEnabledConverter = new();
+    private static readonly EditButtonTooltipConverter EditButtonTooltipConverter = new();
 
     public MainWindow()
     {
@@ -137,7 +138,11 @@ public partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel mainViewModel)
             return;
 
-        var editViewModel = new EditTranslationViewModel(translationKey, mainViewModel.TranslationStore);
+        var editViewModel = new EditTranslationViewModel(
+            translationKey, 
+            mainViewModel.TranslationStore, 
+            mainViewModel.CurrentMode,
+            mainViewModel.Username);
         var dialog = new EditTranslationDialog
         {
             DataContext = editViewModel
@@ -147,6 +152,9 @@ public partial class MainWindow : Window
 
         if (result)
         {
+            // Mark as having unsaved changes (for both Edit and Suggest modes)
+            mainViewModel.HasUnsavedChanges = true;
+            
             // Update status message to show modified count
             var modifiedCount = mainViewModel.TranslationStore.GetModifiedKeys().Count;
 
@@ -163,7 +171,7 @@ public partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel viewModel)
             return;
 
-        // Remove existing language columns and Actions (keep Key and Source File)
+        // Remove existing columns after Key and Source File (keep first 2)
         while (TranslationsGrid.Columns.Count > 2)
         {
             TranslationsGrid.Columns.RemoveAt(2);
@@ -178,42 +186,60 @@ public partial class MainWindow : Window
                 Header = languageName,
                 Width = new DataGridLength(1, DataGridLengthUnitType.Star),
                 MinWidth = 120,
-                CellTemplate = new FuncDataTemplate<object>((_, _) =>
+                CellTemplate = new FuncDataTemplate<object>((data, _) =>
                 {
                     // Create a border to apply background color and left border for highlighting
                     var border = new Border
                     {
-                        Padding = new Avalonia.Thickness(5, 2),
+                        Padding = new Avalonia.Thickness(5, 4),
                         BorderThickness = new Avalonia.Thickness(3, 0, 0, 0) // Left border
                     };
 
-                    // Bind background to highlight modified cells
+                    // Bind background to highlight modified cells and cells with suggestions
                     var backgroundBinding = new MultiBinding
                     {
                         Converter = ModifiedBackgroundConverter,
                         Bindings =
                         {
                             new Binding("ModifiedLanguages"), // HashSet that changes
+                            new Binding("."), // The TranslationKey itself for suggestion check
+                            new Binding("SuggestedValues"), // Explicit binding to trigger refresh when suggestions change
                             new Binding(language) // Just a constant for the language parameter
                         },
                         ConverterParameter = language
                     };
                     border.Bind(Border.BackgroundProperty, backgroundBinding);
 
-                    // Bind left border color to show modification indicator (like VS Code git gutter)
+                    // Bind left border color to show modification (orange) and suggestion (purple) indicators
                     var borderBinding = new MultiBinding
                     {
                         Converter = ModifiedBorderConverter,
                         Bindings =
                         {
                             new Binding("ModifiedLanguages"),
+                            new Binding("."), // The TranslationKey itself for suggestion check
+                            new Binding("SuggestedValues"), // Explicit binding to trigger refresh when suggestions change
                             new Binding(language)
                         },
                         ConverterParameter = language
                     };
                     border.Bind(Border.BorderBrushProperty, borderBinding);
 
-                    var textBlock = new TextBlock
+                    // Create a Grid with two columns: text content and buttons
+                    var grid = new Grid();
+                    grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star)); // Text content
+                    grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto)); // Buttons
+
+                    // Create a StackPanel to hold actual value and suggestion
+                    var stackPanel = new StackPanel
+                    {
+                        Orientation = Avalonia.Layout.Orientation.Vertical,
+                        Spacing = 2
+                    };
+                    Grid.SetColumn(stackPanel, 0);
+
+                    // Actual value TextBlock
+                    var actualValueTextBlock = new TextBlock
                     {
                         TextWrapping = Avalonia.Media.TextWrapping.NoWrap,
                         TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
@@ -234,9 +260,118 @@ public partial class MainWindow : Window
                         ConverterParameter = language,
                         Mode = BindingMode.OneWay
                     };
-                    textBlock.Bind(TextBlock.TextProperty, textBinding);
+                    actualValueTextBlock.Bind(TextBlock.TextProperty, textBinding);
 
-                    border.Child = textBlock;
+                    stackPanel.Children.Add(actualValueTextBlock);
+
+                    // Suggestion TextBlock (only visible if there's a suggestion)
+                    if (data is TranslationKey key)
+                    {
+                        var suggestionTextBlock = new TextBlock
+                        {
+                            FontSize = 11,
+                            Foreground = Brushes.White,
+                            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                            Margin = new Avalonia.Thickness(0, 2, 0, 0)
+                        };
+
+                        // Bind suggestion text
+                        var suggestionTextBinding = new MultiBinding
+                        {
+                            Converter = new SuggestionTextConverter(),
+                            Bindings =
+                            {
+                                new Binding(".") { Source = key },
+                                new Binding("SuggestedValues") { Source = key } // Explicit binding to trigger refresh
+                            },
+                            ConverterParameter = language
+                        };
+                        suggestionTextBlock.Bind(TextBlock.TextProperty, suggestionTextBinding);
+
+                        // Bind visibility - only show if there's a suggestion
+                        var suggestionVisibilityBinding = new MultiBinding
+                        {
+                            Converter = new HasSuggestionConverter(),
+                            Bindings =
+                            {
+                                new Binding(".") { Source = key },
+                                new Binding("SuggestedValues") { Source = key } // Explicit binding to trigger refresh
+                            },
+                            ConverterParameter = language
+                        };
+                        suggestionTextBlock.Bind(TextBlock.IsVisibleProperty, suggestionVisibilityBinding);
+
+                        stackPanel.Children.Add(suggestionTextBlock);
+
+                        // Accept/Reject buttons (only visible in Edit Mode and when there's a suggestion)
+                        var buttonsPanel = new StackPanel
+                        {
+                            Orientation = Avalonia.Layout.Orientation.Horizontal,
+                            Spacing = 3,
+                            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+                            Margin = new Avalonia.Thickness(5, 0, 0, 0)
+                        };
+                        Grid.SetColumn(buttonsPanel, 1);
+
+                        // Accept button (✓)
+                        var acceptButton = new Button
+                        {
+                            Content = "✓",
+                            FontSize = 14,
+                            Foreground = new SolidColorBrush(Color.Parse("#4CAF50")), // Green
+                            Background = Brushes.Transparent,
+                            BorderBrush = new SolidColorBrush(Color.Parse("#4CAF50")),
+                            BorderThickness = new Avalonia.Thickness(1),
+                            Padding = new Avalonia.Thickness(6, 2),
+                            CornerRadius = new Avalonia.CornerRadius(3),
+                            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                            VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                            Command = viewModel.AcceptSuggestionCommand,
+                            CommandParameter = (key, language)
+                        };
+                        ToolTip.SetTip(acceptButton, "Accept suggestion");
+
+                        // Reject button (✗)
+                        var rejectButton = new Button
+                        {
+                            Content = "✗",
+                            FontSize = 14,
+                            Foreground = new SolidColorBrush(Color.Parse("#F44336")), // Red
+                            Background = Brushes.Transparent,
+                            BorderBrush = new SolidColorBrush(Color.Parse("#F44336")),
+                            BorderThickness = new Avalonia.Thickness(1),
+                            Padding = new Avalonia.Thickness(6, 2),
+                            CornerRadius = new Avalonia.CornerRadius(3),
+                            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                            VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                            Command = viewModel.RejectSuggestionCommand,
+                            CommandParameter = (key, language)
+                        };
+                        ToolTip.SetTip(rejectButton, "Reject suggestion");
+
+                        // Bind visibility based on EditMode and HasSuggestion
+                        // Only show buttons in Edit Mode AND when there's a suggestion for this language
+                        var buttonsVisibilityBinding = new MultiBinding
+                        {
+                            Converter = new EditModeAndHasSuggestionConverter(),
+                            Bindings =
+                            {
+                                new Binding("CurrentMode") { Source = viewModel },
+                                new Binding(".") { Source = key },
+                                new Binding("SuggestedValues") { Source = key } // Explicit binding to trigger refresh
+                            },
+                            ConverterParameter = language
+                        };
+                        buttonsPanel.Bind(StackPanel.IsVisibleProperty, buttonsVisibilityBinding);
+
+                        buttonsPanel.Children.Add(acceptButton);
+                        buttonsPanel.Children.Add(rejectButton);
+
+                        grid.Children.Add(stackPanel);
+                        grid.Children.Add(buttonsPanel);
+                    }
+
+                    border.Child = grid;
                     return border;
                 })
             };
@@ -258,7 +393,7 @@ public partial class MainWindow : Window
                     Margin = new Avalonia.Thickness(5, 2)
                 };
 
-                // Show Original toggle button
+                // Show Original toggle button (only visible in Edit mode)
                 var toggleButton = new Button
                 {
                     Content = "👁",
@@ -267,6 +402,14 @@ public partial class MainWindow : Window
                     HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                     VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center
                 };
+
+                // Bind IsVisible to CurrentMode (only show in Edit mode)
+                var visibilityBinding = new Binding("CurrentMode")
+                {
+                    Source = viewModel,
+                    Converter = new IsEditModeConverter()
+                };
+                toggleButton.Bind(Button.IsVisibleProperty, visibilityBinding);
 
                 if (data is TranslationKey key)
                 {
@@ -308,7 +451,14 @@ public partial class MainWindow : Window
                     Command = viewModel.EditTranslationCommand,
                     CommandParameter = data
                 };
-                ToolTip.SetTip(editButton, "Edit translation");
+                
+                // Bind tooltip to CurrentMode for context-aware text
+                var editTooltipBinding = new Binding("CurrentMode")
+                {
+                    Source = viewModel,
+                    Converter = EditButtonTooltipConverter
+                };
+                editButton.Bind(ToolTip.TipProperty, editTooltipBinding);
 
                 panel.Children.Add(toggleButton);
                 panel.Children.Add(editButton);
@@ -395,6 +545,22 @@ public partial class MainWindow : Window
             {
                 viewModel.StatusMessage = $"Drop error: {ex.Message}";
             }
+        }
+    }
+
+    private void OnEditModeBoxTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.SelectModeCommand.Execute(EditMode.Edit);
+        }
+    }
+
+    private void OnSuggestModeBoxTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.SelectModeCommand.Execute(EditMode.Suggest);
         }
     }
 }

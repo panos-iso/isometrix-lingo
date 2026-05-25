@@ -1,13 +1,14 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:IsometrixLingo.ViewModels"
+        xmlns:converters="using:IsometrixLingo.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="500"
         x:Class="IsometrixLingo.Views.EditTranslationDialog"
         x:DataType="vm:EditTranslationViewModel"
-        Title="Edit Translation"
-        Width="600" Height="400"
+        Title="{Binding CurrentMode, Converter={StaticResource EditDialogTitleConverter}}"
+        Width="800" Height="500"
         WindowStartupLocation="CenterOwner"
         CanResize="False">
 
@@ -15,13 +16,16 @@
         <vm:EditTranslationViewModel/>
     </Design.DataContext>
 
+    <Window.Resources>
+        <converters:EditDialogTitleConverter x:Key="EditDialogTitleConverter"/>
+        <converters:EditDialogLabelConverter x:Key="EditDialogLabelConverter"/>
+    </Window.Resources>
+
     <DockPanel Margin="20">
         <!-- Bottom Buttons -->
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
             <Button Content="Save" 
-                    Command="{Binding SaveCommand}"
                     Click="OnSaveClick"
-                    IsDefault="True"
                     Margin="0,0,10,0"
                     Padding="20,8"/>
             <Button Content="Cancel"
@@ -38,26 +42,126 @@
                      IsReadOnly="True" 
                      Margin="0,0,0,20"/>
 
-            <!-- Language Values -->
-            <TextBlock Text="Translations:" FontWeight="SemiBold" Margin="0,0,0,10"/>
-            <ScrollViewer MaxHeight="240">
-                <ItemsControl ItemsSource="{Binding LanguageValues}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Margin="0,0,0,15">
-                                <TextBlock Text="{Binding LanguageName}" 
-                                          FontWeight="Medium"
-                                          Margin="0,0,0,5"/>
-                                <TextBox Text="{Binding Value}" 
-                                        AcceptsReturn="True"
-                                        TextWrapping="Wrap"
-                                        MinHeight="60"
-                                        MaxHeight="100"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+            <!-- Edit Mode: Editable actual values -->
+            <StackPanel IsVisible="{Binding CurrentMode, Converter={StaticResource IsEditModeConverter}}">
+                <TextBlock Text="{Binding CurrentMode, Converter={StaticResource EditDialogLabelConverter}}" 
+                           FontWeight="SemiBold" Margin="0,0,0,10"/>
+                <ScrollViewer MaxHeight="240">
+                    <ItemsControl ItemsSource="{Binding LanguageValues}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,0,0,15">
+                                    <TextBlock Text="{Binding LanguageName}" 
+                                              FontWeight="Medium"
+                                              Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding Value}" 
+                                            AcceptsReturn="True"
+                                            TextWrapping="Wrap"
+                                            MinHeight="60"
+                                            MaxHeight="100"/>
+                                    
+                                    <!-- Suggestion display with Accept/Reject buttons -->
+                                    <Grid IsVisible="{Binding HasSuggestion}" ColumnDefinitions="*,Auto" Margin="0,5,0,0">
+                                        <TextBlock Grid.Column="0"
+                                                  Text="{Binding SuggestionText}"
+                                                  FontSize="11"
+                                                  Foreground="White"
+                                                  TextWrapping="Wrap"
+                                                  VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" Margin="10,0,0,0">
+                                            <Button Content="✓"
+                                                   FontSize="14"
+                                                   Foreground="#4CAF50"
+                                                   Background="Transparent"
+                                                   BorderBrush="#4CAF50"
+                                                   BorderThickness="1"
+                                                   Padding="6,2"
+                                                   CornerRadius="3"
+                                                   Command="{Binding $parent[Window].DataContext.AcceptSuggestionCommand}"
+                                                   CommandParameter="{Binding}"
+                                                   ToolTip.Tip="Accept suggestion"/>
+                                            <Button Content="✗"
+                                                   FontSize="14"
+                                                   Foreground="#F44336"
+                                                   Background="Transparent"
+                                                   BorderBrush="#F44336"
+                                                   BorderThickness="1"
+                                                   Padding="6,2"
+                                                   CornerRadius="3"
+                                                   Command="{Binding $parent[Window].DataContext.RejectSuggestionCommand}"
+                                                   CommandParameter="{Binding}"
+                                                   ToolTip.Tip="Reject suggestion"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </StackPanel>
+
+            <!-- Suggest Mode: Read-only actual values + editable suggestions in 2 columns -->
+            <StackPanel IsVisible="{Binding CurrentMode, Converter={StaticResource IsSuggestModeConverter}}">
+                <TextBlock Text="Suggest Changes (Current vs. Suggested)" 
+                           FontWeight="SemiBold" Margin="0,0,0,10"/>
+                <ScrollViewer MaxHeight="320">
+                    <ItemsControl ItemsSource="{Binding LanguageSuggestions}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="#E0E0E0" 
+                                        BorderThickness="0,0,0,1" 
+                                        Padding="0,0,0,15" 
+                                        Margin="0,0,0,15">
+                                    <StackPanel>
+                                        <!-- Language Header -->
+                                        <TextBlock Text="{Binding LanguageName}" 
+                                                  FontWeight="SemiBold"
+                                                  FontSize="14"
+                                                  Margin="0,0,0,8"/>
+                                        
+                                        <!-- Two Column Grid: Current (left) vs Suggested (right) -->
+                                        <Grid ColumnDefinitions="*,15,*">
+                                            <!-- Left Column: Current Value (Read-Only) -->
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="Current Translation" 
+                                                          FontSize="11"
+                                                          FontWeight="Medium"
+                                                          Margin="0,0,0,5"/>
+                                                <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="4"
+                                                        Padding="10"
+                                                        MinHeight="80">
+                                                    <TextBlock Text="{Binding CurrentValue}" 
+                                                              TextWrapping="Wrap"
+                                                              VerticalAlignment="Top"/>
+                                                </Border>
+                                            </StackPanel>
+                                            
+                                            <!-- Right Column: Suggestion Input -->
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="Your Suggestion" 
+                                                          FontSize="11"
+                                                          FontWeight="Medium"
+                                                          Foreground="#7B1FA2"
+                                                          Margin="0,0,0,5"/>
+                                                <TextBox Text="{Binding SuggestedValue, Mode=TwoWay}" 
+                                                        PlaceholderText="Enter your suggestion..."
+                                                        AcceptsReturn="True"
+                                                        TextWrapping="Wrap"
+                                                        MinHeight="80"
+                                                        MaxHeight="120"
+                                                        BorderBrush="#9C27B0"
+                                                        BorderThickness="1.5"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </StackPanel>
         </StackPanel>
     </DockPanel>
 

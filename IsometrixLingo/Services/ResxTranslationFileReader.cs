@@ -32,15 +32,25 @@ public class ResxTranslationFileReader
 
         foreach (var resource in resources)
         {
-            keys.Add(new TranslationKey
+            var rawValue = resource.Value;
+            var (actualValue, suggestion) = ParseValueWithSuggestion(rawValue, language);
+            
+            var translationKey = new TranslationKey
             {
                 Key = resource.Name,
                 Source = new SourceFile(baseFileName, FileType.Resx),
                 LanguageValues = new Dictionary<string, string>
                 {
-                    { language, resource.Value }
+                    { language, actualValue }
                 }
-            });
+            };
+            
+            if (suggestion != null)
+            {
+                translationKey.SuggestedValues[language] = suggestion;
+            }
+            
+            keys.Add(translationKey);
         }
 
         return new TranslationFile
@@ -104,6 +114,12 @@ public class ResxTranslationFileReader
                     {
                         existingKey.LanguageValues[langValue.Key] = langValue.Value;
                     }
+                    
+                    // Merge suggestions
+                    foreach (var suggestion in key.SuggestedValues)
+                    {
+                        existingKey.SuggestedValues[suggestion.Key] = suggestion.Value;
+                    }
                 }
                 else
                 {
@@ -111,7 +127,8 @@ public class ResxTranslationFileReader
                     {
                         Key = key.Key,
                         Source = key.Source,
-                        LanguageValues = new Dictionary<string, string>(key.LanguageValues)
+                        LanguageValues = new Dictionary<string, string>(key.LanguageValues),
+                        SuggestedValues = new Dictionary<string, Suggestion>(key.SuggestedValues)
                     };
                 }
             }
@@ -132,6 +149,30 @@ public class ResxTranslationFileReader
         }
 
         return consolidatedKeys.Values.OrderBy(k => k.Key).ToList();
+    }
+
+    /// <summary>
+    /// Parse a value string that may contain a suggestion
+    /// Format: "actual value SUGGESTION:suggested_value,by:[username],at:[datetime]"
+    /// Returns the actual value and the parsed suggestion (if present)
+    /// </summary>
+    private (string actualValue, Suggestion? suggestion) ParseValueWithSuggestion(string rawValue, string language)
+    {
+        const string suggestionPrefix = " SUGGESTION:";
+        var suggestionIndex = rawValue.IndexOf(suggestionPrefix, StringComparison.Ordinal);
+        
+        if (suggestionIndex == -1)
+        {
+            // No suggestion in this value
+            return (rawValue, null);
+        }
+
+        // Split actual value and suggestion
+        var actualValue = rawValue.Substring(0, suggestionIndex);
+        var suggestionPart = rawValue.Substring(suggestionIndex + 1); // Skip the leading space
+        
+        var suggestion = Suggestion.FromFileFormat(suggestionPart);
+        return (actualValue, suggestion);
     }
 
     /// <summary>

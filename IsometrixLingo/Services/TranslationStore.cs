@@ -18,6 +18,7 @@ public class TranslationStore
     private List<SourceFile>? _currentFileFilter = null;
     private string _currentSearchTerm = string.Empty;
     private bool _showOnlyMissingTranslations = false;
+    private bool _showOnlyWithSuggestions = false;
     private bool _hasUnsavedChanges = false;
 
     public ObservableCollection<TranslationKey> FilteredKeys => _filteredKeys;
@@ -99,6 +100,12 @@ public class TranslationStore
         ApplyFilters();
     }
 
+    public void FilterBySuggestions(bool showOnlyWithSuggestions)
+    {
+        _showOnlyWithSuggestions = showOnlyWithSuggestions;
+        ApplyFilters();
+    }
+
     private void ApplyFilters()
     {
         _filteredKeys.Clear();
@@ -130,6 +137,12 @@ public class TranslationStore
         if (_showOnlyMissingTranslations)
         {
             keysToShow = keysToShow.Where(k => k.HasMissingTranslations);
+        }
+
+        // Apply suggestions filter if enabled
+        if (_showOnlyWithSuggestions)
+        {
+            keysToShow = keysToShow.Where(k => k.HasAnySuggestions);
         }
 
         foreach (var key in keysToShow)

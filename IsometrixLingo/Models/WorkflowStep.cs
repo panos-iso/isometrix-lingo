@@ -4,8 +4,9 @@ public enum WorkflowStep
 {
     Import = 1,
     FileMapping = 2,
-    Edit = 3,
-    Export = 4
+    ModeSelection = 3,
+    Edit = 4,
+    Export = 5
 }
 
 public enum StepStatus

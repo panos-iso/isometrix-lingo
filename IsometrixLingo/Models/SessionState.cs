@@ -11,6 +11,8 @@ public class SessionState
     public WorkflowStep CurrentStep { get; set; } = WorkflowStep.Import;
     public StepStatus ImportStepStatus { get; set; } = StepStatus.InProgress;
     public StepStatus FileMappingStepStatus { get; set; } = StepStatus.NotStarted;
+    public StepStatus ModeSelectionStepStatus { get; set; } = StepStatus.NotStarted;
     public StepStatus EditStepStatus { get; set; } = StepStatus.NotStarted;
     public StepStatus ExportStepStatus { get; set; } = StepStatus.NotStarted;
+    public EditMode CurrentMode { get; set; } = EditMode.Edit;
 }
