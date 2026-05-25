@@ -1114,7 +1114,10 @@ public partial class MainWindowViewModel : ViewModelBase
                                   "These suggestions have not been accepted or rejected.\n\n" +
                                   "Do you want to stay and review the suggestions, or continue to export anyway?";
 
-                    var dialog = new ConfirmationDialog(message);
+                    var dialog = new ConfirmationDialog(
+                        message,
+                        title: "Confirm Export",
+                        header: "⚠️ Unresolved Suggestions Detected");
                     var result = await dialog.ShowDialog<bool?>(window);
 
                     if (result != true)
@@ -1155,7 +1158,10 @@ public partial class MainWindowViewModel : ViewModelBase
                 var message = $"There are {keysWithMissingTranslations.Count} translation key(s) with missing terms.\n\n" +
                               "Do you want to stay and add the missing translations, or continue to export anyway?";
 
-                var dialog = new ConfirmationDialog(message);
+                var dialog = new ConfirmationDialog(
+                    message,
+                    title: "Confirm Export",
+                    header: "⚠️ Missing Translations Detected");
                 var result = await dialog.ShowDialog<bool?>(window);
 
                 // If result is null (dialog closed) or false (stay clicked), don't proceed

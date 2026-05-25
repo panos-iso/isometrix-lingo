@@ -13,8 +13,19 @@ public partial class ConfirmationDialog : Window
         InitializeComponent();
     }
 
-    public ConfirmationDialog(string message) : this()
+    public ConfirmationDialog(string message, string? title = null, string? header = null) : this()
     {
+        if (!string.IsNullOrEmpty(title))
+        {
+            Title = title;
+        }
+        
+        var headerText = this.FindControl<TextBlock>("HeaderText");
+        if (headerText != null && !string.IsNullOrEmpty(header))
+        {
+            headerText.Text = header;
+        }
+        
         var messageText = this.FindControl<TextBlock>("MessageText");
         if (messageText != null)
         {
