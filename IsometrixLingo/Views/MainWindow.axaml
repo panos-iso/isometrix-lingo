@@ -676,6 +676,7 @@
                                   CanUserResizeColumns="True"
                                   CanUserReorderColumns="False"
                                   DoubleTapped="OnGridDoubleTapped"
+                                  Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                                   ToolTip.Tip="{Binding CurrentMode, Converter={StaticResource EditModeTooltipConverter}}">                                  
                             <DataGrid.Styles>
                                 <Style Selector="DataGridRow" x:DataType="models:TranslationKey">
