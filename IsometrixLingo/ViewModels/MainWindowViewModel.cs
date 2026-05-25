@@ -74,12 +74,14 @@ public partial class MainWindowViewModel : ViewModelBase
     private StepStatus _editStepStatus = StepStatus.NotStarted;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Step3Background), nameof(Step3Foreground), nameof(Step3Status))]
+    [NotifyPropertyChangedFor(nameof(Step3Background), nameof(Step3Foreground), nameof(Step3Status), nameof(StartOverButtonText))]
     private StepStatus _exportStepStatus = StepStatus.NotStarted;
 
     public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
     public bool ShowEditStep => CurrentStep == WorkflowStep.Edit;
     public bool ShowExportStep => CurrentStep == WorkflowStep.Export;
+
+    public string StartOverButtonText => ExportStepStatus == StepStatus.Completed ? "Start New Session" : "Start Over";
 
     public SolidColorBrush Step1Background => ImportStepStatus switch
     {

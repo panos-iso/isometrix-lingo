@@ -112,7 +112,7 @@
                                 HorizontalAlignment="Right" 
                                 Spacing="10"
                                 Margin="0,15,0,0">
-                        <Button Content="Start Over"
+                        <Button Content="{Binding StartOverButtonText}"
                                 Command="{Binding StartOverCommand}"
                                 IsEnabled="{Binding HasKeys}"
                                 Padding="15,8"/>
@@ -212,6 +212,9 @@
                             HorizontalAlignment="Right" 
                             Spacing="10"
                             Margin="0,15,0,0">
+                    <Button Content="{Binding StartOverButtonText}"
+                            Command="{Binding StartOverCommand}"
+                            Padding="15,8"/>
                     <Button Content="Add Key"
                             Command="{Binding AddKeyCommand}"
                             CommandParameter="{Binding $parent[Window]}"
@@ -295,12 +298,15 @@
 
             <!-- Step 3: Export Files -->
             <DockPanel IsVisible="{Binding ShowExportStep}" LastChildFill="True">
-                <!-- Back button at bottom -->
+                <!-- Action buttons at bottom -->
                 <StackPanel DockPanel.Dock="Bottom"
                             Orientation="Horizontal" 
                             HorizontalAlignment="Right" 
                             Spacing="10"
                             Margin="0,15,0,0">
+                    <Button Content="{Binding StartOverButtonText}"
+                            Command="{Binding StartOverCommand}"
+                            Padding="15,8"/>
                     <Button Content="← Back to Edit"
                             Command="{Binding GoBackToEditCommand}"
                             Padding="15,8"/>
