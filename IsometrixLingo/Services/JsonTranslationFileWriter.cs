@@ -74,20 +74,20 @@ public class JsonTranslationFileWriter
 
                 foreach (var key in keys)
                 {
-                    if (key.LanguageValues.TryGetValue(language, out var value))
+                    // Use actual value if exists, otherwise empty string
+                    var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+                    if (UpdateNestedValue(jsonObject, key.Key, value))
                     {
-                        if (UpdateNestedValue(jsonObject, key.Key, value))
-                        {
-                            processedKeys.Add(key.Key);
-                        }
+                        processedKeys.Add(key.Key);
                     }
                 }
 
                 // Add new keys that weren't in the template
                 foreach (var key in keys)
                 {
-                    if (!processedKeys.Contains(key.Key) && key.LanguageValues.TryGetValue(language, out var value))
+                    if (!processedKeys.Contains(key.Key))
                     {
+                        var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
                         SetNestedValue(jsonObject, key.Key, value);
                     }
                 }
@@ -98,10 +98,8 @@ public class JsonTranslationFileWriter
                 jsonObject = new JsonObject();
                 foreach (var key in keys)
                 {
-                    if (key.LanguageValues.TryGetValue(language, out var value))
-                    {
-                        SetNestedValue(jsonObject, key.Key, value);
-                    }
+                    var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+                    SetNestedValue(jsonObject, key.Key, value);
                 }
             }
         }
@@ -111,10 +109,8 @@ public class JsonTranslationFileWriter
             jsonObject = new JsonObject();
             foreach (var key in keys)
             {
-                if (key.LanguageValues.TryGetValue(language, out var value))
-                {
-                    SetNestedValue(jsonObject, key.Key, value);
-                }
+                var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+                SetNestedValue(jsonObject, key.Key, value);
             }
         }
 

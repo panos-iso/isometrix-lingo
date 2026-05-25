@@ -600,6 +600,20 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        // Detect new files that will be created
+        var newFiles = DetectNewFilesForExport(allKeys);
+        
+        // If there are new files, show confirmation
+        if (newFiles.Count > 0)
+        {
+            var confirmed = await ShowNewFilesConfirmation(window, newFiles);
+            if (!confirmed)
+            {
+                StatusMessage = "Export cancelled.";
+                return;
+            }
+        }
+
         // Default to output directory in current working directory
         var defaultOutputPath = Path.Combine(Directory.GetCurrentDirectory(), "output");
 
@@ -643,6 +657,167 @@ public partial class MainWindowViewModel : ViewModelBase
 
         // Prompt user for next action after export
         await PromptAfterExport(window);
+    }
+
+    private List<string> DetectNewFilesForExport(List<TranslationKey> allKeys)
+    {
+        var newFiles = new List<string>();
+        var importedFileNamesLower = new HashSet<string>(
+            ImportedFileNames.Select(f => f.ToLower()), 
+            StringComparer.OrdinalIgnoreCase
+        );
+
+        // Group keys by source file
+        var groupedByFile = allKeys.GroupBy(k => k.Source.Name);
+
+        foreach (var fileGroup in groupedByFile)
+        {
+            var sourceFile = fileGroup.Key;
+            var fileKeys = fileGroup.ToList();
+            var fileType = fileKeys.First().Source.Type;
+
+            // Get all languages for this file
+            var languages = fileKeys
+                .SelectMany(k => k.LanguageValues.Keys)
+                .Distinct()
+                .ToList();
+
+            // Check each language file
+            foreach (var language in languages)
+            {
+                string fileName;
+                if (fileType == FileType.Json)
+                {
+                    fileName = $"{sourceFile}.{language}.json";
+                }
+                else // RESX
+                {
+                    fileName = language == "en" 
+                        ? $"{sourceFile}.resx" 
+                        : $"{sourceFile}_{language}.resx";
+                }
+
+                if (!importedFileNamesLower.Contains(fileName.ToLower()))
+                {
+                    newFiles.Add(fileName);
+                }
+            }
+        }
+
+        return newFiles;
+    }
+
+    private async Task<bool> ShowNewFilesConfirmation(Window window, List<string> newFiles)
+    {
+        var dialog = new Window
+        {
+            Title = "Confirm New Files",
+            Width = 500,
+            Height = 350,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        var mainPanel = new DockPanel
+        {
+            Margin = new Thickness(20),
+            LastChildFill = true
+        };
+
+        // Header
+        var headerPanel = new StackPanel { Spacing = 10 };
+        DockPanel.SetDock(headerPanel, Dock.Top);
+
+        headerPanel.Children.Add(new TextBlock
+        {
+            Text = "⚠ New Files Will Be Created",
+            FontSize = 16,
+            FontWeight = FontWeight.Bold,
+            Foreground = new SolidColorBrush(Color.FromRgb(255, 152, 0)) // Orange
+        });
+
+        headerPanel.Children.Add(new TextBlock
+        {
+            Text = "The following files did not exist in your original import but will be created during export:",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 10)
+        });
+
+        mainPanel.Children.Add(headerPanel);
+
+        // Files list in scrollable area
+        var scrollViewer = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Margin = new Thickness(0, 10, 0, 15)
+        };
+        DockPanel.SetDock(scrollViewer, Dock.Top);
+
+        var filesList = new StackPanel { Spacing = 5 };
+        foreach (var file in newFiles)
+        {
+            filesList.Children.Add(new TextBlock
+            {
+                Text = $"• {file}",
+                FontFamily = new FontFamily("Courier New, monospace"),
+                Margin = new Thickness(10, 0, 0, 0)
+            });
+        }
+
+        scrollViewer.Content = filesList;
+        mainPanel.Children.Add(scrollViewer);
+
+        // Confirmation message
+        var confirmPanel = new StackPanel { Spacing = 10 };
+        DockPanel.SetDock(confirmPanel, Dock.Top);
+
+        confirmPanel.Children.Add(new TextBlock
+        {
+            Text = "Do you want to proceed with creating these files?",
+            FontWeight = FontWeight.SemiBold
+        });
+
+        mainPanel.Children.Add(confirmPanel);
+
+        // Buttons
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = 10,
+            Margin = new Thickness(0, 15, 0, 0)
+        };
+        DockPanel.SetDock(buttonPanel, Dock.Bottom);
+
+        var proceedButton = new Button
+        {
+            Content = "Yes, Create Files",
+            Width = 130,
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
+
+        var cancelButton = new Button
+        {
+            Content = "Cancel",
+            Width = 80,
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
+
+        bool confirmed = false;
+
+        proceedButton.Click += (s, args) => { confirmed = true; dialog.Close(); };
+        cancelButton.Click += (s, args) => { confirmed = false; dialog.Close(); };
+
+        buttonPanel.Children.Add(cancelButton);
+        buttonPanel.Children.Add(proceedButton);
+
+        mainPanel.Children.Add(buttonPanel);
+        mainPanel.Children.Add(new Border()); // Filler
+
+        dialog.Content = mainPanel;
+        await dialog.ShowDialog(window);
+
+        return confirmed;
     }
 
     private async Task PromptAfterExport(Window window)
