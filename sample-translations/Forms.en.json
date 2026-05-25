@@ -11,5 +11,8 @@
   "Forms_Navigation_Home": "Home",
   "Forms_Navigation_Profile": "Profile",
   "Forms_Navigation_Settings": "Settings",
-  "Forms_Navigation_Logout": "Logout"
+  "Forms_Navigation_Logout": "Logout",
+  "Forms_EdgeCase_OnlyEnglish": "This key only exists in English",
+  "Forms_EdgeCase_BothEmpty": "",
+  "Forms_EdgeCase_EmptyEnglishMissingSpanish": ""
 }
