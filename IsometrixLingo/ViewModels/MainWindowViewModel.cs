@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -29,6 +30,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly ResxTranslationFileWriter _resxWriter;
     private readonly ProgressService _progressService;
     private readonly UserSettingsService _settingsService;
+    private string _lastExportFolder = string.Empty;
+    private string _lastExportFileName = string.Empty;
 
     [ObservableProperty]
     private string _statusMessage = "Ready. Click Import to load translation files.";
@@ -501,8 +504,19 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void SaveProgress()
     {
-        var allKeys = _translationStore.GetAllKeys();
-        _progressService.SaveProgress(allKeys);
+        var sessionState = new SessionState
+        {
+            TranslationKeys = _translationStore.GetAllKeys(),
+            ImportedFileNames = ImportedFileNames.ToList(),
+            ResxTemplates = _translationStore.GetAllResxTemplates(),
+            JsonTemplates = _translationStore.GetAllJsonTemplates(),
+            CurrentStep = CurrentStep,
+            ImportStepStatus = ImportStepStatus,
+            EditStepStatus = EditStepStatus,
+            ExportStepStatus = ExportStepStatus
+        };
+        
+        _progressService.SaveProgress(sessionState);
         _translationStore.MarkAllChangesSaved();
         StatusMessage = "Progress saved successfully.";
     }
@@ -570,6 +584,13 @@ public partial class MainWindowViewModel : ViewModelBase
         ImportedFileNames.Clear();
         HasKeys = false;
         HasUnsavedChanges = false;
+        
+        // Reset workflow state
+        CurrentStep = WorkflowStep.Import;
+        ImportStepStatus = StepStatus.InProgress;
+        EditStepStatus = StepStatus.NotStarted;
+        ExportStepStatus = StepStatus.NotStarted;
+        
         UpdateFileFilters();
         StatusMessage = "Ready. Click Import to load translation files.";
     }
@@ -587,6 +608,9 @@ public partial class MainWindowViewModel : ViewModelBase
         EditStepStatus = StepStatus.InProgress;
         CurrentStep = WorkflowStep.Edit;
         StatusMessage = "Import complete. You can now edit translations or proceed to export.";
+        
+        // Auto-save progress
+        SaveProgress();
     }
 
     [RelayCommand]
@@ -596,6 +620,9 @@ public partial class MainWindowViewModel : ViewModelBase
         ExportStepStatus = StepStatus.InProgress;
         CurrentStep = WorkflowStep.Export;
         StatusMessage = "Ready to export translations.";
+        
+        // Auto-save progress
+        SaveProgress();
     }
 
     [RelayCommand]
@@ -605,6 +632,9 @@ public partial class MainWindowViewModel : ViewModelBase
         EditStepStatus = StepStatus.InProgress;
         CurrentStep = WorkflowStep.Edit;
         StatusMessage = "Returned to editing. Make your changes and proceed to export when ready.";
+        
+        // Auto-save progress
+        SaveProgress();
     }
 
     [RelayCommand]
@@ -663,6 +693,10 @@ public partial class MainWindowViewModel : ViewModelBase
             ExportStepStatus = StepStatus.Completed;
             StatusMessage = $"Exported {allKeys.Count} translation key(s) to {zipFilePath}";
 
+            // Store output folder and filename for dialog
+            _lastExportFolder = outputPath;
+            _lastExportFileName = Path.GetFileName(zipFilePath);
+
             // Prompt to start over
             await PromptToStartOverAfterExport();
         }
@@ -683,8 +717,8 @@ public partial class MainWindowViewModel : ViewModelBase
         var dialog = new Window
         {
             Title = "Export Complete",
-            Width = 400,
-            Height = 200,
+            Width = 450,
+            Height = 320,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };
@@ -692,14 +726,102 @@ public partial class MainWindowViewModel : ViewModelBase
         var panel = new StackPanel
         {
             Margin = new Thickness(20),
-            Spacing = 20
+            Spacing = 15
         };
+
+        // Success message
+        var successPanel = new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#E8F5E9")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#4CAF50")),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(10),
+            Margin = new Thickness(0, 0, 0, 5)
+        };
+
+        var successStack = new StackPanel { Spacing = 8 };
+        successStack.Children.Add(new TextBlock
+        {
+            Text = "✓ Export Successful!",
+            FontWeight = FontWeight.Bold,
+            Foreground = new SolidColorBrush(Color.Parse("#2E7D32")),
+            FontSize = 14
+        });
+
+        successStack.Children.Add(new TextBlock
+        {
+            Text = $"File: {_lastExportFileName}",
+            FontSize = 12,
+            Foreground = new SolidColorBrush(Color.Parse("#424242")),
+            FontWeight = FontWeight.Medium
+        });
+
+        successStack.Children.Add(new TextBlock
+        {
+            Text = $"Location: output/",
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Color.Parse("#757575"))
+        });
+
+        successPanel.Child = successStack;
+        panel.Children.Add(successPanel);
+
+        // View in Finder/Explorer button
+        var viewFolderButton = new Button
+        {
+            Content = OperatingSystem.IsMacOS() ? "📁 View in Finder" : "📁 View in Explorer",
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Padding = new Thickness(15, 8),
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+
+        viewFolderButton.Click += (s, args) =>
+        {
+            try
+            {
+                if (OperatingSystem.IsMacOS())
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "open",
+                        Arguments = _lastExportFolder,
+                        UseShellExecute = false
+                    });
+                }
+                else if (OperatingSystem.IsWindows())
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = _lastExportFolder,
+                        UseShellExecute = true,
+                        Verb = "open"
+                    });
+                }
+                else if (OperatingSystem.IsLinux())
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "xdg-open",
+                        Arguments = _lastExportFolder,
+                        UseShellExecute = false
+                    });
+                }
+            }
+            catch
+            {
+                // Silently ignore if opening fails
+            }
+        };
+
+        panel.Children.Add(viewFolderButton);
 
         panel.Children.Add(new TextBlock
         {
-            Text = "Files exported successfully! Would you like to start a new session?",
+            Text = "Would you like to start a new session?",
             TextWrapping = TextWrapping.Wrap,
-            FontWeight = FontWeight.SemiBold
+            FontWeight = FontWeight.SemiBold,
+            HorizontalAlignment = HorizontalAlignment.Center
         });
 
         panel.Children.Add(new TextBlock
@@ -707,7 +829,8 @@ public partial class MainWindowViewModel : ViewModelBase
             Text = "Starting over will clear all current translations and reset the workflow.",
             TextWrapping = TextWrapping.Wrap,
             FontSize = 11,
-            Foreground = Brushes.Gray
+            Foreground = Brushes.Gray,
+            HorizontalAlignment = HorizontalAlignment.Center
         });
 
         var buttonPanel = new StackPanel
@@ -746,15 +869,34 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void LoadProgress()
     {
-        var savedKeys = _progressService.LoadProgress();
-        if (savedKeys != null && savedKeys.Count > 0)
+        var sessionState = _progressService.LoadProgress();
+        if (sessionState != null && sessionState.TranslationKeys.Count > 0)
         {
-            _translationStore.AddTranslations(savedKeys);
+            // Restore translation keys
+            _translationStore.AddTranslations(sessionState.TranslationKeys);
+            
+            // Restore templates
+            _translationStore.RestoreResxTemplates(sessionState.ResxTemplates);
+            _translationStore.RestoreJsonTemplates(sessionState.JsonTemplates);
+            
+            // Restore imported file names
+            ImportedFileNames.Clear();
+            foreach (var fileName in sessionState.ImportedFileNames)
+            {
+                ImportedFileNames.Add(fileName);
+            }
+            
+            // Restore workflow state
+            CurrentStep = sessionState.CurrentStep;
+            ImportStepStatus = sessionState.ImportStepStatus;
+            EditStepStatus = sessionState.EditStepStatus;
+            ExportStepStatus = sessionState.ExportStepStatus;
+            
             UpdateFileFilters();
             HasKeys = true;
-            // Don't mark as unsaved since we just loaded
             HasUnsavedChanges = false;
-            StatusMessage = $"Loaded {savedKeys.Count} translation keys from saved progress.";
+            
+            StatusMessage = $"Loaded {sessionState.TranslationKeys.Count} translation keys from saved progress.";
             LanguagesChanged?.Invoke(this, EventArgs.Empty);
         }
     }

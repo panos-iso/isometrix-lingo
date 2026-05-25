@@ -103,10 +103,9 @@
                    Padding="10,5"/>
 
         <!-- Main Content Area - Changes based on current step -->
-        <ScrollViewer Margin="20" VerticalScrollBarVisibility="Auto">
-            <Grid>
-                <!-- Step 1: Import Files -->
-                <DockPanel IsVisible="{Binding ShowImportStep}" LastChildFill="True">
+        <Grid Margin="20">
+            <!-- Step 1: Import Files -->
+            <DockPanel IsVisible="{Binding ShowImportStep}" LastChildFill="True">
                     <!-- Buttons at bottom -->
                     <StackPanel DockPanel.Dock="Bottom"
                                 Orientation="Horizontal" 
@@ -206,64 +205,9 @@
                 </DockPanel>
 
             <!-- Step 2: Edit Translations -->
-            <Grid IsVisible="{Binding ShowEditStep}" RowDefinitions="Auto,Auto,*,Auto">
-                <TextBlock Grid.Row="0"
-                           Text="Step 2: Edit Translations"
-                           FontSize="20"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                           Margin="0,0,0,10"/>
-
-                <!-- File Filters -->
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,15" Spacing="10">
-                    <TextBlock Text="Filter by file:" 
-                               VerticalAlignment="Center" 
-                               FontWeight="SemiBold"/>
-                    <ComboBox ItemsSource="{Binding AvailableSourceFiles}"
-                              SelectedItem="{Binding SelectedSourceFile}"
-                              Width="250">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Converter={StaticResource SourceFileDisplayConverter}}"/>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                    <TextBlock Text="Search:" VerticalAlignment="Center" Margin="20,0,5,0"/>
-                    <TextBox Text="{Binding SearchText}"
-                             PlaceholderText="Search keys and values..."
-                             MinWidth="200"
-                             VerticalAlignment="Center"/>
-                    <Button Content="Reset Filters"
-                            Command="{Binding ResetFiltersCommand}"
-                            Padding="10,5"/>
-                </StackPanel>
-
-                <!-- DataGrid -->
-                <DataGrid Grid.Row="2"
-                          x:Name="TranslationsGrid"
-                          ItemsSource="{Binding TranslationStore.FilteredKeys}"
-                          AutoGenerateColumns="False"
-                          IsReadOnly="True"
-                          GridLinesVisibility="All"
-                          BorderThickness="1"
-                          BorderBrush="Gray"
-                          CanUserResizeColumns="True"
-                          CanUserReorderColumns="False"
-                          DoubleTapped="OnGridDoubleTapped">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Key" 
-                                            Binding="{Binding Key}" 
-                                            Width="1.5*" 
-                                            MinWidth="150"/>
-                        <DataGridTextColumn Header="Source File" 
-                                            Binding="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
-                                            Width="*" 
-                                            MinWidth="150"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-
-                <!-- Action Buttons -->
-                <StackPanel Grid.Row="3" 
+            <DockPanel IsVisible="{Binding ShowEditStep}" LastChildFill="True">
+                <!-- Action Buttons docked to bottom -->
+                <StackPanel DockPanel.Dock="Bottom" 
                             Orientation="Horizontal" 
                             HorizontalAlignment="Right" 
                             Spacing="10"
@@ -284,7 +228,70 @@
                             Padding="15,8"
                             FontWeight="SemiBold"/>
                 </StackPanel>
-            </Grid>
+
+                <!-- Main content area with Grid layout -->
+                <Grid RowDefinitions="Auto,Auto,*">
+                    <!-- Title -->
+                    <TextBlock Grid.Row="0"
+                               Text="Step 2: Edit Translations"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                               Margin="0,0,0,10"/>
+
+                    <!-- File Filters -->
+                    <StackPanel Grid.Row="1" 
+                                Orientation="Horizontal" 
+                                Spacing="10"
+                                Margin="0,0,0,15">
+                        <TextBlock Text="Filter by file:" 
+                                   VerticalAlignment="Center" 
+                                   FontWeight="SemiBold"/>
+                        <ComboBox ItemsSource="{Binding AvailableSourceFiles}"
+                                  SelectedItem="{Binding SelectedSourceFile}"
+                                  Width="250">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource SourceFileDisplayConverter}}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBlock Text="Search:" VerticalAlignment="Center" Margin="20,0,5,0"/>
+                        <TextBox Text="{Binding SearchText}"
+                                 PlaceholderText="Search keys and values..."
+                                 MinWidth="200"
+                                 VerticalAlignment="Center"/>
+                        <Button Content="Reset Filters"
+                                Command="{Binding ResetFiltersCommand}"
+                                Padding="10,5"/>
+                    </StackPanel>
+
+                    <!-- DataGrid with constrained height -->
+                    <Border Grid.Row="2"
+                            BorderThickness="1"
+                            BorderBrush="Gray">
+                        <DataGrid x:Name="TranslationsGrid"
+                                  ItemsSource="{Binding TranslationStore.FilteredKeys}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  GridLinesVisibility="All"
+                                  CanUserResizeColumns="True"
+                                  CanUserReorderColumns="False"
+                                  DoubleTapped="OnGridDoubleTapped">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Key" 
+                                                    Binding="{Binding Key}" 
+                                                    Width="1.5*" 
+                                                    MinWidth="150"/>
+                                <DataGridTextColumn Header="Source File" 
+                                                    Binding="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
+                                                    Width="*" 
+                                                    MinWidth="150"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                </Grid>
+            </DockPanel>
 
             <!-- Step 3: Export Files -->
             <DockPanel IsVisible="{Binding ShowExportStep}" LastChildFill="True">
@@ -343,8 +350,7 @@
                     </Border>
                 </StackPanel>
             </DockPanel>
-            </Grid>
-        </ScrollViewer>
+        </Grid>
     </DockPanel>
 
 </Window>

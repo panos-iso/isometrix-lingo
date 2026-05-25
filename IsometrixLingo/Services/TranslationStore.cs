@@ -190,6 +190,39 @@ public class TranslationStore
         SetUnsavedChanges(false);
     }
 
+    public Dictionary<string, string> GetAllResxTemplates()
+    {
+        var templates = new Dictionary<string, string>();
+        foreach (var kvp in _resxTemplates)
+        {
+            templates[kvp.Key] = kvp.Value.ToString();
+        }
+        return templates;
+    }
+
+    public Dictionary<string, string> GetAllJsonTemplates()
+    {
+        return new Dictionary<string, string>(_jsonTemplates);
+    }
+
+    public void RestoreResxTemplates(Dictionary<string, string> templates)
+    {
+        _resxTemplates.Clear();
+        foreach (var kvp in templates)
+        {
+            _resxTemplates[kvp.Key] = XDocument.Parse(kvp.Value);
+        }
+    }
+
+    public void RestoreJsonTemplates(Dictionary<string, string> templates)
+    {
+        _jsonTemplates.Clear();
+        foreach (var kvp in templates)
+        {
+            _jsonTemplates[kvp.Key] = kvp.Value;
+        }
+    }
+
     private void SetUnsavedChanges(bool value)
     {
         if (_hasUnsavedChanges != value)
