@@ -147,9 +147,6 @@ public partial class MainWindow : Window
 
         if (result)
         {
-            // Refresh UI to show updated values
-            mainViewModel.TranslationStore.RefreshUI();
-
             // Update status message to show modified count
             var modifiedCount = mainViewModel.TranslationStore.GetModifiedKeys().Count;
 
