@@ -30,30 +30,34 @@ Download the latest release for your platform:
 
 ### Installation
 
-**macOS:**
+**macOS (Apple Silicon):**
 
-1. Extract the downloaded tar.gz file:
+1. Extract the downloaded tar file
+2. Remove macOS quarantine (choose **ONE** method):
 
-   ```bash
-   tar -xzf isometrix-lingo-v*-macos-arm64.tar
-   ```
+   **Option A - For Non-Technical Users (GUI Method):**
+   - Locate `IsometrixLingo.app` in Finder
+   - **Right-click** (or Control+click) on the app
+   - Select **"Open"** from the menu
+   - Click **"Open"** in the security dialog that appears
+   - The app will now launch (this only needs to be done once)
 
-2. Remove quarantine attribute (required for unsigned apps):
-
+   **Option B - For Technical Users (Command Line):**
    ```bash
    xattr -d com.apple.quarantine IsometrixLingo.app
    ```
 
 3. Double-click `IsometrixLingo.app` to launch
 
-> **Note**: The quarantine removal is needed because the app is not code-signed. This is a one-time step after downloading.
+> **Why is this needed?** The app is not code-signed with an Apple Developer certificate. This is a one-time step after downloading.
 
-**Windows:**
+**Windows (x64):**
 
-1. Extract `isometrix-lingo-v*-windows-x64.zip`
+1. Extract the ZIP file
 2. Run `isometrix-lingo.exe`
+3. If Windows SmartScreen appears, click "More info" → "Run anyway"
 
-No .NET runtime installation required - fully self-contained!
+**No .NET runtime installation required** - fully self-contained!
 
 ## Usage
 
