@@ -648,6 +648,10 @@
                                   IsChecked="{Binding ShowOnlyMissingTranslations}"
                                   VerticalAlignment="Center"
                                   ToolTip.Tip="Show only keys with missing translations"/>
+                        <CheckBox Content="Only With Suggestions"
+                                  IsChecked="{Binding ShowOnlyWithSuggestions}"
+                                  VerticalAlignment="Center"
+                                  ToolTip.Tip="Show only keys that have suggestions"/>
                         <TextBox Text="{Binding SearchText}"
                                  PlaceholderText="Search keys and values..."
                                  MinWidth="200"

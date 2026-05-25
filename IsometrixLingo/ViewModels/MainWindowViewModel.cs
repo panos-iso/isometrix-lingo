@@ -96,6 +96,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _showOnlyMissingTranslations;
 
     [ObservableProperty]
+    private bool _showOnlyWithSuggestions;
+
+    [ObservableProperty]
     private bool _showFilters = true;
 
     [ObservableProperty]
@@ -562,6 +565,7 @@ public partial class MainWindowViewModel : ViewModelBase
         SearchText = string.Empty;
         ShowOriginalValues = false;
         ShowOnlyMissingTranslations = false;
+        ShowOnlyWithSuggestions = false;
         _translationStore.FilterBySourceFiles(null!);
         _translationStore.FilterBySearchTerm(string.Empty);
         UpdateStatusMessage();
@@ -582,6 +586,12 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnShowOnlyMissingTranslationsChanged(bool value)
     {
         _translationStore.FilterByMissingTranslations(value);
+        UpdateStatusMessage();
+    }
+
+    partial void OnShowOnlyWithSuggestionsChanged(bool value)
+    {
+        _translationStore.FilterBySuggestions(value);
         UpdateStatusMessage();
     }
 
