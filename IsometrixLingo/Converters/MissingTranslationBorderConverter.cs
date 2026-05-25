@@ -14,7 +14,7 @@ public class MissingTranslationBorderConverter : IValueConverter
     {
         if (value is bool hasMissingTranslations && hasMissingTranslations)
         {
-            return new SolidColorBrush(Color.FromArgb(40, 220, 53, 69)); // Light red/rose background (semi-transparent)
+            return new SolidColorBrush(Color.FromArgb(70, 255, 80, 80)); // More visible red background
         }
 
         return Brushes.Transparent; // Transparent background for normal rows

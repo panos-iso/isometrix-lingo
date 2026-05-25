@@ -39,10 +39,15 @@ public partial class TranslationKey : ObservableObject
     }
 
     /// <summary>
-    /// Update the HasMissingTranslations property based on current language values
+    /// Update the HasMissingTranslations property based on current language values.
+    /// Checks if both English and Spanish have non-empty values.
     /// </summary>
     public void UpdateMissingTranslationsStatus()
     {
-        HasMissingTranslations = LanguageValues.Any(kvp => string.IsNullOrWhiteSpace(kvp.Value));
+        // A translation is missing if either en or es is not present or is empty
+        var hasEnglish = LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue);
+        var hasSpanish = LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue);
+        
+        HasMissingTranslations = !hasEnglish || !hasSpanish;
     }
 }
