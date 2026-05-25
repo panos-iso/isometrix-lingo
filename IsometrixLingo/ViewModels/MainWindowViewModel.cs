@@ -793,7 +793,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task CompleteEdit(Window window)
+    private async Task CompleteEdit(Window? window)
     {
         try
         {
@@ -804,13 +804,29 @@ public partial class MainWindowViewModel : ViewModelBase
 
             if (keysWithMissingTranslations.Count > 0)
             {
+                // Get the window if not provided
+                if (window == null)
+                {
+                    if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                    {
+                        window = desktop.MainWindow;
+                    }
+                }
+
+                if (window == null)
+                {
+                    StatusMessage = "Cannot show dialog - no window available.";
+                    return;
+                }
+
                 var message = $"There are {keysWithMissingTranslations.Count} translation key(s) with missing terms.\n\n" +
                               "Do you want to stay and add the missing translations, or continue to export anyway?";
 
                 var dialog = new ConfirmationDialog(message);
-                var continueToExport = await dialog.ShowDialog<bool>(window);
+                var result = await dialog.ShowDialog<bool?>(window);
 
-                if (!continueToExport)
+                // If result is null (dialog closed) or false (stay clicked), don't proceed
+                if (result != true)
                 {
                     // User chose to stay and add missing terms
                     StatusMessage = "Add missing translations before exporting.";

@@ -271,6 +271,7 @@
                         <Button Content="Complete &amp; Continue to Export →"
                                 Classes="PrimaryButton"
                                 Command="{Binding CompleteEditCommand}"
+                                CommandParameter="{Binding $parent[Window]}"
                                 IsEnabled="{Binding HasKeys}"
                                 Padding="15,8"
                                 FontWeight="SemiBold"/>
