@@ -180,190 +180,208 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task ImportFiles(Window window)
     {
-        var files = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        try
         {
-            Title = "Select Translation Files",
-            AllowMultiple = true,
-            FileTypeFilter = new[]
+            var files = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                new FilePickerFileType("Translation Files")
+                Title = "Select Translation Files",
+                AllowMultiple = true,
+                FileTypeFilter = new[]
                 {
-                    Patterns = new[] { "*.json", "*.resx" }
+                    new FilePickerFileType("Translation Files")
+                    {
+                        Patterns = new[] { "*.json", "*.resx" }
+                    }
+                }
+            });
+
+            if (files.Count == 0)
+            {
+                return;
+            }
+
+            var translationFiles = new List<TranslationFile>();
+            // Don't clear existing files - we want to accumulate multiple imports
+            // ImportedFileNames.Clear(); // REMOVED to allow multiple imports
+
+            foreach (var file in files)
+            {
+                try
+                {
+                    var filePath = file.Path.LocalPath;
+                    var fileName = Path.GetFileName(filePath);
+                    var extension = Path.GetExtension(filePath).ToLower();
+
+                    TranslationFile translationFile = extension switch
+                    {
+                        ".json" => _jsonReader.ReadFile(filePath),
+                        ".resx" => _resxReader.ReadFile(filePath),
+                        _ => throw new NotSupportedException($"Unsupported file type: {extension}")
+                    };
+
+                    translationFiles.Add(translationFile);
+
+                    // Only add unique file names
+                    if (!ImportedFileNames.Contains(fileName))
+                    {
+                        ImportedFileNames.Add(fileName);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log individual file errors but continue processing
+                    StatusMessage = $"Warning: Could not import file - {ex.Message}";
                 }
             }
-        });
 
-        if (files.Count == 0)
-        {
-            return;
+            // Group files by base name and file type, then consolidate
+            var groupedFiles = translationFiles
+                .GroupBy(tf => (ExtractBaseFileName(tf.FilePath, tf.FileType), tf.FileType))
+                .ToList();
+
+            foreach (var group in groupedFiles)
+            {
+                var consolidated = group.Key.FileType == FileType.Json
+                    ? _jsonReader.ConsolidateKeys(group.ToList())
+                    : _resxReader.ConsolidateKeys(group.ToList());
+
+                _translationStore.AddTranslations(consolidated);
+
+                // Extract and store the template from the first file in the group
+                if (group.Any())
+                {
+                    var firstFile = group.First();
+                    if (group.Key.FileType == FileType.Resx)
+                    {
+                        var template = _resxReader.ExtractTemplate(firstFile.FilePath);
+                        _translationStore.SetResxTemplate(group.Key.Item1, template);
+                    }
+                    else if (group.Key.FileType == FileType.Json)
+                    {
+                        var template = _jsonReader.ExtractTemplate(firstFile.FilePath);
+                        _translationStore.SetJsonTemplate(group.Key.Item1, template);
+                    }
+                }
+            }
+
+            UpdateFileFilters();
+            StatusMessage = $"Imported {translationFiles.Count} file(s). Review the imported files below and click 'Confirm & Continue' to proceed.";
+            HasKeys = _translationStore.GetAllKeys().Count > 0;
+            ImportStepStatus = StepStatus.InProgress;
+            LanguagesChanged?.Invoke(this, EventArgs.Empty);
+
+            // Auto-save imported progress
+            SaveProgress();
         }
-
-        var translationFiles = new List<TranslationFile>();
-        // Don't clear existing files - we want to accumulate multiple imports
-        // ImportedFileNames.Clear(); // REMOVED to allow multiple imports
-
-        foreach (var file in files)
+        catch (Exception ex)
         {
-            try
-            {
-                var filePath = file.Path.LocalPath;
-                var fileName = Path.GetFileName(filePath);
-                var extension = Path.GetExtension(filePath).ToLower();
-
-                TranslationFile translationFile = extension switch
-                {
-                    ".json" => _jsonReader.ReadFile(filePath),
-                    ".resx" => _resxReader.ReadFile(filePath),
-                    _ => throw new NotSupportedException($"Unsupported file type: {extension}")
-                };
-
-                translationFiles.Add(translationFile);
-
-                // Only add unique file names
-                if (!ImportedFileNames.Contains(fileName))
-                {
-                    ImportedFileNames.Add(fileName);
-                }
-            }
-            catch
-            {
-                // Skip invalid files
-            }
+            StatusMessage = $"Error importing files: {ex.Message}";
+            // Don't re-throw - keep the app running
         }
-
-        // Group files by base name and file type, then consolidate
-        var groupedFiles = translationFiles
-            .GroupBy(tf => (ExtractBaseFileName(tf.FilePath, tf.FileType), tf.FileType))
-            .ToList();
-
-        foreach (var group in groupedFiles)
-        {
-            var consolidated = group.Key.FileType == FileType.Json
-                ? _jsonReader.ConsolidateKeys(group.ToList())
-                : _resxReader.ConsolidateKeys(group.ToList());
-
-            _translationStore.AddTranslations(consolidated);
-
-            // Extract and store the template from the first file in the group
-            if (group.Any())
-            {
-                var firstFile = group.First();
-                if (group.Key.FileType == FileType.Resx)
-                {
-                    var template = _resxReader.ExtractTemplate(firstFile.FilePath);
-                    _translationStore.SetResxTemplate(group.Key.Item1, template);
-                }
-                else if (group.Key.FileType == FileType.Json)
-                {
-                    var template = _jsonReader.ExtractTemplate(firstFile.FilePath);
-                    _translationStore.SetJsonTemplate(group.Key.Item1, template);
-                }
-            }
-        }
-
-        UpdateFileFilters();
-        StatusMessage = $"Imported {files.Count} file(s). Review the imported files below and click 'Confirm & Continue' to proceed.";
-        HasKeys = _translationStore.GetAllKeys().Count > 0;
-        ImportStepStatus = StepStatus.InProgress;
-        LanguagesChanged?.Invoke(this, EventArgs.Empty);
-
-        // Auto-save imported progress
-        SaveProgress();
     }
 
     public async Task ImportDroppedFiles(IEnumerable<IStorageItem> storageItems)
     {
-        var files = storageItems.ToList();
-
-        if (files.Count == 0)
+        try
         {
-            return;
-        }
+            var files = storageItems.ToList();
 
-        var translationFiles = new List<TranslationFile>();
-        // Don't clear existing files - we want to accumulate multiple drops
-        // ImportedFileNames.Clear(); // REMOVED to allow multiple drops
-
-        foreach (var item in files)
-        {
-            if (item is not IStorageFile file)
-                continue;
-
-            try
+            if (files.Count == 0)
             {
-                var filePath = file.Path.LocalPath;
-                var fileName = Path.GetFileName(filePath);
-                var extension = Path.GetExtension(filePath).ToLower();
+                return;
+            }
 
-                // Only process JSON and RESX files
-                if (extension != ".json" && extension != ".resx")
+            var translationFiles = new List<TranslationFile>();
+            // Don't clear existing files - we want to accumulate multiple drops
+            // ImportedFileNames.Clear(); // REMOVED to allow multiple drops
+
+            foreach (var item in files)
+            {
+                if (item is not IStorageFile file)
                     continue;
 
-                TranslationFile translationFile = extension switch
+                try
                 {
-                    ".json" => _jsonReader.ReadFile(filePath),
-                    ".resx" => _resxReader.ReadFile(filePath),
-                    _ => throw new NotSupportedException($"Unsupported file type: {extension}")
-                };
+                    var filePath = file.Path.LocalPath;
+                    var fileName = Path.GetFileName(filePath);
+                    var extension = Path.GetExtension(filePath).ToLower();
 
-                translationFiles.Add(translationFile);
+                    // Only process JSON and RESX files
+                    if (extension != ".json" && extension != ".resx")
+                        continue;
 
-                // Only add unique file names
-                if (!ImportedFileNames.Contains(fileName))
+                    TranslationFile translationFile = extension switch
+                    {
+                        ".json" => _jsonReader.ReadFile(filePath),
+                        ".resx" => _resxReader.ReadFile(filePath),
+                        _ => throw new NotSupportedException($"Unsupported file type: {extension}")
+                    };
+
+                    translationFiles.Add(translationFile);
+
+                    // Only add unique file names
+                    if (!ImportedFileNames.Contains(fileName))
+                    {
+                        ImportedFileNames.Add(fileName);
+                    }
+                }
+                catch (Exception ex)
                 {
-                    ImportedFileNames.Add(fileName);
+                    // Log individual file errors but continue processing
+                    StatusMessage = $"Warning: Could not import file - {ex.Message}";
                 }
             }
-            catch
+
+            if (translationFiles.Count == 0)
             {
-                // Skip invalid files
+                StatusMessage = "No valid translation files found. Please drop JSON or RESX files.";
+                return;
             }
-        }
 
-        if (translationFiles.Count == 0)
-        {
-            StatusMessage = "No valid translation files found. Please drop JSON or RESX files.";
-            return;
-        }
+            // Group files by base name and file type, then consolidate
+            var groupedFiles = translationFiles
+                .GroupBy(tf => (ExtractBaseFileName(tf.FilePath, tf.FileType), tf.FileType))
+                .ToList();
 
-        // Group files by base name and file type, then consolidate
-        var groupedFiles = translationFiles
-            .GroupBy(tf => (ExtractBaseFileName(tf.FilePath, tf.FileType), tf.FileType))
-            .ToList();
-
-        foreach (var group in groupedFiles)
-        {
-            var consolidated = group.Key.FileType == FileType.Json
-                ? _jsonReader.ConsolidateKeys(group.ToList())
-                : _resxReader.ConsolidateKeys(group.ToList());
-
-            _translationStore.AddTranslations(consolidated);
-
-            // Extract and store the template from the first file in the group
-            if (group.Any())
+            foreach (var group in groupedFiles)
             {
-                var firstFile = group.First();
-                if (group.Key.FileType == FileType.Resx)
+                var consolidated = group.Key.FileType == FileType.Json
+                    ? _jsonReader.ConsolidateKeys(group.ToList())
+                    : _resxReader.ConsolidateKeys(group.ToList());
+
+                _translationStore.AddTranslations(consolidated);
+
+                // Extract and store the template from the first file in the group
+                if (group.Any())
                 {
-                    var template = _resxReader.ExtractTemplate(firstFile.FilePath);
-                    _translationStore.SetResxTemplate(group.Key.Item1, template);
-                }
-                else if (group.Key.FileType == FileType.Json)
-                {
-                    var template = _jsonReader.ExtractTemplate(firstFile.FilePath);
-                    _translationStore.SetJsonTemplate(group.Key.Item1, template);
+                    var firstFile = group.First();
+                    if (group.Key.FileType == FileType.Resx)
+                    {
+                        var template = _resxReader.ExtractTemplate(firstFile.FilePath);
+                        _translationStore.SetResxTemplate(group.Key.Item1, template);
+                    }
+                    else if (group.Key.FileType == FileType.Json)
+                    {
+                        var template = _jsonReader.ExtractTemplate(firstFile.FilePath);
+                        _translationStore.SetJsonTemplate(group.Key.Item1, template);
+                    }
                 }
             }
+
+            UpdateFileFilters();
+            StatusMessage = $"Imported {translationFiles.Count} file(s). Review the imported files below and click 'Confirm & Continue' to proceed.";
+            HasKeys = _translationStore.GetAllKeys().Count > 0;
+            ImportStepStatus = StepStatus.InProgress;
+            LanguagesChanged?.Invoke(this, EventArgs.Empty);
+
+            // Auto-save imported progress
+            SaveProgress();
         }
-
-        UpdateFileFilters();
-        StatusMessage = $"Imported {files.Count} file(s). Review the imported files below and click 'Confirm & Continue' to proceed.";
-        HasKeys = _translationStore.GetAllKeys().Count > 0;
-        ImportStepStatus = StepStatus.InProgress;
-        LanguagesChanged?.Invoke(this, EventArgs.Empty);
-
-        // Auto-save imported progress
-        SaveProgress();
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error importing files: {ex.Message}";
+            // Don't re-throw - keep the app running
+        }
     }
 
     [RelayCommand]
