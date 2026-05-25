@@ -80,17 +80,18 @@ public class ResxTranslationFileWriter
 
                     if (translationKey != null)
                     {
-                        // Use actual value if exists, otherwise empty string
+                        // Get actual value and append suggestion if exists
                         var value = translationKey.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+                        var fullValue = AppendSuggestionIfExists(value, translationKey, language);
                         // Update the value in the existing data element
                         var valueElement = dataElement.Element("value");
                         if (valueElement != null)
                         {
-                            valueElement.Value = value;
+                            valueElement.Value = fullValue;
                         }
                         else
                         {
-                            dataElement.Add(new XElement("value", value));
+                            dataElement.Add(new XElement("value", fullValue));
                         }
                         processedKeys.Add(keyName);
                     }
@@ -103,10 +104,11 @@ public class ResxTranslationFileWriter
                 if (!processedKeys.Contains(key.Key))
                 {
                     var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+                    var fullValue = AppendSuggestionIfExists(value, key, language);
                     var dataElement = new XElement("data",
                         new XAttribute("name", key.Key),
                         new XAttribute(XNamespace.Xml + "space", "preserve"),
-                        new XElement("value", value)
+                        new XElement("value", fullValue)
                     );
 
                     root.Add(dataElement);
@@ -122,10 +124,11 @@ public class ResxTranslationFileWriter
             foreach (var key in keys.OrderBy(k => k.Key))
             {
                 var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+                var fullValue = AppendSuggestionIfExists(value, key, language);
                 var dataElement = new XElement("data",
                     new XAttribute("name", key.Key),
                     new XAttribute(XNamespace.Xml + "space", "preserve"),
-                    new XElement("value", value)
+                    new XElement("value", fullValue)
                 );
 
                 root.Add(dataElement);
@@ -138,6 +141,19 @@ public class ResxTranslationFileWriter
         );
 
         doc.Save(filePath);
+    }
+
+    /// <summary>
+    /// Append suggestion to value if it exists for the given language
+    /// Format: "actual value SUGGESTION:suggested_value,by:[username],at:[datetime]"
+    /// </summary>
+    private string AppendSuggestionIfExists(string actualValue, TranslationKey key, string language)
+    {
+        if (key.SuggestedValues.TryGetValue(language, out var suggestion))
+        {
+            return $"{actualValue} {suggestion.ToFileFormat()}";
+        }
+        return actualValue;
     }
 
     private XElement CreateResxDocument()
