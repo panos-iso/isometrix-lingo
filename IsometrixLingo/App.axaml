@@ -16,6 +16,7 @@
         <converters:EditModeTooltipConverter x:Key="EditModeTooltipConverter"/>
         <converters:HasSuggestionConverter x:Key="HasSuggestionConverter"/>
         <converters:SuggestionTextConverter x:Key="SuggestionTextConverter"/>
+        <converters:EditModeAndHasSuggestionConverter x:Key="EditModeAndHasSuggestionConverter"/>
     </Application.Resources>
   
     <Application.Styles>

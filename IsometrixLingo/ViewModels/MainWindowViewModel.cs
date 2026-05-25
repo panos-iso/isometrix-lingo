@@ -15,6 +15,7 @@ using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using IsometrixLingo.Helpers;
 using IsometrixLingo.Models;
 using IsometrixLingo.Services;
 using IsometrixLingo.Views;
@@ -1721,6 +1722,53 @@ public partial class MainWindowViewModel : ViewModelBase
 
         dialog.Content = mainPanel;
         await dialog.ShowDialog(window);
+    }
+
+    [RelayCommand]
+    private void AcceptSuggestion((TranslationKey key, string language) parameters)
+    {
+        var (key, language) = parameters;
+        
+        if (!key.SuggestedValues.TryGetValue(language, out var suggestion))
+            return;
+
+        // Apply the suggestion to the actual value
+        key.LanguageValues[language] = suggestion.Value;
+        
+        // Remove the suggestion
+        key.SuggestedValues.Remove(language);
+        
+        // Mark as modified
+        key.ModifiedLanguages.Add(language);
+        key.IsModified = true;
+        
+        // Update missing translations status
+        key.UpdateMissingTranslationsStatus();
+        
+        // Mark as having unsaved changes
+        HasUnsavedChanges = true;
+        
+        StatusMessage = $"Accepted suggestion for '{key.Key}' in {LanguageHelper.GetLanguageName(language)}.";
+    }
+
+    [RelayCommand]
+    private void RejectSuggestion((TranslationKey key, string language) parameters)
+    {
+        var (key, language) = parameters;
+        
+        if (!key.SuggestedValues.ContainsKey(language))
+            return;
+
+        // Remove the suggestion
+        key.SuggestedValues.Remove(language);
+        
+        // Update missing translations status (in case removing the suggestion makes it missing)
+        key.UpdateMissingTranslationsStatus();
+        
+        // Mark as having unsaved changes
+        HasUnsavedChanges = true;
+        
+        StatusMessage = $"Rejected suggestion for '{key.Key}' in {LanguageHelper.GetLanguageName(language)}.";
     }
 }
 

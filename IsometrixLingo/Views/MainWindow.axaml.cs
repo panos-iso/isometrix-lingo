@@ -248,12 +248,18 @@ public partial class MainWindow : Window
                     };
                     border.Bind(Border.BorderBrushProperty, borderBinding);
 
+                    // Create a Grid with two columns: text content and buttons
+                    var grid = new Grid();
+                    grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star)); // Text content
+                    grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto)); // Buttons
+
                     // Create a StackPanel to hold actual value and suggestion
                     var stackPanel = new StackPanel
                     {
                         Orientation = Avalonia.Layout.Orientation.Vertical,
                         Spacing = 2
                     };
+                    Grid.SetColumn(stackPanel, 0);
 
                     // Actual value TextBlock
                     var actualValueTextBlock = new TextBlock
@@ -318,9 +324,75 @@ public partial class MainWindow : Window
                         suggestionTextBlock.Bind(TextBlock.IsVisibleProperty, suggestionVisibilityBinding);
 
                         stackPanel.Children.Add(suggestionTextBlock);
+
+                        // Accept/Reject buttons (only visible in Edit Mode and when there's a suggestion)
+                        var buttonsPanel = new StackPanel
+                        {
+                            Orientation = Avalonia.Layout.Orientation.Horizontal,
+                            Spacing = 3,
+                            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+                            Margin = new Avalonia.Thickness(5, 0, 0, 0)
+                        };
+                        Grid.SetColumn(buttonsPanel, 1);
+
+                        // Accept button (✓)
+                        var acceptButton = new Button
+                        {
+                            Content = "✓",
+                            FontSize = 14,
+                            Foreground = new SolidColorBrush(Color.Parse("#4CAF50")), // Green
+                            Background = Brushes.Transparent,
+                            BorderBrush = new SolidColorBrush(Color.Parse("#4CAF50")),
+                            BorderThickness = new Avalonia.Thickness(1),
+                            Padding = new Avalonia.Thickness(6, 2),
+                            CornerRadius = new Avalonia.CornerRadius(3),
+                            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                            VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                            Command = viewModel.AcceptSuggestionCommand,
+                            CommandParameter = (key, language)
+                        };
+                        ToolTip.SetTip(acceptButton, "Accept suggestion");
+
+                        // Reject button (✗)
+                        var rejectButton = new Button
+                        {
+                            Content = "✗",
+                            FontSize = 14,
+                            Foreground = new SolidColorBrush(Color.Parse("#F44336")), // Red
+                            Background = Brushes.Transparent,
+                            BorderBrush = new SolidColorBrush(Color.Parse("#F44336")),
+                            BorderThickness = new Avalonia.Thickness(1),
+                            Padding = new Avalonia.Thickness(6, 2),
+                            CornerRadius = new Avalonia.CornerRadius(3),
+                            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                            VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                            Command = viewModel.RejectSuggestionCommand,
+                            CommandParameter = (key, language)
+                        };
+                        ToolTip.SetTip(rejectButton, "Reject suggestion");
+
+                        // Bind visibility based on EditMode and HasSuggestion
+                        // Only show buttons in Edit Mode AND when there's a suggestion for this language
+                        var buttonsVisibilityBinding = new MultiBinding
+                        {
+                            Converter = new EditModeAndHasSuggestionConverter(),
+                            Bindings =
+                            {
+                                new Binding("CurrentMode") { Source = viewModel },
+                                new Binding(".") { Source = key }
+                            },
+                            ConverterParameter = language
+                        };
+                        buttonsPanel.Bind(StackPanel.IsVisibleProperty, buttonsVisibilityBinding);
+
+                        buttonsPanel.Children.Add(acceptButton);
+                        buttonsPanel.Children.Add(rejectButton);
+
+                        grid.Children.Add(stackPanel);
+                        grid.Children.Add(buttonsPanel);
                     }
 
-                    border.Child = stackPanel;
+                    border.Child = grid;
                     return border;
                 })
             };
