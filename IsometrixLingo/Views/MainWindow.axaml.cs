@@ -392,7 +392,7 @@ public partial class MainWindow : Window
                     Margin = new Avalonia.Thickness(5, 2)
                 };
 
-                // Show Original toggle button
+                // Show Original toggle button (only visible in Edit mode)
                 var toggleButton = new Button
                 {
                     Content = "👁",
@@ -401,6 +401,14 @@ public partial class MainWindow : Window
                     HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                     VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center
                 };
+
+                // Bind IsVisible to CurrentMode (only show in Edit mode)
+                var visibilityBinding = new Binding("CurrentMode")
+                {
+                    Source = viewModel,
+                    Converter = new IsEditModeConverter()
+                };
+                toggleButton.Bind(Button.IsVisibleProperty, visibilityBinding);
 
                 if (data is TranslationKey key)
                 {

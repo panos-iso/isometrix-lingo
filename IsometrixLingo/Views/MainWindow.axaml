@@ -641,6 +641,7 @@
                                 Padding="10,5"/>
                         <CheckBox Content="Show Original Values"
                                   IsChecked="{Binding ShowOriginalValues}"
+                                  IsVisible="{Binding CurrentMode, Converter={StaticResource IsEditModeConverter}}"
                                   VerticalAlignment="Center"
                                   ToolTip.Tip="Toggle between current and original values to see what changed"/>
                         <CheckBox Content="Only Missing Translations"
