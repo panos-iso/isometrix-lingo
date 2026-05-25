@@ -48,15 +48,7 @@ public class ProgressService
             ExportStepStatus = state.ExportStepStatus
         };
 
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            IgnoreReadOnlyProperties = false,
-            IncludeFields = false
-        };
-
-        var json = JsonSerializer.Serialize(serializableState, options);
+        var json = JsonSerializer.Serialize(serializableState, AppJsonSerializerContext.Default.SerializableSessionState);
         File.WriteAllText(_progressFilePath, json);
     }
 
@@ -70,7 +62,7 @@ public class ProgressService
         try
         {
             var json = File.ReadAllText(_progressFilePath);
-            var serializableState = JsonSerializer.Deserialize<SerializableSessionState>(json);
+            var serializableState = JsonSerializer.Deserialize(json, AppJsonSerializerContext.Default.SerializableSessionState);
 
             if (serializableState == null)
             {
