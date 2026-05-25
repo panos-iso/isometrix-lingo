@@ -16,4 +16,22 @@ public partial class TranslationKey : ObservableObject
 
     [ObservableProperty]
     private bool _isModified;
+
+    /// <summary>
+    /// Original values before any edits (for showing changes)
+    /// </summary>
+    public Dictionary<string, string> OriginalValues { get; set; } = new();
+
+    /// <summary>
+    /// Track which specific languages have been modified
+    /// </summary>
+    public HashSet<string> ModifiedLanguages { get; set; } = new();
+
+    /// <summary>
+    /// Check if a specific language value has been modified
+    /// </summary>
+    public bool IsLanguageModified(string language)
+    {
+        return ModifiedLanguages.Contains(language);
+    }
 }

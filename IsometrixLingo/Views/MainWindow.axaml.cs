@@ -19,6 +19,8 @@ namespace IsometrixLingo.Views;
 public partial class MainWindow : Window
 {
     private static readonly LanguageValueConverter LanguageConverter = new();
+    private static readonly TranslationValueConverter TranslationConverter = new();
+    private static readonly ModifiedCellBackgroundConverter ModifiedBackgroundConverter = new();
 
     public MainWindow()
     {
@@ -177,20 +179,47 @@ public partial class MainWindow : Window
                 MinWidth = 120,
                 CellTemplate = new FuncDataTemplate<object>((_, _) =>
                 {
+                    // Create a border to apply background color for highlighting
+                    var border = new Border
+                    {
+                        Padding = new Avalonia.Thickness(5, 2)
+                    };
+
+                    // Bind background to highlight modified cells
+                    var backgroundBinding = new MultiBinding
+                    {
+                        Converter = ModifiedBackgroundConverter,
+                        Bindings =
+                        {
+                            new Binding("."), // The TranslationKey itself
+                            new Binding(language) // Just a constant for the language parameter
+                        },
+                        ConverterParameter = language
+                    };
+                    border.Bind(Border.BackgroundProperty, backgroundBinding);
+
                     var textBlock = new TextBlock
                     {
                         TextWrapping = Avalonia.Media.TextWrapping.NoWrap,
                         TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
-                        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                        Margin = new Avalonia.Thickness(5, 2)
+                        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
                     };
-                    var binding = new Binding("LanguageValues")
+
+                    // Bind text to show either current or original value
+                    var textBinding = new MultiBinding
                     {
-                        Converter = LanguageConverter,
+                        Converter = TranslationConverter,
+                        Bindings =
+                        {
+                            new Binding("."), // The TranslationKey itself
+                            new Binding("$parent[Window].DataContext.ShowOriginalValues") // Toggle from ViewModel
+                        },
                         ConverterParameter = language
                     };
-                    textBlock.Bind(TextBlock.TextProperty, binding);
-                    return textBlock;
+                    textBlock.Bind(TextBlock.TextProperty, textBinding);
+
+                    border.Child = textBlock;
+                    return border;
                 })
             };
             TranslationsGrid.Columns.Add(column);

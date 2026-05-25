@@ -301,6 +301,11 @@
                         <Button Content="Reset Filters"
                                 Command="{Binding ResetFiltersCommand}"
                                 Padding="10,5"/>
+                        <CheckBox Content="Show Original Values"
+                                  IsChecked="{Binding ShowOriginalValues}"
+                                  VerticalAlignment="Center"
+                                  Margin="20,0,0,0"
+                                  ToolTip.Tip="Toggle between current and original values to see what changed"/>
                     </StackPanel>
 
                     <!-- DataGrid with constrained height -->

@@ -144,8 +144,31 @@ public class TranslationStore
         var translationKey = _allKeys.FirstOrDefault(k => k.Key == key);
         if (translationKey != null)
         {
+            // Store original value if this is the first edit for this language
+            if (!translationKey.OriginalValues.ContainsKey(language))
+            {
+                translationKey.OriginalValues[language] = translationKey.LanguageValues.TryGetValue(language, out var originalValue) 
+                    ? originalValue 
+                    : string.Empty;
+            }
+
+            // Update the value
             translationKey.LanguageValues[language] = newValue;
-            translationKey.IsModified = true;
+            
+            // Check if value actually changed from original
+            var original = translationKey.OriginalValues[language];
+            if (newValue != original)
+            {
+                translationKey.ModifiedLanguages.Add(language);
+                translationKey.IsModified = true;
+            }
+            else
+            {
+                // Value was reverted to original - remove from modified set
+                translationKey.ModifiedLanguages.Remove(language);
+                translationKey.IsModified = translationKey.ModifiedLanguages.Count > 0;
+            }
+
             SetUnsavedChanges(true);
 
             // Trigger property change notification for the dictionary
