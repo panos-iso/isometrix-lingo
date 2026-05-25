@@ -94,7 +94,7 @@ public partial class EditTranslationViewModel : ViewModelBase
             // Edit Mode: update actual values
             foreach (var item in LanguageValues)
             {
-                _translationStore.UpdateTranslation(_originalKey, item.LanguageCode, item.Value);
+                _translationStore.UpdateTranslation(_originalKey, item.LanguageCode, item.Value ?? string.Empty);
                 
                 // If there was a suggestion and user manually edited, remove the suggestion
                 if (item.HasSuggestion)
