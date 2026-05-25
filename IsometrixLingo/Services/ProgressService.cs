@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using IsometrixLingo.Models;
 
 namespace IsometrixLingo.Services;
@@ -20,12 +22,38 @@ public class ProgressService
 
     public void SaveProgress(SessionState state)
     {
-        var options = new JsonSerializerOptions
+        // Convert to serializable format
+        var serializableState = new SerializableSessionState
         {
-            WriteIndented = true
+            TranslationKeys = state.TranslationKeys.Select(tk => new SerializableTranslationKey
+            {
+                Key = tk.Key,
+                Source = new SerializableSourceFile
+                {
+                    Name = tk.Source.Name,
+                    Type = tk.Source.Type
+                },
+                LanguageValues = new Dictionary<string, string>(tk.LanguageValues),
+                IsModified = tk.IsModified
+            }).ToList(),
+            ImportedFileNames = state.ImportedFileNames,
+            ResxTemplates = state.ResxTemplates,
+            JsonTemplates = state.JsonTemplates,
+            CurrentStep = state.CurrentStep,
+            ImportStepStatus = state.ImportStepStatus,
+            EditStepStatus = state.EditStepStatus,
+            ExportStepStatus = state.ExportStepStatus
         };
 
-        var json = JsonSerializer.Serialize(state, options);
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            IgnoreReadOnlyProperties = false,
+            IncludeFields = false
+        };
+
+        var json = JsonSerializer.Serialize(serializableState, options);
         File.WriteAllText(_progressFilePath, json);
     }
 
@@ -39,7 +67,33 @@ public class ProgressService
         try
         {
             var json = File.ReadAllText(_progressFilePath);
-            return JsonSerializer.Deserialize<SessionState>(json);
+            var serializableState = JsonSerializer.Deserialize<SerializableSessionState>(json);
+            
+            if (serializableState == null)
+            {
+                return null;
+            }
+
+            // Convert back to SessionState with ObservableObject instances
+            var sessionState = new SessionState
+            {
+                TranslationKeys = serializableState.TranslationKeys.Select(stk => new TranslationKey
+                {
+                    Key = stk.Key,
+                    Source = new SourceFile(stk.Source.Name, stk.Source.Type),
+                    LanguageValues = new Dictionary<string, string>(stk.LanguageValues),
+                    IsModified = stk.IsModified
+                }).ToList(),
+                ImportedFileNames = serializableState.ImportedFileNames,
+                ResxTemplates = serializableState.ResxTemplates,
+                JsonTemplates = serializableState.JsonTemplates,
+                CurrentStep = serializableState.CurrentStep,
+                ImportStepStatus = serializableState.ImportStepStatus,
+                EditStepStatus = serializableState.EditStepStatus,
+                ExportStepStatus = serializableState.ExportStepStatus
+            };
+
+            return sessionState;
         }
         catch
         {
