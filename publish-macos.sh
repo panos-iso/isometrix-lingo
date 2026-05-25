@@ -7,7 +7,7 @@ APP_NAME="Isometrix Lingo"
 BUNDLE_NAME="IsometrixLingo.app"
 EXECUTABLE_NAME="isometrix-lingo"
 BUNDLE_IDENTIFIER="com.isometrix.lingo"
-VERSION="2.0.2"
+VERSION="3.0.0"
 
 echo "Publishing Translation Management Tool for macOS (Apple Silicon)..."
 
