@@ -2,12 +2,19 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="IsometrixLingo.App"
              xmlns:local="using:IsometrixLingo"
+             xmlns:converters="using:IsometrixLingo.Converters"
              RequestedThemeVariant="Default">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
+  
+    <Application.Resources>
+        <converters:EditModeColorConverter x:Key="EditModeColorConverter"/>
+        <converters:EditModeTextConverter x:Key="EditModeTextConverter"/>
+        <converters:EditModeTooltipConverter x:Key="EditModeTooltipConverter"/>
+    </Application.Resources>
   
     <Application.Styles>
         <FluentTheme />

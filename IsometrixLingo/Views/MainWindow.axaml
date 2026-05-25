@@ -570,12 +570,34 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         
-                        <TextBlock Grid.Column="0"
-                                   Text="Step 4: Edit/Suggest Translations"
-                                   FontSize="20"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                                   VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <TextBlock Text="Step 4: Edit/Suggest Translations"
+                                       FontSize="20"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                       VerticalAlignment="Center"/>
+                            
+                            <!-- Mode Indicator Badge -->
+                            <Border CornerRadius="12"
+                                    Padding="12,4"
+                                    VerticalAlignment="Center">
+                                <Border.Background>
+                                    <SolidColorBrush Color="{Binding CurrentMode, Converter={StaticResource EditModeColorConverter}}" Opacity="0.15"/>
+                                </Border.Background>
+                                <Border.BorderBrush>
+                                    <SolidColorBrush Color="{Binding CurrentMode, Converter={StaticResource EditModeColorConverter}}"/>
+                                </Border.BorderBrush>
+                                <Border.BorderThickness>1.5</Border.BorderThickness>
+                                <TextBlock Text="{Binding CurrentMode, Converter={StaticResource EditModeTextConverter}}"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center">
+                                    <TextBlock.Foreground>
+                                        <SolidColorBrush Color="{Binding CurrentMode, Converter={StaticResource EditModeColorConverter}}"/>
+                                    </TextBlock.Foreground>
+                                </TextBlock>
+                            </Border>
+                        </StackPanel>
                         
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
                             <Button Content="{Binding ShowFilters, Converter={StaticResource ShowFiltersTextConverter}, FallbackValue='Show Filters'}"
@@ -636,7 +658,8 @@
                                   GridLinesVisibility="All"
                                   CanUserResizeColumns="True"
                                   CanUserReorderColumns="False"
-                                  DoubleTapped="OnGridDoubleTapped">
+                                  DoubleTapped="OnGridDoubleTapped"
+                                  ToolTip.Tip="{Binding CurrentMode, Converter={StaticResource EditModeTooltipConverter}}">                                  
                             <DataGrid.Styles>
                                 <Style Selector="DataGridRow" x:DataType="models:TranslationKey">
                                     <Setter Property="Background" Value="{Binding HasMissingTranslations, Converter={StaticResource MissingTranslationBorderConverter}}"/>
