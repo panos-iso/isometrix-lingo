@@ -940,6 +940,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
             _progressService.SaveProgress(sessionState);
             _translationStore.MarkAllChangesSaved();
+            HasUnsavedChanges = false;
             StatusMessage = "Progress saved successfully.";
         }
         catch (Exception ex)

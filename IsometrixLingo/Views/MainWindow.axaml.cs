@@ -152,6 +152,9 @@ public partial class MainWindow : Window
 
         if (result)
         {
+            // Mark as having unsaved changes (for both Edit and Suggest modes)
+            mainViewModel.HasUnsavedChanges = true;
+            
             // Update status message to show modified count
             var modifiedCount = mainViewModel.TranslationStore.GetModifiedKeys().Count;
 
