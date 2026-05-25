@@ -80,6 +80,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _showOriginalValues;
 
+    [ObservableProperty]
+    private bool _showFilters = true;
+
     public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
     public bool ShowEditStep => CurrentStep == WorkflowStep.Edit;
     public bool ShowExportStep => CurrentStep == WorkflowStep.Export;
@@ -469,6 +472,12 @@ public partial class MainWindowViewModel : ViewModelBase
         _translationStore.FilterBySourceFiles(null!);
         _translationStore.FilterBySearchTerm(string.Empty);
         UpdateStatusMessage();
+    }
+
+    [RelayCommand]
+    private void ToggleFilters()
+    {
+        ShowFilters = !ShowFilters;
     }
 
     partial void OnSearchTextChanged(string value)
