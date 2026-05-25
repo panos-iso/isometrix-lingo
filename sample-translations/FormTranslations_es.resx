@@ -39,4 +39,7 @@
     <data name="Cancel" xml:space="preserve">
     <value>Cancelar</value>
   </data>
+    <data name="EdgeCase_BothEmpty" xml:space="preserve">
+    <value></value>
+  </data>
 </root>

@@ -77,6 +77,15 @@ public partial class MainWindowViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(Step3Background), nameof(Step3Foreground), nameof(Step3Status), nameof(StartOverButtonText))]
     private StepStatus _exportStepStatus = StepStatus.NotStarted;
 
+    [ObservableProperty]
+    private bool _showOriginalValues;
+
+    [ObservableProperty]
+    private bool _showOnlyMissingTranslations;
+
+    [ObservableProperty]
+    private bool _showFilters = true;
+
     public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
     public bool ShowEditStep => CurrentStep == WorkflowStep.Edit;
     public bool ShowExportStep => CurrentStep == WorkflowStep.Export;
@@ -462,15 +471,38 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         SelectedSourceFile = null;
         SearchText = string.Empty;
+        ShowOriginalValues = false;
+        ShowOnlyMissingTranslations = false;
         _translationStore.FilterBySourceFiles(null!);
         _translationStore.FilterBySearchTerm(string.Empty);
         UpdateStatusMessage();
+    }
+
+    [RelayCommand]
+    private void ToggleFilters()
+    {
+        ShowFilters = !ShowFilters;
     }
 
     partial void OnSearchTextChanged(string value)
     {
         _translationStore.FilterBySearchTerm(value);
         UpdateStatusMessage();
+    }
+
+    partial void OnShowOnlyMissingTranslationsChanged(bool value)
+    {
+        _translationStore.FilterByMissingTranslations(value);
+        UpdateStatusMessage();
+    }
+
+    partial void OnShowOriginalValuesChanged(bool value)
+    {
+        // Set all per-row toggles to match the global toggle
+        foreach (var key in _translationStore.GetAllKeys())
+        {
+            key.ShowOriginalForThisRow = value;
+        }
     }
 
     private void UpdateStatusMessage()
@@ -761,10 +793,47 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void CompleteEdit()
+    private async Task CompleteEdit(Window? window)
     {
         try
         {
+            // Check for missing translations
+            var keysWithMissingTranslations = _translationStore.GetAllKeys()
+                .Where(k => k.HasMissingTranslations)
+                .ToList();
+
+            if (keysWithMissingTranslations.Count > 0)
+            {
+                // Get the window if not provided
+                if (window == null)
+                {
+                    if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                    {
+                        window = desktop.MainWindow;
+                    }
+                }
+
+                if (window == null)
+                {
+                    StatusMessage = "Cannot show dialog - no window available.";
+                    return;
+                }
+
+                var message = $"There are {keysWithMissingTranslations.Count} translation key(s) with missing terms.\n\n" +
+                              "Do you want to stay and add the missing translations, or continue to export anyway?";
+
+                var dialog = new ConfirmationDialog(message);
+                var result = await dialog.ShowDialog<bool?>(window);
+
+                // If result is null (dialog closed) or false (stay clicked), don't proceed
+                if (result != true)
+                {
+                    // User chose to stay and add missing terms
+                    StatusMessage = "Add missing translations before exporting.";
+                    return;
+                }
+            }
+
             EditStepStatus = StepStatus.Completed;
             ExportStepStatus = StepStatus.InProgress;
             CurrentStep = WorkflowStep.Export;

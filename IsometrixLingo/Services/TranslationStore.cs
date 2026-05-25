@@ -17,6 +17,7 @@ public class TranslationStore
     private static readonly List<string> _supportedLanguages = new() { "en", "es" };
     private List<SourceFile>? _currentFileFilter = null;
     private string _currentSearchTerm = string.Empty;
+    private bool _showOnlyMissingTranslations = false;
     private bool _hasUnsavedChanges = false;
 
     public ObservableCollection<TranslationKey> FilteredKeys => _filteredKeys;
@@ -92,6 +93,12 @@ public class TranslationStore
         ApplyFilters();
     }
 
+    public void FilterByMissingTranslations(bool showOnlyMissing)
+    {
+        _showOnlyMissingTranslations = showOnlyMissing;
+        ApplyFilters();
+    }
+
     private void ApplyFilters()
     {
         _filteredKeys.Clear();
@@ -119,6 +126,12 @@ public class TranslationStore
             );
         }
 
+        // Apply missing translations filter if enabled
+        if (_showOnlyMissingTranslations)
+        {
+            keysToShow = keysToShow.Where(k => k.HasMissingTranslations);
+        }
+
         foreach (var key in keysToShow)
         {
             _filteredKeys.Add(key);
@@ -144,14 +157,48 @@ public class TranslationStore
         var translationKey = _allKeys.FirstOrDefault(k => k.Key == key);
         if (translationKey != null)
         {
-            translationKey.LanguageValues[language] = newValue;
-            translationKey.IsModified = true;
-            SetUnsavedChanges(true);
+            // Store original value if this is the first edit for this language
+            if (!translationKey.OriginalValues.ContainsKey(language))
+            {
+                var original = translationKey.LanguageValues.TryGetValue(language, out var originalValue)
+                    ? originalValue
+                    : string.Empty;
 
-            // Trigger property change notification for the dictionary
-            // This is a workaround: we reassign to trigger INotifyPropertyChanged
-            var temp = translationKey.LanguageValues;
-            translationKey.LanguageValues = new Dictionary<string, string>(temp);
+                // Create new dictionary to trigger property change
+                var newOriginals = new Dictionary<string, string>(translationKey.OriginalValues)
+                {
+                    [language] = original
+                };
+                translationKey.OriginalValues = newOriginals;
+            }
+
+            // Update the value - create new dictionary to trigger property change
+            var newValues = new Dictionary<string, string>(translationKey.LanguageValues)
+            {
+                [language] = newValue
+            };
+            translationKey.LanguageValues = newValues;
+
+            // Check if value actually changed from original
+            var originalStoredValue = translationKey.OriginalValues[language];
+            var newModified = new HashSet<string>(translationKey.ModifiedLanguages);
+
+            if (newValue != originalStoredValue)
+            {
+                newModified.Add(language);
+                translationKey.IsModified = true;
+            }
+            else
+            {
+                // Value was reverted to original - remove from modified set
+                newModified.Remove(language);
+                translationKey.IsModified = newModified.Count > 0;
+            }
+
+            translationKey.ModifiedLanguages = newModified;
+            translationKey.UpdateMissingTranslationsStatus();
+
+            SetUnsavedChanges(true);
         }
     }
 
@@ -174,6 +221,7 @@ public class TranslationStore
     public void AddKey(TranslationKey key)
     {
         _allKeys.Add(key);
+        key.UpdateMissingTranslationsStatus();
 
         // Add source file if not already tracked
         if (!_sourceFiles.Any(sf => sf.Name == key.Source.Name && sf.Type == key.Source.Type))

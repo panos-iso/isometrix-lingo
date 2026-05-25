@@ -64,7 +64,7 @@ public class ResxTranslationFileReaderTests
         Assert.Equal(filePath, result.FilePath);
         Assert.Equal("en", result.Language);
         Assert.Equal(FileType.Resx, result.FileType);
-        Assert.Equal(9, result.Keys.Count);
+        Assert.Equal(12, result.Keys.Count);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class ResxTranslationFileReaderTests
         var result = _reader.ConsolidateKeys(new() { enFile, esFile });
 
         // Assert
-        Assert.Equal(9, result.Count); // 9 unique keys total
+        Assert.Equal(12, result.Count); // 12 unique keys total (9 original + 3 edge cases)
 
         var cancelButton = result.First(k => k.Key == "Cancel");
         Assert.Equal(2, cancelButton.LanguageValues.Count);

@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:IsometrixLingo.ViewModels"
         xmlns:views="using:IsometrixLingo.Views"
+        xmlns:models="using:IsometrixLingo.Models"
         xmlns:converters="using:IsometrixLingo.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -15,6 +16,10 @@
     <Window.Resources>
         <converters:SourceFileConverter x:Key="SourceFileConverter"/>
         <converters:SourceFileDisplayConverter x:Key="SourceFileDisplayConverter"/>
+        <converters:ShowFiltersTextConverter x:Key="ShowFiltersTextConverter"/>
+        <converters:ShowOriginalTooltipConverter x:Key="ShowOriginalTooltipConverter"/>
+        <converters:RowToggleEnabledConverter x:Key="RowToggleEnabledConverter"/>
+        <converters:MissingTranslationBorderConverter x:Key="MissingTranslationBorderConverter"/>
     </Window.Resources>
     
     <Window.Styles>
@@ -240,52 +245,94 @@
 
             <!-- Step 2: Edit Translations -->
             <DockPanel IsVisible="{Binding ShowEditStep}" LastChildFill="True">
-                <!-- Action Buttons docked to bottom -->
-                <StackPanel DockPanel.Dock="Bottom" 
-                            Orientation="Horizontal" 
-                            HorizontalAlignment="Right" 
-                            Spacing="10"
-                            Margin="0,15,0,0">
-                    <Button Content="{Binding StartOverButtonText}"
-                            Command="{Binding StartOverCommand}"
-                            Padding="15,8"/>
-                    <Button Content="Add Key"
-                            Command="{Binding AddKeyCommand}"
-                            CommandParameter="{Binding $parent[Window]}"
-                            IsEnabled="{Binding HasKeys}"
-                            Padding="15,8"/>
-                    <Button Content="Save Progress"
+                <!-- Bottom buttons with Save Progress on left, workflow buttons on right -->
+                <Grid DockPanel.Dock="Bottom" Margin="0,15,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Save Progress on the left -->
+                    <Button Grid.Column="0"
+                            Content="Save Progress"
                             Command="{Binding SaveProgressCommand}"
                             IsEnabled="{Binding HasUnsavedChanges}"
-                            Padding="15,8"/>
-                    <Button Content="Complete &amp; Continue to Export →"
-                            Classes="PrimaryButton"
-                            Command="{Binding CompleteEditCommand}"
-                            IsEnabled="{Binding HasKeys}"
                             Padding="15,8"
-                            FontWeight="SemiBold"/>
-                </StackPanel>
+                            HorizontalAlignment="Left"/>
+                    
+                    <!-- Workflow navigation buttons on the right -->
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal" 
+                                HorizontalAlignment="Right" 
+                                Spacing="10">
+                        <Button Content="{Binding StartOverButtonText}"
+                                Command="{Binding StartOverCommand}"
+                                Padding="15,8"/>
+                        <Button Content="Complete &amp; Continue to Export →"
+                                Classes="PrimaryButton"
+                                Command="{Binding CompleteEditCommand}"
+                                CommandParameter="{Binding $parent[Window]}"
+                                IsEnabled="{Binding HasKeys}"
+                                Padding="15,8"
+                                FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Grid>
 
                 <!-- Main content area with Grid layout -->
                 <Grid RowDefinitions="Auto,Auto,*">
-                    <!-- Title -->
-                    <TextBlock Grid.Row="0"
-                               Text="Step 2: Edit Translations"
-                               FontSize="20"
-                               FontWeight="Bold"
-                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                               Margin="0,0,0,10"/>
+                    <!-- Title and Action Buttons Row -->
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Grid.Column="0"
+                                   Text="Step 2: Edit Translations"
+                                   FontSize="20"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                   VerticalAlignment="Center"/>
+                        
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                            <Button Content="{Binding ShowFilters, Converter={StaticResource ShowFiltersTextConverter}, FallbackValue='Show Filters'}"
+                                    Command="{Binding ToggleFiltersCommand}"
+                                    Padding="10,5"/>
+                            <Button Content="Add Key"
+                                    Command="{Binding AddKeyCommand}"
+                                    CommandParameter="{Binding $parent[Window]}"
+                                    IsEnabled="{Binding HasKeys}"
+                                    Padding="10,5"
+                                    FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Grid>
 
-                    <!-- File Filters -->
+                    <!-- Filters Row (collapsible) -->
                     <StackPanel Grid.Row="1" 
                                 Orientation="Horizontal" 
+                                HorizontalAlignment="Right"
                                 Spacing="10"
-                                Margin="0,0,0,15">
-                        <TextBlock Text="Filter by file:" 
-                                   VerticalAlignment="Center" 
-                                   FontWeight="SemiBold"/>
+                                Margin="0,0,0,15"
+                                IsVisible="{Binding ShowFilters}">
+                        <Button Content="Reset Filters"
+                                Command="{Binding ResetFiltersCommand}"
+                                Padding="10,5"/>
+                        <CheckBox Content="Show Original Values"
+                                  IsChecked="{Binding ShowOriginalValues}"
+                                  VerticalAlignment="Center"
+                                  ToolTip.Tip="Toggle between current and original values to see what changed"/>
+                        <CheckBox Content="Only Missing Translations"
+                                  IsChecked="{Binding ShowOnlyMissingTranslations}"
+                                  VerticalAlignment="Center"
+                                  ToolTip.Tip="Show only keys with missing translations"/>
+                        <TextBox Text="{Binding SearchText}"
+                                 PlaceholderText="Search keys and values..."
+                                 MinWidth="200"
+                                 Width="200"
+                                 VerticalAlignment="Center"/>
                         <ComboBox ItemsSource="{Binding AvailableSourceFiles}"
                                   SelectedItem="{Binding SelectedSourceFile}"
+                                  MinWidth="250"
                                   Width="250">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
@@ -293,14 +340,6 @@
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                        <TextBlock Text="Search:" VerticalAlignment="Center" Margin="20,0,5,0"/>
-                        <TextBox Text="{Binding SearchText}"
-                                 PlaceholderText="Search keys and values..."
-                                 MinWidth="200"
-                                 VerticalAlignment="Center"/>
-                        <Button Content="Reset Filters"
-                                Command="{Binding ResetFiltersCommand}"
-                                Padding="10,5"/>
                     </StackPanel>
 
                     <!-- DataGrid with constrained height -->
@@ -315,6 +354,12 @@
                                   CanUserResizeColumns="True"
                                   CanUserReorderColumns="False"
                                   DoubleTapped="OnGridDoubleTapped">
+                            <DataGrid.Styles>
+                                <Style Selector="DataGridRow" x:DataType="models:TranslationKey">
+                                    <Setter Property="BorderBrush" Value="{Binding HasMissingTranslations, Converter={StaticResource MissingTranslationBorderConverter}}"/>
+                                    <Setter Property="BorderThickness" Value="2"/>
+                                </Style>
+                            </DataGrid.Styles>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Key" 
                                                     Binding="{Binding Key}" 

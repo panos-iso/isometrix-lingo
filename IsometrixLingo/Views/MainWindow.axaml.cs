@@ -19,6 +19,11 @@ namespace IsometrixLingo.Views;
 public partial class MainWindow : Window
 {
     private static readonly LanguageValueConverter LanguageConverter = new();
+    private static readonly TranslationValueConverter TranslationConverter = new();
+    private static readonly ModifiedCellBackgroundConverter ModifiedBackgroundConverter = new();
+    private static readonly ModifiedCellBorderConverter ModifiedBorderConverter = new();
+    private static readonly ShowOriginalTooltipConverter ShowOriginalTooltipConverter = new();
+    private static readonly RowToggleEnabledConverter RowToggleEnabledConverter = new();
 
     public MainWindow()
     {
@@ -42,9 +47,11 @@ public partial class MainWindow : Window
         DragDrop.AddDragLeaveHandler(DropOverlay, DragLeave);
     }
 
+    private bool _isClosingConfirmed = false;
+
     private async void OnClosing(object? sender, CancelEventArgs e)
     {
-        if (DataContext is MainWindowViewModel viewModel && viewModel.HasUnsavedChanges)
+        if (DataContext is MainWindowViewModel viewModel && viewModel.HasUnsavedChanges && !_isClosingConfirmed)
         {
             // Cancel the close temporarily to show dialog
             e.Cancel = true;
@@ -100,11 +107,13 @@ public partial class MainWindow : Window
             {
                 // Save and close
                 viewModel.SaveProgressCommand.Execute(null);
+                _isClosingConfirmed = true;
                 Close();
             }
             else if (result == false)
             {
                 // Discard and close
+                _isClosingConfirmed = true;
                 Close();
             }
             // If result is null, user cancelled - do nothing
@@ -177,20 +186,64 @@ public partial class MainWindow : Window
                 MinWidth = 120,
                 CellTemplate = new FuncDataTemplate<object>((_, _) =>
                 {
+                    // Create a border to apply background color and left border for highlighting
+                    var border = new Border
+                    {
+                        Padding = new Avalonia.Thickness(5, 2),
+                        BorderThickness = new Avalonia.Thickness(3, 0, 0, 0) // Left border
+                    };
+
+                    // Bind background to highlight modified cells
+                    var backgroundBinding = new MultiBinding
+                    {
+                        Converter = ModifiedBackgroundConverter,
+                        Bindings =
+                        {
+                            new Binding("ModifiedLanguages"), // HashSet that changes
+                            new Binding(language) // Just a constant for the language parameter
+                        },
+                        ConverterParameter = language
+                    };
+                    border.Bind(Border.BackgroundProperty, backgroundBinding);
+
+                    // Bind left border color to show modification indicator (like VS Code git gutter)
+                    var borderBinding = new MultiBinding
+                    {
+                        Converter = ModifiedBorderConverter,
+                        Bindings =
+                        {
+                            new Binding("ModifiedLanguages"),
+                            new Binding(language)
+                        },
+                        ConverterParameter = language
+                    };
+                    border.Bind(Border.BorderBrushProperty, borderBinding);
+
                     var textBlock = new TextBlock
                     {
                         TextWrapping = Avalonia.Media.TextWrapping.NoWrap,
                         TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
-                        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                        Margin = new Avalonia.Thickness(5, 2)
+                        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
                     };
-                    var binding = new Binding("LanguageValues")
+
+                    // Bind text to show either current or original value
+                    var textBinding = new MultiBinding
                     {
-                        Converter = LanguageConverter,
-                        ConverterParameter = language
+                        Converter = TranslationConverter,
+                        Bindings =
+                        {
+                            new Binding("LanguageValues") { Mode = BindingMode.OneWay }, // Dictionary that changes
+                            new Binding("OriginalValues") { Mode = BindingMode.OneWay }, // Original values
+                            new Binding("ShowOriginalValues") { Source = viewModel, Mode = BindingMode.OneWay }, // Global toggle from ViewModel
+                            new Binding("ShowOriginalForThisRow") { Mode = BindingMode.OneWay } // Per-row toggle
+                        },
+                        ConverterParameter = language,
+                        Mode = BindingMode.OneWay
                     };
-                    textBlock.Bind(TextBlock.TextProperty, binding);
-                    return textBlock;
+                    textBlock.Bind(TextBlock.TextProperty, textBinding);
+
+                    border.Child = textBlock;
+                    return border;
                 })
             };
             TranslationsGrid.Columns.Add(column);
@@ -201,22 +254,71 @@ public partial class MainWindow : Window
         {
             Header = "Actions",
             Width = DataGridLength.Auto,
-            MinWidth = 60,
+            MinWidth = 100,
             CellTemplate = new FuncDataTemplate<object>((data, _) =>
             {
-                var button = new Button
+                var panel = new StackPanel
+                {
+                    Orientation = Avalonia.Layout.Orientation.Horizontal,
+                    Spacing = 5,
+                    Margin = new Avalonia.Thickness(5, 2)
+                };
+
+                // Show Original toggle button
+                var toggleButton = new Button
+                {
+                    Content = "👁",
+                    FontSize = 18,
+                    Padding = new Avalonia.Thickness(8, 4),
+                    HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                    VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center
+                };
+
+                if (data is TranslationKey key)
+                {
+                    // Bind IsEnabled to IsModified AND NOT ShowOriginalValues
+                    var enabledBinding = new MultiBinding
+                    {
+                        Converter = RowToggleEnabledConverter,
+                        Bindings =
+                        {
+                            new Binding("IsModified") { Source = key },
+                            new Binding("ShowOriginalValues") { Source = viewModel }
+                        }
+                    };
+                    toggleButton.Bind(Button.IsEnabledProperty, enabledBinding);
+
+                    // Bind tooltip to ShowOriginalForThisRow for context-aware text
+                    var tooltipBinding = new Binding("ShowOriginalForThisRow")
+                    {
+                        Source = key,
+                        Converter = ShowOriginalTooltipConverter
+                    };
+                    toggleButton.Bind(ToolTip.TipProperty, tooltipBinding);
+
+                    // Bind Command to toggle ShowOriginalForThisRow
+                    toggleButton.Click += (s, e) =>
+                    {
+                        key.ShowOriginalForThisRow = !key.ShowOriginalForThisRow;
+                    };
+                }
+
+                // Edit button
+                var editButton = new Button
                 {
                     Content = "📝",
                     FontSize = 18,
                     Padding = new Avalonia.Thickness(8, 4),
-                    Margin = new Avalonia.Thickness(5, 2),
                     HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                     VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center,
                     Command = viewModel.EditTranslationCommand,
                     CommandParameter = data
                 };
-                ToolTip.SetTip(button, "Edit translation");
-                return button;
+                ToolTip.SetTip(editButton, "Edit translation");
+
+                panel.Children.Add(toggleButton);
+                panel.Children.Add(editButton);
+                return panel;
             })
         };
         TranslationsGrid.Columns.Add(actionsColumn);

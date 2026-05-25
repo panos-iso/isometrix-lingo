@@ -39,4 +39,13 @@
     <data name="Cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
+    <data name="EdgeCase_OnlyEnglish" xml:space="preserve">
+    <value>This key only exists in English RESX</value>
+  </data>
+    <data name="EdgeCase_BothEmpty" xml:space="preserve">
+    <value></value>
+  </data>
+    <data name="EdgeCase_EmptyEnglishMissingSpanish" xml:space="preserve">
+    <value></value>
+  </data>
 </root>

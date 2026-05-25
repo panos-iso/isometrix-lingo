@@ -34,7 +34,10 @@ public class ProgressService
                     Type = tk.Source.Type
                 },
                 LanguageValues = new Dictionary<string, string>(tk.LanguageValues),
-                IsModified = tk.IsModified
+                IsModified = tk.IsModified,
+                OriginalValues = new Dictionary<string, string>(tk.OriginalValues),
+                ModifiedLanguages = tk.ModifiedLanguages.ToList(),
+                ShowOriginalForThisRow = tk.ShowOriginalForThisRow
             }).ToList(),
             ImportedFileNames = state.ImportedFileNames,
             ResxTemplates = state.ResxTemplates,
@@ -68,7 +71,7 @@ public class ProgressService
         {
             var json = File.ReadAllText(_progressFilePath);
             var serializableState = JsonSerializer.Deserialize<SerializableSessionState>(json);
-            
+
             if (serializableState == null)
             {
                 return null;
@@ -77,12 +80,20 @@ public class ProgressService
             // Convert back to SessionState with ObservableObject instances
             var sessionState = new SessionState
             {
-                TranslationKeys = serializableState.TranslationKeys.Select(stk => new TranslationKey
+                TranslationKeys = serializableState.TranslationKeys.Select(stk =>
                 {
-                    Key = stk.Key,
-                    Source = new SourceFile(stk.Source.Name, stk.Source.Type),
-                    LanguageValues = new Dictionary<string, string>(stk.LanguageValues),
-                    IsModified = stk.IsModified
+                    var key = new TranslationKey
+                    {
+                        Key = stk.Key,
+                        Source = new SourceFile(stk.Source.Name, stk.Source.Type),
+                        LanguageValues = new Dictionary<string, string>(stk.LanguageValues),
+                        IsModified = stk.IsModified,
+                        OriginalValues = new Dictionary<string, string>(stk.OriginalValues),
+                        ModifiedLanguages = new HashSet<string>(stk.ModifiedLanguages),
+                        ShowOriginalForThisRow = stk.ShowOriginalForThisRow
+                    };
+                    key.UpdateMissingTranslationsStatus();
+                    return key;
                 }).ToList(),
                 ImportedFileNames = serializableState.ImportedFileNames,
                 ResxTemplates = serializableState.ResxTemplates,

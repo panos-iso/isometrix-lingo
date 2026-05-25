@@ -117,6 +117,20 @@ public class ResxTranslationFileReader
             }
         }
 
+        // Fill in missing language values with empty strings
+        var allLanguages = files.Select(f => f.Language).Distinct().ToList();
+        foreach (var translationKey in consolidatedKeys.Values)
+        {
+            foreach (var language in allLanguages)
+            {
+                if (!translationKey.LanguageValues.ContainsKey(language))
+                {
+                    translationKey.LanguageValues[language] = string.Empty;
+                }
+            }
+            translationKey.UpdateMissingTranslationsStatus();
+        }
+
         return consolidatedKeys.Values.OrderBy(k => k.Key).ToList();
     }
 

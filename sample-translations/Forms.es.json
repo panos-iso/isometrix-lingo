@@ -11,5 +11,6 @@
   "Forms_Navigation_Home": "Inicio",
   "Forms_Navigation_Profile": "Perfil",
   "Forms_Navigation_Settings": "Configuración",
-  "Forms_Navigation_Logout": "Cerrar Sesión"
+  "Forms_Navigation_Logout": "Cerrar Sesión",
+  "Forms_EdgeCase_BothEmpty": ""
 }

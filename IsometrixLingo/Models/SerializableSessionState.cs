@@ -26,6 +26,9 @@ public class SerializableTranslationKey
     public SerializableSourceFile Source { get; set; } = new();
     public Dictionary<string, string> LanguageValues { get; set; } = new();
     public bool IsModified { get; set; }
+    public Dictionary<string, string> OriginalValues { get; set; } = new();
+    public List<string> ModifiedLanguages { get; set; } = new();
+    public bool ShowOriginalForThisRow { get; set; }
 }
 
 /// <summary>
