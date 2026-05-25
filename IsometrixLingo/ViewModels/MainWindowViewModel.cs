@@ -811,8 +811,9 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        // Create output directory if it doesn't exist
-        var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output");
+        // Create output directory in user's Documents folder
+        var documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var outputPath = Path.Combine(documentsPath, "IsometrixLingo", "output");
         if (!Directory.Exists(outputPath))
         {
             Directory.CreateDirectory(outputPath);
