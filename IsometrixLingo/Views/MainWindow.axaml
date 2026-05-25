@@ -239,6 +239,60 @@
                                     </DockPanel>
                                 </Border>
                             </Grid>
+
+                            <!-- Ignored Files Section -->
+                            <Border BorderBrush="#FF9800"
+                                    BorderThickness="1"
+                                    Background="{DynamicResource SystemControlAcrylicWindowBrush}"
+                                    CornerRadius="8"
+                                    Padding="15"
+                                    Margin="0,10,0,0"
+                                    IsVisible="{Binding !!IgnoredFileNames.Count}">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+                                        <TextBlock Text="⚠"
+                                                   FontSize="16"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="#FF9800"/>
+                                        <TextBlock Text="Ignored Files (Unsupported Language)"
+                                                   FontSize="14"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <TextBlock DockPanel.Dock="Top"
+                                               Text="The following files were ignored because they use unsupported languages. Only English (en) and Spanish (es) are supported."
+                                               FontSize="12"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,0,10"/>
+                                    <ItemsControl ItemsSource="{Binding IgnoredFileNames}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Spacing="6"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="#FFF3E0"
+                                                        BorderBrush="#FFB74D"
+                                                        BorderThickness="1"
+                                                        CornerRadius="3"
+                                                        Padding="8,6">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <TextBlock Text="🚫" FontSize="12" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding}" 
+                                                                   FontSize="12"
+                                                                   Foreground="#E65100"
+                                                                   VerticalAlignment="Center"
+                                                                   FontWeight="Medium"
+                                                                   TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </DockPanel>
+                            </Border>
                     </StackPanel>
                     </ScrollViewer>
                 </DockPanel>

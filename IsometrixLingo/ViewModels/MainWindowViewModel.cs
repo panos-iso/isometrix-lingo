@@ -58,6 +58,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<string> _importedFileNames = new();
 
+    [ObservableProperty]
+    private ObservableCollection<string> _ignoredFileNames = new();
+
     // Workflow state properties
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowFileMappingStep), nameof(ShowEditStep), nameof(ShowExportStep),
@@ -250,9 +253,21 @@ public partial class MainWindowViewModel : ViewModelBase
                     var extension = Path.GetExtension(filePath).ToLower();
 
                     // Check for duplicate files (case-insensitive)
-                    if (ImportedFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)))
+                    if (ImportedFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)) ||
+                        IgnoredFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)))
                     {
                         StatusMessage = $"File '{fileName}' has already been imported. Skipping duplicate.";
+                        continue;
+                    }
+
+                    // Check if language is supported (en or es only)
+                    var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
+                    var language = ExtractLanguage(fileName, fileType);
+                    
+                    if (string.IsNullOrEmpty(language) || (language != "en" && language != "es"))
+                    {
+                        IgnoredFileNames.Add(fileName);
+                        StatusMessage = $"File '{fileName}' ignored - unsupported language. Only English (en) and Spanish (es) are supported.";
                         continue;
                     }
 
@@ -350,9 +365,21 @@ public partial class MainWindowViewModel : ViewModelBase
                         continue;
 
                     // Check for duplicate files (case-insensitive)
-                    if (ImportedFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)))
+                    if (ImportedFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)) ||
+                        IgnoredFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)))
                     {
                         StatusMessage = $"File '{fileName}' has already been imported. Skipping duplicate.";
+                        continue;
+                    }
+
+                    // Check if language is supported (en or es only)
+                    var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
+                    var language = ExtractLanguage(fileName, fileType);
+                    
+                    if (string.IsNullOrEmpty(language) || (language != "en" && language != "es"))
+                    {
+                        IgnoredFileNames.Add(fileName);
+                        StatusMessage = $"File '{fileName}' ignored - unsupported language. Only English (en) and Spanish (es) are supported.";
                         continue;
                     }
 
@@ -786,6 +813,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _translationStore.Clear();
         _progressService.ClearProgress();
         ImportedFileNames.Clear();
+        IgnoredFileNames.Clear();
         FilePairs.Clear();
         HasKeys = false;
         HasUnsavedChanges = false;
@@ -815,10 +843,10 @@ public partial class MainWindowViewModel : ViewModelBase
             ImportStepStatus = StepStatus.Completed;
             FileMappingStepStatus = StepStatus.InProgress;
             CurrentStep = WorkflowStep.FileMapping;
-            
+
             // Generate file pairs
             DetectFilePairs();
-            
+
             StatusMessage = "Import complete. Review file mappings and confirm to continue.";
 
             // Auto-save progress
