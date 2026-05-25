@@ -78,7 +78,8 @@ public class JsonTranslationFileReader
                     {
                         Key = key.Key,
                         Source = new SourceFile(baseName, FileType.Json),
-                        LanguageValues = new Dictionary<string, string>()
+                        LanguageValues = new Dictionary<string, string>(),
+                        SuggestedValues = new Dictionary<string, Suggestion>()
                     };
                 }
 
@@ -86,6 +87,12 @@ public class JsonTranslationFileReader
                 if (key.LanguageValues.ContainsKey(file.Language))
                 {
                     consolidatedKeys[key.Key].LanguageValues[file.Language] = key.LanguageValues[file.Language];
+                }
+                
+                // Add suggestion if present
+                if (key.SuggestedValues.ContainsKey(file.Language))
+                {
+                    consolidatedKeys[key.Key].SuggestedValues[file.Language] = key.SuggestedValues[file.Language];
                 }
             }
         }

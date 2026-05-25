@@ -114,6 +114,12 @@ public class ResxTranslationFileReader
                     {
                         existingKey.LanguageValues[langValue.Key] = langValue.Value;
                     }
+                    
+                    // Merge suggestions
+                    foreach (var suggestion in key.SuggestedValues)
+                    {
+                        existingKey.SuggestedValues[suggestion.Key] = suggestion.Value;
+                    }
                 }
                 else
                 {
@@ -121,7 +127,8 @@ public class ResxTranslationFileReader
                     {
                         Key = key.Key,
                         Source = key.Source,
-                        LanguageValues = new Dictionary<string, string>(key.LanguageValues)
+                        LanguageValues = new Dictionary<string, string>(key.LanguageValues),
+                        SuggestedValues = new Dictionary<string, Suggestion>(key.SuggestedValues)
                     };
                 }
             }
