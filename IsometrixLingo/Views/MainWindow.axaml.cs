@@ -271,8 +271,7 @@ public partial class MainWindow : Window
                     {
                         TextWrapping = Avalonia.Media.TextWrapping.NoWrap,
                         TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
-                        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                        Foreground = this.FindResource("SystemControlForegroundBaseHighBrush") as IBrush
+                        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
                     };
 
                     // Bind text to show either current or original value
@@ -299,10 +298,10 @@ public partial class MainWindow : Window
                         var suggestionTextBlock = new TextBlock
                         {
                             FontSize = 11,
+                            Foreground = Brushes.Gray,
                             TextWrapping = Avalonia.Media.TextWrapping.NoWrap,
                             TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
-                            Margin = new Avalonia.Thickness(0, 0, 0, 0),
-                            Foreground = this.FindResource("SystemControlForegroundBaseMediumBrush") as IBrush
+                            Margin = new Avalonia.Thickness(0, 0, 0, 0)
                         };
 
                         // Bind suggestion text
