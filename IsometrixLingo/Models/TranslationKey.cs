@@ -30,6 +30,9 @@ public partial class TranslationKey : ObservableObject
     [ObservableProperty]
     private bool _hasMissingTranslations;
 
+    [ObservableProperty]
+    private Dictionary<string, Suggestion> _suggestedValues = new();
+
     /// <summary>
     /// Check if a specific language value has been modified
     /// </summary>
@@ -39,14 +42,29 @@ public partial class TranslationKey : ObservableObject
     }
 
     /// <summary>
-    /// Update the HasMissingTranslations property based on current language values.
-    /// Checks if both English and Spanish have non-empty values.
+    /// Check if a specific language has a suggestion
+    /// </summary>
+    public bool HasSuggestion(string language)
+    {
+        return SuggestedValues.ContainsKey(language);
+    }
+
+    /// <summary>
+    /// Check if this key has any suggestions across any language
+    /// </summary>
+    public bool HasAnySuggestions => SuggestedValues.Count > 0;
+
+    /// <summary>
+    /// Update the HasMissingTranslations property based on current language values and suggestions.
+    /// A translation is missing if a language has neither a value NOR a suggestion.
     /// </summary>
     public void UpdateMissingTranslationsStatus()
     {
-        // A translation is missing if either en or es is not present or is empty
-        var hasEnglish = LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue);
-        var hasSpanish = LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue);
+        // A translation is OK if it has either a value OR a suggestion
+        var hasEnglish = (LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue)) 
+                        || SuggestedValues.ContainsKey("en");
+        var hasSpanish = (LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue))
+                        || SuggestedValues.ContainsKey("es");
         
         HasMissingTranslations = !hasEnglish || !hasSpanish;
     }
