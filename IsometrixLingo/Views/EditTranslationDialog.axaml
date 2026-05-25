@@ -1,12 +1,13 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:IsometrixLingo.ViewModels"
+        xmlns:converters="using:IsometrixLingo.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
         x:Class="IsometrixLingo.Views.EditTranslationDialog"
         x:DataType="vm:EditTranslationViewModel"
-        Title="Edit Translation"
+        Title="{Binding CurrentMode, Converter={StaticResource EditDialogTitleConverter}}"
         Width="600" Height="400"
         WindowStartupLocation="CenterOwner"
         CanResize="False">
@@ -14,6 +15,11 @@
     <Design.DataContext>
         <vm:EditTranslationViewModel/>
     </Design.DataContext>
+
+    <Window.Resources>
+        <converters:EditDialogTitleConverter x:Key="EditDialogTitleConverter"/>
+        <converters:EditDialogLabelConverter x:Key="EditDialogLabelConverter"/>
+    </Window.Resources>
 
     <DockPanel Margin="20">
         <!-- Bottom Buttons -->
@@ -38,26 +44,75 @@
                      IsReadOnly="True" 
                      Margin="0,0,0,20"/>
 
-            <!-- Language Values -->
-            <TextBlock Text="Translations:" FontWeight="SemiBold" Margin="0,0,0,10"/>
-            <ScrollViewer MaxHeight="240">
-                <ItemsControl ItemsSource="{Binding LanguageValues}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Margin="0,0,0,15">
-                                <TextBlock Text="{Binding LanguageName}" 
-                                          FontWeight="Medium"
-                                          Margin="0,0,0,5"/>
-                                <TextBox Text="{Binding Value}" 
-                                        AcceptsReturn="True"
-                                        TextWrapping="Wrap"
-                                        MinHeight="60"
-                                        MaxHeight="100"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+            <!-- Edit Mode: Editable actual values -->
+            <StackPanel IsVisible="{Binding CurrentMode, Converter={StaticResource IsEditModeConverter}}">
+                <TextBlock Text="{Binding CurrentMode, Converter={StaticResource EditDialogLabelConverter}}" 
+                           FontWeight="SemiBold" Margin="0,0,0,10"/>
+                <ScrollViewer MaxHeight="240">
+                    <ItemsControl ItemsSource="{Binding LanguageValues}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,0,0,15">
+                                    <TextBlock Text="{Binding LanguageName}" 
+                                              FontWeight="Medium"
+                                              Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding Value}" 
+                                            AcceptsReturn="True"
+                                            TextWrapping="Wrap"
+                                            MinHeight="60"
+                                            MaxHeight="100"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </StackPanel>
+
+            <!-- Suggest Mode: Read-only actual values + editable suggestions -->
+            <StackPanel IsVisible="{Binding CurrentMode, Converter={StaticResource IsSuggestModeConverter}}">
+                <TextBlock Text="Current Translations (Read-Only):" 
+                           FontWeight="SemiBold" Margin="0,0,0,10"/>
+                <ScrollViewer MaxHeight="120">
+                    <ItemsControl ItemsSource="{Binding LanguageValues}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,0,0,10">
+                                    <TextBlock Text="{Binding LanguageName}" 
+                                              FontWeight="Medium"
+                                              FontSize="11"
+                                              Margin="0,0,0,3"/>
+                                    <TextBox Text="{Binding Value}" 
+                                            IsReadOnly="True"
+                                            Background="#F5F5F5"
+                                            MinHeight="40"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <TextBlock Text="Suggested Translations:" 
+                           FontWeight="SemiBold" Margin="0,15,0,10"/>
+                <ScrollViewer MaxHeight="120">
+                    <ItemsControl ItemsSource="{Binding LanguageSuggestions}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,0,0,15">
+                                    <TextBlock Text="{Binding LanguageName}" 
+                                              FontWeight="Medium"
+                                              Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding SuggestedValue}" 
+                                            PlaceholderText="Enter your suggestion..."
+                                            AcceptsReturn="True"
+                                            TextWrapping="Wrap"
+                                            MinHeight="60"
+                                            MaxHeight="100"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </StackPanel>
         </StackPanel>
     </DockPanel>
 

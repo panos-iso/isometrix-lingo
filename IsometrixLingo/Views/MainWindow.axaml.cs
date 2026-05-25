@@ -137,7 +137,11 @@ public partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel mainViewModel)
             return;
 
-        var editViewModel = new EditTranslationViewModel(translationKey, mainViewModel.TranslationStore);
+        var editViewModel = new EditTranslationViewModel(
+            translationKey, 
+            mainViewModel.TranslationStore, 
+            mainViewModel.CurrentMode,
+            mainViewModel.Username);
         var dialog = new EditTranslationDialog
         {
             DataContext = editViewModel

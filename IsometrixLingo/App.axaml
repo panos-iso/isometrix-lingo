@@ -19,6 +19,10 @@
         <converters:EditModeAndHasSuggestionConverter x:Key="EditModeAndHasSuggestionConverter"/>
         <converters:AddKeyDialogTitleConverter x:Key="AddKeyDialogTitleConverter"/>
         <converters:AddKeyGuidanceConverter x:Key="AddKeyGuidanceConverter"/>
+        <converters:EditDialogTitleConverter x:Key="EditDialogTitleConverter"/>
+        <converters:EditDialogLabelConverter x:Key="EditDialogLabelConverter"/>
+        <converters:IsEditModeConverter x:Key="IsEditModeConverter"/>
+        <converters:IsSuggestModeConverter x:Key="IsSuggestModeConverter"/>
     </Application.Resources>
   
     <Application.Styles>
