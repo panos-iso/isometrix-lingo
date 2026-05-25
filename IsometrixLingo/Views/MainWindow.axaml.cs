@@ -168,44 +168,10 @@ public partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel viewModel)
             return;
 
-        // Remove existing columns after Key, Source File, and Indicator (keep first 3)
-        while (TranslationsGrid.Columns.Count > 3)
+        // Remove existing columns after Key and Source File (keep first 2)
+        while (TranslationsGrid.Columns.Count > 2)
         {
-            TranslationsGrid.Columns.RemoveAt(3);
-        }
-
-        // Add indicator column if not present (at index 2, after Key and Source File)
-        if (TranslationsGrid.Columns.Count == 2)
-        {
-            var indicatorColumn = new DataGridTemplateColumn
-            {
-                Header = "💡",
-                Width = DataGridLength.Auto,
-                MinWidth = 35,
-                CellTemplate = new FuncDataTemplate<object>((data, _) =>
-                {
-                    var textBlock = new TextBlock
-                    {
-                        Text = "💡",
-                        FontSize = 16,
-                        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-                        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                        Margin = new Avalonia.Thickness(5, 0)
-                    };
-
-                    if (data is TranslationKey key)
-                    {
-                        var binding = new Binding("HasAnySuggestions")
-                        {
-                            Source = key
-                        };
-                        textBlock.Bind(TextBlock.IsVisibleProperty, binding);
-                    }
-
-                    return textBlock;
-                })
-            };
-            TranslationsGrid.Columns.Insert(2, indicatorColumn);
+            TranslationsGrid.Columns.RemoveAt(2);
         }
 
         // Add a column for each language
