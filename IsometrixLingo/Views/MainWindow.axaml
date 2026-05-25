@@ -240,7 +240,7 @@
 
             <!-- Step 2: Edit Translations -->
             <DockPanel IsVisible="{Binding ShowEditStep}" LastChildFill="True">
-                <!-- Action Buttons docked to bottom -->
+                <!-- Workflow navigation buttons docked to bottom -->
                 <StackPanel DockPanel.Dock="Bottom" 
                             Orientation="Horizontal" 
                             HorizontalAlignment="Right" 
@@ -248,11 +248,6 @@
                             Margin="0,15,0,0">
                     <Button Content="{Binding StartOverButtonText}"
                             Command="{Binding StartOverCommand}"
-                            Padding="15,8"/>
-                    <Button Content="Add Key"
-                            Command="{Binding AddKeyCommand}"
-                            CommandParameter="{Binding $parent[Window]}"
-                            IsEnabled="{Binding HasKeys}"
                             Padding="15,8"/>
                     <Button Content="Save Progress"
                             Command="{Binding SaveProgressCommand}"
@@ -276,7 +271,7 @@
                                Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                                Margin="0,0,0,10"/>
 
-                    <!-- File Filters -->
+                    <!-- Toolbar with filters and actions -->
                     <StackPanel Grid.Row="1" 
                                 Orientation="Horizontal" 
                                 Spacing="10"
@@ -306,6 +301,12 @@
                                   VerticalAlignment="Center"
                                   Margin="20,0,0,0"
                                   ToolTip.Tip="Toggle between current and original values to see what changed"/>
+                        <Button Content="Add Key"
+                                Command="{Binding AddKeyCommand}"
+                                CommandParameter="{Binding $parent[Window]}"
+                                IsEnabled="{Binding HasKeys}"
+                                Padding="10,5"
+                                Margin="20,0,0,0"/>
                     </StackPanel>
 
                     <!-- DataGrid with constrained height -->

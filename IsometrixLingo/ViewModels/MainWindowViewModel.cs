@@ -465,6 +465,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         SelectedSourceFile = null;
         SearchText = string.Empty;
+        ShowOriginalValues = false;
         _translationStore.FilterBySourceFiles(null!);
         _translationStore.FilterBySearchTerm(string.Empty);
         UpdateStatusMessage();

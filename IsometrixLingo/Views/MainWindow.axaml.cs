@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private static readonly LanguageValueConverter LanguageConverter = new();
     private static readonly TranslationValueConverter TranslationConverter = new();
     private static readonly ModifiedCellBackgroundConverter ModifiedBackgroundConverter = new();
+    private static readonly ModifiedCellBorderConverter ModifiedBorderConverter = new();
 
     public MainWindow()
     {
@@ -44,9 +45,11 @@ public partial class MainWindow : Window
         DragDrop.AddDragLeaveHandler(DropOverlay, DragLeave);
     }
 
+    private bool _isClosingConfirmed = false;
+
     private async void OnClosing(object? sender, CancelEventArgs e)
     {
-        if (DataContext is MainWindowViewModel viewModel && viewModel.HasUnsavedChanges)
+        if (DataContext is MainWindowViewModel viewModel && viewModel.HasUnsavedChanges && !_isClosingConfirmed)
         {
             // Cancel the close temporarily to show dialog
             e.Cancel = true;
@@ -102,11 +105,13 @@ public partial class MainWindow : Window
             {
                 // Save and close
                 viewModel.SaveProgressCommand.Execute(null);
+                _isClosingConfirmed = true;
                 Close();
             }
             else if (result == false)
             {
                 // Discard and close
+                _isClosingConfirmed = true;
                 Close();
             }
             // If result is null, user cancelled - do nothing
@@ -179,10 +184,11 @@ public partial class MainWindow : Window
                 MinWidth = 120,
                 CellTemplate = new FuncDataTemplate<object>((_, _) =>
                 {
-                    // Create a border to apply background color for highlighting
+                    // Create a border to apply background color and left border for highlighting
                     var border = new Border
                     {
-                        Padding = new Avalonia.Thickness(5, 2)
+                        Padding = new Avalonia.Thickness(5, 2),
+                        BorderThickness = new Avalonia.Thickness(3, 0, 0, 0) // Left border
                     };
 
                     // Bind background to highlight modified cells
@@ -191,12 +197,25 @@ public partial class MainWindow : Window
                         Converter = ModifiedBackgroundConverter,
                         Bindings =
                         {
-                            new Binding("."), // The TranslationKey itself
+                            new Binding("ModifiedLanguages"), // HashSet that changes
                             new Binding(language) // Just a constant for the language parameter
                         },
                         ConverterParameter = language
                     };
                     border.Bind(Border.BackgroundProperty, backgroundBinding);
+
+                    // Bind left border color to show modification indicator (like VS Code git gutter)
+                    var borderBinding = new MultiBinding
+                    {
+                        Converter = ModifiedBorderConverter,
+                        Bindings =
+                        {
+                            new Binding("ModifiedLanguages"),
+                            new Binding(language)
+                        },
+                        ConverterParameter = language
+                    };
+                    border.Bind(Border.BorderBrushProperty, borderBinding);
 
                     var textBlock = new TextBlock
                     {
@@ -211,8 +230,9 @@ public partial class MainWindow : Window
                         Converter = TranslationConverter,
                         Bindings =
                         {
-                            new Binding("."), // The TranslationKey itself
-                            new Binding("$parent[Window].DataContext.ShowOriginalValues") // Toggle from ViewModel
+                            new Binding("LanguageValues"), // Dictionary that changes
+                            new Binding("OriginalValues"), // Original values
+                            new Binding("ShowOriginalValues") { Source = viewModel } // Toggle from ViewModel
                         },
                         ConverterParameter = language
                     };

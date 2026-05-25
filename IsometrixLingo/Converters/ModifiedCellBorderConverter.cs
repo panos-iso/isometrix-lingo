@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Globalization;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
-using IsometrixLingo.Models;
 
 namespace IsometrixLingo.Converters;
 
 /// <summary>
-/// Converter to highlight modified translation cells
+/// Converter to show left border indicator for modified cells (like VS Code git gutter)
 /// </summary>
-public class ModifiedCellBackgroundConverter : IMultiValueConverter
+public class ModifiedCellBorderConverter : IMultiValueConverter
 {
     public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -21,12 +20,10 @@ public class ModifiedCellBackgroundConverter : IMultiValueConverter
 
         var modifiedLanguages = values[0] as HashSet<string>;
 
-        // Highlight if this language was modified
-        // Using subtle orange/amber background with strong left border (like VS Code git changes)
-        // Works well in both light and dark modes
+        // Show left border if this language was modified
         if (modifiedLanguages?.Contains(language) == true)
         {
-            return new SolidColorBrush(Color.FromArgb(60, 255, 152, 0)); // Subtle orange background
+            return new SolidColorBrush(Color.FromRgb(255, 152, 0)); // Solid orange border
         }
 
         return Brushes.Transparent;

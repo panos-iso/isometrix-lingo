@@ -14,25 +14,28 @@ public class TranslationValueConverter : IMultiValueConverter
 {
     public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (values.Count < 2 || values[0] is not TranslationKey translationKey || values[1] is not bool showOriginal)
+        if (values.Count < 3 || parameter is not string language)
         {
             return string.Empty;
         }
 
-        var language = parameter as string;
+        var languageValues = values[0] as Dictionary<string, string>;
+        var originalValues = values[1] as Dictionary<string, string>;
+        var showOriginal = values[2] is bool show && show;
+
         if (string.IsNullOrEmpty(language))
         {
             return string.Empty;
         }
 
         // If showing original and we have an original value, show it
-        if (showOriginal && translationKey.OriginalValues.TryGetValue(language, out var originalValue))
+        if (showOriginal && originalValues?.TryGetValue(language, out var originalValue) == true)
         {
             return originalValue;
         }
 
         // Otherwise show current value
-        if (translationKey.LanguageValues.TryGetValue(language, out var currentValue))
+        if (languageValues?.TryGetValue(language, out var currentValue) == true)
         {
             return currentValue;
         }

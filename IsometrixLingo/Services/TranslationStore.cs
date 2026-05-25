@@ -147,34 +147,44 @@ public class TranslationStore
             // Store original value if this is the first edit for this language
             if (!translationKey.OriginalValues.ContainsKey(language))
             {
-                translationKey.OriginalValues[language] = translationKey.LanguageValues.TryGetValue(language, out var originalValue) 
+                var original = translationKey.LanguageValues.TryGetValue(language, out var originalValue) 
                     ? originalValue 
                     : string.Empty;
+                
+                // Create new dictionary to trigger property change
+                var newOriginals = new Dictionary<string, string>(translationKey.OriginalValues)
+                {
+                    [language] = original
+                };
+                translationKey.OriginalValues = newOriginals;
             }
 
-            // Update the value
-            translationKey.LanguageValues[language] = newValue;
+            // Update the value - create new dictionary to trigger property change
+            var newValues = new Dictionary<string, string>(translationKey.LanguageValues)
+            {
+                [language] = newValue
+            };
+            translationKey.LanguageValues = newValues;
             
             // Check if value actually changed from original
-            var original = translationKey.OriginalValues[language];
-            if (newValue != original)
+            var originalStoredValue = translationKey.OriginalValues[language];
+            var newModified = new HashSet<string>(translationKey.ModifiedLanguages);
+            
+            if (newValue != originalStoredValue)
             {
-                translationKey.ModifiedLanguages.Add(language);
+                newModified.Add(language);
                 translationKey.IsModified = true;
             }
             else
             {
                 // Value was reverted to original - remove from modified set
-                translationKey.ModifiedLanguages.Remove(language);
-                translationKey.IsModified = translationKey.ModifiedLanguages.Count > 0;
+                newModified.Remove(language);
+                translationKey.IsModified = newModified.Count > 0;
             }
+            
+            translationKey.ModifiedLanguages = newModified;
 
             SetUnsavedChanges(true);
-
-            // Trigger property change notification for the dictionary
-            // This is a workaround: we reassign to trigger INotifyPropertyChanged
-            var temp = translationKey.LanguageValues;
-            translationKey.LanguageValues = new Dictionary<string, string>(temp);
         }
     }
 
