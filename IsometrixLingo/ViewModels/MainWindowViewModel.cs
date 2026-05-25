@@ -1071,6 +1071,43 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         try
         {
+            // Get the window if not provided
+            if (window == null)
+            {
+                if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                {
+                    window = desktop.MainWindow;
+                }
+            }
+
+            if (window == null)
+            {
+                StatusMessage = "Cannot show dialog - no window available.";
+                return;
+            }
+
+            // Check for unresolved suggestions
+            var keysWithSuggestions = _translationStore.GetAllKeys()
+                .Where(k => k.HasAnySuggestions)
+                .ToList();
+
+            if (keysWithSuggestions.Count > 0)
+            {
+                var totalSuggestions = keysWithSuggestions.Sum(k => k.SuggestedValues.Count);
+                var message = $"There are {totalSuggestions} unresolved suggestion(s) across {keysWithSuggestions.Count} key(s).\n\n" +
+                              "These suggestions have not been accepted or rejected.\n\n" +
+                              "Do you want to stay and review the suggestions, or continue to export anyway?";
+
+                var dialog = new ConfirmationDialog(message);
+                var result = await dialog.ShowDialog<bool?>(window);
+
+                if (result != true)
+                {
+                    StatusMessage = "Review suggestions before exporting.";
+                    return;
+                }
+            }
+
             // Check for missing translations
             var keysWithMissingTranslations = _translationStore.GetAllKeys()
                 .Where(k => k.HasMissingTranslations)
@@ -1078,21 +1115,6 @@ public partial class MainWindowViewModel : ViewModelBase
 
             if (keysWithMissingTranslations.Count > 0)
             {
-                // Get the window if not provided
-                if (window == null)
-                {
-                    if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-                    {
-                        window = desktop.MainWindow;
-                    }
-                }
-
-                if (window == null)
-                {
-                    StatusMessage = "Cannot show dialog - no window available.";
-                    return;
-                }
-
                 var message = $"There are {keysWithMissingTranslations.Count} translation key(s) with missing terms.\n\n" +
                               "Do you want to stay and add the missing translations, or continue to export anyway?";
 
