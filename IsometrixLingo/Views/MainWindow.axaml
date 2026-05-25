@@ -20,8 +20,6 @@
         <converters:ShowOriginalTooltipConverter x:Key="ShowOriginalTooltipConverter"/>
         <converters:RowToggleEnabledConverter x:Key="RowToggleEnabledConverter"/>
         <converters:MissingTranslationBorderConverter x:Key="MissingTranslationBorderConverter"/>
-        <converters:SuggestionRowBorderConverter x:Key="SuggestionRowBorderConverter"/>
-        <converters:SuggestionRowBorderBrushConverter x:Key="SuggestionRowBorderBrushConverter"/>
     </Window.Resources>
     
     <Window.Styles>
@@ -682,8 +680,6 @@
                             <DataGrid.Styles>
                                 <Style Selector="DataGridRow" x:DataType="models:TranslationKey">
                                     <Setter Property="Background" Value="{Binding HasMissingTranslations, Converter={StaticResource MissingTranslationBorderConverter}}"/>
-                                    <Setter Property="BorderThickness" Value="{Binding HasAnySuggestions, Converter={StaticResource SuggestionRowBorderConverter}}"/>
-                                    <Setter Property="BorderBrush" Value="{Binding HasAnySuggestions, Converter={StaticResource SuggestionRowBorderBrushConverter}}"/>
                                 </Style>
                             </DataGrid.Styles>
                             <DataGrid.Columns>

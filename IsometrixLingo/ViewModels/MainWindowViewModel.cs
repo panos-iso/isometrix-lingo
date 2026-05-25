@@ -1769,21 +1769,11 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var (key, language) = parameters;
         
-        if (!key.SuggestedValues.TryGetValue(language, out var suggestion))
+        // Use the TranslationKey's method to accept the suggestion (handles all state updates and notifications)
+        var acceptedValue = key.AcceptSuggestionForLanguage(language);
+        
+        if (acceptedValue == null)
             return;
-
-        // Apply the suggestion to the actual value
-        key.LanguageValues[language] = suggestion.Value;
-        
-        // Remove the suggestion
-        key.SuggestedValues.Remove(language);
-        
-        // Mark as modified
-        key.ModifiedLanguages.Add(language);
-        key.IsModified = true;
-        
-        // Update missing translations status
-        key.UpdateMissingTranslationsStatus();
         
         // Mark as having unsaved changes
         HasUnsavedChanges = true;
@@ -1796,14 +1786,11 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var (key, language) = parameters;
         
-        if (!key.SuggestedValues.ContainsKey(language))
-            return;
-
-        // Remove the suggestion
-        key.SuggestedValues.Remove(language);
+        // Use the TranslationKey's method to reject the suggestion (handles all state updates and notifications)
+        var wasRejected = key.RejectSuggestionForLanguage(language);
         
-        // Update missing translations status (in case removing the suggestion makes it missing)
-        key.UpdateMissingTranslationsStatus();
+        if (!wasRejected)
+            return;
         
         // Mark as having unsaved changes
         HasUnsavedChanges = true;

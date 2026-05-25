@@ -209,13 +209,14 @@ public partial class MainWindow : Window
                     };
                     border.Bind(Border.BackgroundProperty, backgroundBinding);
 
-                    // Bind left border color to show modification indicator (like VS Code git gutter)
+                    // Bind left border color to show modification (orange) and suggestion (purple) indicators
                     var borderBinding = new MultiBinding
                     {
                         Converter = ModifiedBorderConverter,
                         Bindings =
                         {
                             new Binding("ModifiedLanguages"),
+                            new Binding("."), // The TranslationKey itself for suggestion check
                             new Binding(language)
                         },
                         ConverterParameter = language
@@ -268,9 +269,8 @@ public partial class MainWindow : Window
                         {
                             FontSize = 11,
                             Foreground = Brushes.Gray,
-                            TextWrapping = Avalonia.Media.TextWrapping.NoWrap,
-                            TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
-                            Margin = new Avalonia.Thickness(0, 0, 0, 0)
+                            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                            Margin = new Avalonia.Thickness(0, 2, 0, 0)
                         };
 
                         // Bind suggestion text

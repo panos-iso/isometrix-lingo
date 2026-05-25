@@ -68,4 +68,57 @@ public partial class TranslationKey : ObservableObject
         
         HasMissingTranslations = !hasEnglish || !hasSpanish;
     }
+
+    /// <summary>
+    /// Accept a suggestion for a specific language, applying it as the actual value.
+    /// Returns the accepted suggestion value, or null if no suggestion exists.
+    /// </summary>
+    public string? AcceptSuggestionForLanguage(string language)
+    {
+        if (!SuggestedValues.TryGetValue(language, out var suggestion))
+            return null;
+
+        // Apply the suggestion to the actual value
+        LanguageValues[language] = suggestion.Value;
+        
+        // Remove the suggestion
+        SuggestedValues.Remove(language);
+        
+        // Mark as modified
+        ModifiedLanguages.Add(language);
+        IsModified = true;
+        
+        // Update missing translations status
+        UpdateMissingTranslationsStatus();
+        
+        // Trigger property change notifications to refresh UI bindings
+        OnPropertyChanged(nameof(SuggestedValues));
+        OnPropertyChanged(nameof(HasAnySuggestions));
+        OnPropertyChanged(nameof(LanguageValues));
+        OnPropertyChanged(nameof(ModifiedLanguages));
+        
+        return suggestion.Value;
+    }
+
+    /// <summary>
+    /// Reject a suggestion for a specific language, removing it without applying.
+    /// Returns true if a suggestion was rejected, false if no suggestion exists.
+    /// </summary>
+    public bool RejectSuggestionForLanguage(string language)
+    {
+        if (!SuggestedValues.ContainsKey(language))
+            return false;
+
+        // Remove the suggestion
+        SuggestedValues.Remove(language);
+        
+        // Update missing translations status
+        UpdateMissingTranslationsStatus();
+        
+        // Trigger property change notifications to refresh UI bindings
+        OnPropertyChanged(nameof(SuggestedValues));
+        OnPropertyChanged(nameof(HasAnySuggestions));
+        
+        return true;
+    }
 }
