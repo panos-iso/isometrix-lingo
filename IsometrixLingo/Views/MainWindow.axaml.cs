@@ -2,9 +2,13 @@ using System;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Data;
+using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using IsometrixLingo.Converters;
 using IsometrixLingo.Helpers;
 using IsometrixLingo.Models;
@@ -22,6 +26,20 @@ public partial class MainWindow : Window
 
         DataContextChanged += OnDataContextChanged;
         Closing += OnClosing;
+
+        // Set up drag and drop for the entire drop zone area
+        DragDrop.SetAllowDrop(DropZone, true);
+        DragDrop.AddDragOverHandler(DropZone, DragOver);
+        DragDrop.AddDropHandler(DropZone, Drop);
+        DragDrop.AddDragEnterHandler(DropZone, DragEnter);
+        DragDrop.AddDragLeaveHandler(DropZone, DragLeave);
+        
+        // Also set up on the overlay to catch all drag events across the entire area
+        DragDrop.SetAllowDrop(DropOverlay, true);
+        DragDrop.AddDragOverHandler(DropOverlay, DragOver);
+        DragDrop.AddDropHandler(DropOverlay, Drop);
+        DragDrop.AddDragEnterHandler(DropOverlay, DragEnter);
+        DragDrop.AddDragLeaveHandler(DropOverlay, DragLeave);
     }
 
     private async void OnClosing(object? sender, CancelEventArgs e)
@@ -210,6 +228,77 @@ public partial class MainWindow : Window
             DataContext is MainWindowViewModel viewModel)
         {
             viewModel.EditTranslationCommand.Execute(selectedKey);
+        }
+    }
+
+    private void DragEnter(object? sender, DragEventArgs e)
+    {
+        // Always update the DropZone border, regardless of which element triggered the event
+        DropZone.BorderBrush = new SolidColorBrush(Color.Parse("#1976D2"));
+        DropZone.BorderThickness = new Thickness(4);
+    }
+
+    private void DragLeave(object? sender, DragEventArgs e)
+    {
+        // Always update the DropZone border, regardless of which element triggered the event
+        DropZone.BorderBrush = new SolidColorBrush(Color.Parse("#2196F3"));
+        DropZone.BorderThickness = new Thickness(3);
+    }
+
+    private void DragOver(object? sender, DragEventArgs e)
+    {
+        // Check if files are being dragged
+        e.DragEffects = e.DataTransfer.Formats.Contains(DataFormat.File)
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
+    }
+
+    private async void Drop(object? sender, DragEventArgs e)
+    {
+        // Reset the DropZone border
+        DropZone.BorderBrush = new SolidColorBrush(Color.Parse("#2196F3"));
+        DropZone.BorderThickness = new Thickness(3);
+
+        try
+        {
+            if (DataContext is MainWindowViewModel viewModel)
+            {
+                viewModel.StatusMessage = "Processing dropped files...";
+                
+                if (e.DataTransfer.Formats.Contains(DataFormat.File))
+                {
+                    var files = e.DataTransfer.TryGetFiles();
+                    if (files != null)
+                    {
+                        var fileList = files.ToList();
+                        viewModel.StatusMessage = $"Found {fileList.Count} file(s) in drop";
+                        if (fileList.Count > 0)
+                        {
+                            await viewModel.ImportDroppedFiles(fileList);
+                        }
+                        else
+                        {
+                            viewModel.StatusMessage = "No files in drop";
+                        }
+                    }
+                    else
+                    {
+                        viewModel.StatusMessage = "TryGetFiles returned null";
+                    }
+                }
+                else
+                {
+                    var formats = string.Join(", ", e.DataTransfer.Formats);
+                    viewModel.StatusMessage = $"Drop does not contain files. Formats: {formats}";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            if (DataContext is MainWindowViewModel viewModel)
+            {
+                viewModel.StatusMessage = $"Drop error: {ex.Message}";
+            }
         }
     }
 }

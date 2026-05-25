@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
@@ -28,6 +30,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly ResxTranslationFileWriter _resxWriter;
     private readonly ProgressService _progressService;
     private readonly UserSettingsService _settingsService;
+    private string _lastExportFolder = string.Empty;
+    private string _lastExportFileName = string.Empty;
 
     [ObservableProperty]
     private string _statusMessage = "Ready. Click Import to load translation files.";
@@ -50,6 +54,94 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _hasUnsavedChanges;
+
+    [ObservableProperty]
+    private ObservableCollection<string> _importedFileNames = new();
+
+    // Workflow state properties
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowEditStep), nameof(ShowExportStep), 
+                               nameof(Step1Background), nameof(Step2Background), nameof(Step3Background),
+                               nameof(Step1Status), nameof(Step2Status), nameof(Step3Status))]
+    private WorkflowStep _currentStep = WorkflowStep.Import;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Step1Background), nameof(Step1Foreground), nameof(Step1Status))]
+    private StepStatus _importStepStatus = StepStatus.InProgress;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Step2Background), nameof(Step2Foreground), nameof(Step2Status))]
+    private StepStatus _editStepStatus = StepStatus.NotStarted;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Step3Background), nameof(Step3Foreground), nameof(Step3Status), nameof(StartOverButtonText))]
+    private StepStatus _exportStepStatus = StepStatus.NotStarted;
+
+    public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
+    public bool ShowEditStep => CurrentStep == WorkflowStep.Edit;
+    public bool ShowExportStep => CurrentStep == WorkflowStep.Export;
+
+    public string StartOverButtonText => ExportStepStatus == StepStatus.Completed ? "Start New Session" : "Start Over";
+
+    public SolidColorBrush Step1Background => ImportStepStatus switch
+    {
+        StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
+        StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
+        _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
+    };
+
+    public SolidColorBrush Step2Background => EditStepStatus switch
+    {
+        StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
+        StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
+        _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
+    };
+
+    public SolidColorBrush Step3Background => ExportStepStatus switch
+    {
+        StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
+        StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
+        _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
+    };
+
+    public SolidColorBrush Step1Foreground => ImportStepStatus switch
+    {
+        StepStatus.NotStarted => new SolidColorBrush(Colors.White),
+        _ => new SolidColorBrush(Colors.White)
+    };
+
+    public SolidColorBrush Step2Foreground => EditStepStatus switch
+    {
+        StepStatus.NotStarted => new SolidColorBrush(Colors.White),
+        _ => new SolidColorBrush(Colors.White)
+    };
+
+    public SolidColorBrush Step3Foreground => ExportStepStatus switch
+    {
+        StepStatus.NotStarted => new SolidColorBrush(Colors.White),
+        _ => new SolidColorBrush(Colors.White)
+    };
+
+    public string Step1Status => ImportStepStatus switch
+    {
+        StepStatus.Completed => "✓ Complete",
+        StepStatus.InProgress => "In Progress",
+        _ => "Not Started"
+    };
+
+    public string Step2Status => EditStepStatus switch
+    {
+        StepStatus.Completed => "✓ Complete",
+        StepStatus.InProgress => "In Progress",
+        _ => "Not Started"
+    };
+
+    public string Step3Status => ExportStepStatus switch
+    {
+        StepStatus.Completed => "✓ Complete",
+        StepStatus.InProgress => "In Progress",
+        _ => "Not Started"
+    };
 
     public bool CanImport => !HasKeys;
 
@@ -107,12 +199,15 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         var translationFiles = new List<TranslationFile>();
+        // Don't clear existing files - we want to accumulate multiple imports
+        // ImportedFileNames.Clear(); // REMOVED to allow multiple imports
 
         foreach (var file in files)
         {
             try
             {
                 var filePath = file.Path.LocalPath;
+                var fileName = Path.GetFileName(filePath);
                 var extension = Path.GetExtension(filePath).ToLower();
 
                 TranslationFile translationFile = extension switch
@@ -123,6 +218,12 @@ public partial class MainWindowViewModel : ViewModelBase
                 };
 
                 translationFiles.Add(translationFile);
+                
+                // Only add unique file names
+                if (!ImportedFileNames.Contains(fileName))
+                {
+                    ImportedFileNames.Add(fileName);
+                }
             }
             catch
             {
@@ -161,8 +262,104 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         UpdateFileFilters();
-        StatusMessage = $"Imported {files.Count} file(s) with {_translationStore.FilteredKeys.Count} translation keys.";
+        StatusMessage = $"Imported {files.Count} file(s). Review the imported files below and click 'Confirm & Continue' to proceed.";
         HasKeys = _translationStore.GetAllKeys().Count > 0;
+        ImportStepStatus = StepStatus.InProgress;
+        LanguagesChanged?.Invoke(this, EventArgs.Empty);
+
+        // Auto-save imported progress
+        SaveProgress();
+    }
+
+    public async Task ImportDroppedFiles(IEnumerable<IStorageItem> storageItems)
+    {
+        var files = storageItems.ToList();
+        
+        if (files.Count == 0)
+        {
+            return;
+        }
+
+        var translationFiles = new List<TranslationFile>();
+        // Don't clear existing files - we want to accumulate multiple drops
+        // ImportedFileNames.Clear(); // REMOVED to allow multiple drops
+
+        foreach (var item in files)
+        {
+            if (item is not IStorageFile file)
+                continue;
+
+            try
+            {
+                var filePath = file.Path.LocalPath;
+                var fileName = Path.GetFileName(filePath);
+                var extension = Path.GetExtension(filePath).ToLower();
+
+                // Only process JSON and RESX files
+                if (extension != ".json" && extension != ".resx")
+                    continue;
+
+                TranslationFile translationFile = extension switch
+                {
+                    ".json" => _jsonReader.ReadFile(filePath),
+                    ".resx" => _resxReader.ReadFile(filePath),
+                    _ => throw new NotSupportedException($"Unsupported file type: {extension}")
+                };
+
+                translationFiles.Add(translationFile);
+                
+                // Only add unique file names
+                if (!ImportedFileNames.Contains(fileName))
+                {
+                    ImportedFileNames.Add(fileName);
+                }
+            }
+            catch
+            {
+                // Skip invalid files
+            }
+        }
+
+        if (translationFiles.Count == 0)
+        {
+            StatusMessage = "No valid translation files found. Please drop JSON or RESX files.";
+            return;
+        }
+
+        // Group files by base name and file type, then consolidate
+        var groupedFiles = translationFiles
+            .GroupBy(tf => (ExtractBaseFileName(tf.FilePath, tf.FileType), tf.FileType))
+            .ToList();
+
+        foreach (var group in groupedFiles)
+        {
+            var consolidated = group.Key.FileType == FileType.Json
+                ? _jsonReader.ConsolidateKeys(group.ToList())
+                : _resxReader.ConsolidateKeys(group.ToList());
+
+            _translationStore.AddTranslations(consolidated);
+
+            // Extract and store the template from the first file in the group
+            if (group.Any())
+            {
+                var firstFile = group.First();
+                if (group.Key.FileType == FileType.Resx)
+                {
+                    var template = _resxReader.ExtractTemplate(firstFile.FilePath);
+                    _translationStore.SetResxTemplate(group.Key.Item1, template);
+                }
+                else if (group.Key.FileType == FileType.Json)
+                {
+                    var template = _jsonReader.ExtractTemplate(firstFile.FilePath);
+                    _translationStore.SetJsonTemplate(group.Key.Item1, template);
+                }
+            }
+        }
+
+        UpdateFileFilters();
+        StatusMessage = $"Imported {files.Count} file(s). Review the imported files below and click 'Confirm & Continue' to proceed.";
+        HasKeys = _translationStore.GetAllKeys().Count > 0;
+        ImportStepStatus = StepStatus.InProgress;
         LanguagesChanged?.Invoke(this, EventArgs.Empty);
 
         // Auto-save imported progress
@@ -410,8 +607,19 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void SaveProgress()
     {
-        var allKeys = _translationStore.GetAllKeys();
-        _progressService.SaveProgress(allKeys);
+        var sessionState = new SessionState
+        {
+            TranslationKeys = _translationStore.GetAllKeys(),
+            ImportedFileNames = ImportedFileNames.ToList(),
+            ResxTemplates = _translationStore.GetAllResxTemplates(),
+            JsonTemplates = _translationStore.GetAllJsonTemplates(),
+            CurrentStep = CurrentStep,
+            ImportStepStatus = ImportStepStatus,
+            EditStepStatus = EditStepStatus,
+            ExportStepStatus = ExportStepStatus
+        };
+        
+        _progressService.SaveProgress(sessionState);
         _translationStore.MarkAllChangesSaved();
         StatusMessage = "Progress saved successfully.";
     }
@@ -455,8 +663,18 @@ public partial class MainWindowViewModel : ViewModelBase
             Spacing = 10
         };
 
-        var confirmButton = new Button { Content = "Yes, Start Over", Width = 130 };
-        var cancelButton = new Button { Content = "Cancel", Width = 100 };
+        var confirmButton = new Button 
+        { 
+            Content = "Yes, Start Over", 
+            Width = 130,
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
+        var cancelButton = new Button 
+        { 
+            Content = "Cancel", 
+            Width = 100,
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
 
         bool confirmed = false;
 
@@ -476,23 +694,333 @@ public partial class MainWindowViewModel : ViewModelBase
         // Proceed with start over
         _translationStore.Clear();
         _progressService.ClearProgress();
+        ImportedFileNames.Clear();
         HasKeys = false;
         HasUnsavedChanges = false;
+        
+        // Reset workflow state
+        CurrentStep = WorkflowStep.Import;
+        ImportStepStatus = StepStatus.InProgress;
+        EditStepStatus = StepStatus.NotStarted;
+        ExportStepStatus = StepStatus.NotStarted;
+        
         UpdateFileFilters();
         StatusMessage = "Ready. Click Import to load translation files.";
     }
 
+    [RelayCommand]
+    private void ConfirmImport()
+    {
+        if (!HasKeys)
+        {
+            StatusMessage = "Please import at least one file before continuing.";
+            return;
+        }
+
+        ImportStepStatus = StepStatus.Completed;
+        EditStepStatus = StepStatus.InProgress;
+        CurrentStep = WorkflowStep.Edit;
+        StatusMessage = "Import complete. You can now edit translations or proceed to export.";
+        
+        // Auto-save progress
+        SaveProgress();
+    }
+
+    [RelayCommand]
+    private void CompleteEdit()
+    {
+        EditStepStatus = StepStatus.Completed;
+        ExportStepStatus = StepStatus.InProgress;
+        CurrentStep = WorkflowStep.Export;
+        StatusMessage = "Ready to export translations.";
+        
+        // Auto-save progress
+        SaveProgress();
+    }
+
+    [RelayCommand]
+    private void GoBackToEdit()
+    {
+        ExportStepStatus = StepStatus.NotStarted;
+        EditStepStatus = StepStatus.InProgress;
+        CurrentStep = WorkflowStep.Edit;
+        StatusMessage = "Returned to editing. Make your changes and proceed to export when ready.";
+        
+        // Auto-save progress
+        SaveProgress();
+    }
+
+    [RelayCommand]
+    private async Task ExportToZip()
+    {
+        var allKeys = _translationStore.GetAllKeys();
+
+        if (allKeys.Count == 0)
+        {
+            StatusMessage = "No translations to export.";
+            return;
+        }
+
+        // Create output directory if it doesn't exist
+        var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output");
+        if (!Directory.Exists(outputPath))
+        {
+            Directory.CreateDirectory(outputPath);
+        }
+
+        // Create timestamped folder name
+        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var tempFolderName = $"exported_translations_{timestamp}";
+        var tempFolderPath = Path.Combine(Path.GetTempPath(), tempFolderName);
+        var zipFilePath = Path.Combine(outputPath, $"{tempFolderName}.zip");
+
+        try
+        {
+            // Create temporary folder for exported files
+            Directory.CreateDirectory(tempFolderPath);
+
+            // Group all keys by file type and export to temp folder
+            var jsonKeys = allKeys.Where(k => k.Source.Type == FileType.Json).ToList();
+            var resxKeys = allKeys.Where(k => k.Source.Type == FileType.Resx).ToList();
+
+            if (jsonKeys.Count > 0)
+            {
+                _jsonWriter.WriteFiles(jsonKeys, tempFolderPath, sourceFileName => _translationStore.GetJsonTemplate(sourceFileName));
+            }
+
+            if (resxKeys.Count > 0)
+            {
+                _resxWriter.WriteFiles(resxKeys, tempFolderPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName));
+            }
+
+            // Create ZIP file
+            if (File.Exists(zipFilePath))
+            {
+                File.Delete(zipFilePath);
+            }
+            ZipFile.CreateFromDirectory(tempFolderPath, zipFilePath);
+
+            // Clean up temp folder
+            Directory.Delete(tempFolderPath, true);
+
+            ExportStepStatus = StepStatus.Completed;
+            StatusMessage = $"Exported {allKeys.Count} translation key(s) to {zipFilePath}";
+
+            // Store output folder and filename for dialog
+            _lastExportFolder = outputPath;
+            _lastExportFileName = Path.GetFileName(zipFilePath);
+
+            // Prompt to start over
+            await PromptToStartOverAfterExport();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Export failed: {ex.Message}";
+        }
+    }
+
+    private async Task PromptToStartOverAfterExport()
+    {
+        var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+
+        if (window == null) return;
+
+        var dialog = new Window
+        {
+            Title = "Export Complete",
+            Width = 450,
+            Height = 320,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        var panel = new StackPanel
+        {
+            Margin = new Thickness(20),
+            Spacing = 15
+        };
+
+        // Success message
+        var successPanel = new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#E8F5E9")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#4CAF50")),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(10),
+            Margin = new Thickness(0, 0, 0, 5)
+        };
+
+        var successStack = new StackPanel { Spacing = 8 };
+        successStack.Children.Add(new TextBlock
+        {
+            Text = "✓ Export Successful!",
+            FontWeight = FontWeight.Bold,
+            Foreground = new SolidColorBrush(Color.Parse("#2E7D32")),
+            FontSize = 14
+        });
+
+        successStack.Children.Add(new TextBlock
+        {
+            Text = $"File: {_lastExportFileName}",
+            FontSize = 12,
+            Foreground = new SolidColorBrush(Color.Parse("#424242")),
+            FontWeight = FontWeight.Medium
+        });
+
+        successStack.Children.Add(new TextBlock
+        {
+            Text = $"Location: output/",
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Color.Parse("#757575"))
+        });
+
+        successPanel.Child = successStack;
+        panel.Children.Add(successPanel);
+
+        // View in Finder/Explorer button
+        var viewFolderButton = new Button
+        {
+            Content = OperatingSystem.IsMacOS() ? "📁 View in Finder" : "📁 View in Explorer",
+            HorizontalAlignment = HorizontalAlignment.Center,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            Padding = new Thickness(15, 8),
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+
+        viewFolderButton.Click += (s, args) =>
+        {
+            try
+            {
+                if (OperatingSystem.IsMacOS())
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "open",
+                        Arguments = _lastExportFolder,
+                        UseShellExecute = false
+                    });
+                }
+                else if (OperatingSystem.IsWindows())
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = _lastExportFolder,
+                        UseShellExecute = true,
+                        Verb = "open"
+                    });
+                }
+                else if (OperatingSystem.IsLinux())
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "xdg-open",
+                        Arguments = _lastExportFolder,
+                        UseShellExecute = false
+                    });
+                }
+            }
+            catch
+            {
+                // Silently ignore if opening fails
+            }
+        };
+
+        panel.Children.Add(viewFolderButton);
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Would you like to start a new session?",
+            TextWrapping = TextWrapping.Wrap,
+            FontWeight = FontWeight.SemiBold,
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Starting over will clear all current translations and reset the workflow.",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 11,
+            Foreground = Brushes.Gray,
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Spacing = 10
+        };
+
+        var startOverButton = new Button 
+        { 
+            Content = "Start New Session", 
+            Width = 150,
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
+        var continueButton = new Button 
+        { 
+            Content = "Stay Here", 
+            Width = 120,
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
+
+        bool shouldStartOver = false;
+
+        startOverButton.Click += (s, args) => { shouldStartOver = true; dialog.Close(); };
+        continueButton.Click += (s, args) => { shouldStartOver = false; dialog.Close(); };
+
+        buttonPanel.Children.Add(continueButton);
+        buttonPanel.Children.Add(startOverButton);
+
+        panel.Children.Add(buttonPanel);
+        dialog.Content = panel;
+
+        await dialog.ShowDialog(window);
+
+        if (shouldStartOver)
+        {
+            await StartOver();
+            // Reset workflow
+            CurrentStep = WorkflowStep.Import;
+            ImportStepStatus = StepStatus.InProgress;
+            EditStepStatus = StepStatus.NotStarted;
+            ExportStepStatus = StepStatus.NotStarted;
+        }
+    }
+
     private void LoadProgress()
     {
-        var savedKeys = _progressService.LoadProgress();
-        if (savedKeys != null && savedKeys.Count > 0)
+        var sessionState = _progressService.LoadProgress();
+        if (sessionState != null && sessionState.TranslationKeys.Count > 0)
         {
-            _translationStore.AddTranslations(savedKeys);
+            // Restore translation keys
+            _translationStore.AddTranslations(sessionState.TranslationKeys);
+            
+            // Restore templates
+            _translationStore.RestoreResxTemplates(sessionState.ResxTemplates);
+            _translationStore.RestoreJsonTemplates(sessionState.JsonTemplates);
+            
+            // Restore imported file names
+            ImportedFileNames.Clear();
+            foreach (var fileName in sessionState.ImportedFileNames)
+            {
+                ImportedFileNames.Add(fileName);
+            }
+            
+            // Restore workflow state
+            CurrentStep = sessionState.CurrentStep;
+            ImportStepStatus = sessionState.ImportStepStatus;
+            EditStepStatus = sessionState.EditStepStatus;
+            ExportStepStatus = sessionState.ExportStepStatus;
+            
             UpdateFileFilters();
             HasKeys = true;
-            // Don't mark as unsaved since we just loaded
             HasUnsavedChanges = false;
-            StatusMessage = $"Loaded {savedKeys.Count} translation keys from saved progress.";
+            
+            StatusMessage = $"Loaded {sessionState.TranslationKeys.Count} translation keys from saved progress.";
             LanguagesChanged?.Invoke(this, EventArgs.Empty);
         }
     }

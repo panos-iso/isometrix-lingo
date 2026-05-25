@@ -18,18 +18,18 @@ public class ProgressService
         _progressFilePath = Path.Combine(appFolder, "progress.json");
     }
 
-    public void SaveProgress(List<TranslationKey> keys)
+    public void SaveProgress(SessionState state)
     {
         var options = new JsonSerializerOptions
         {
             WriteIndented = true
         };
 
-        var json = JsonSerializer.Serialize(keys, options);
+        var json = JsonSerializer.Serialize(state, options);
         File.WriteAllText(_progressFilePath, json);
     }
 
-    public List<TranslationKey>? LoadProgress()
+    public SessionState? LoadProgress()
     {
         if (!File.Exists(_progressFilePath))
         {
@@ -39,7 +39,7 @@ public class ProgressService
         try
         {
             var json = File.ReadAllText(_progressFilePath);
-            return JsonSerializer.Deserialize<List<TranslationKey>>(json);
+            return JsonSerializer.Deserialize<SessionState>(json);
         }
         catch
         {
