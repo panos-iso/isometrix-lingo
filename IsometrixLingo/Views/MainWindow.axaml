@@ -150,8 +150,8 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Spacing="15">
 
-                            <!-- Two-column layout: Drop zone + File list -->
-                            <Grid ColumnDefinitions="*,300" ColumnSpacing="15">
+                            <!-- Two-column layout: Drop zone + File list (65/35 split) -->
+                            <Grid ColumnDefinitions="1.85*,*" ColumnSpacing="15">
                                 <!-- Left Column: Drop Zone -->
                                 <Border Grid.Column="0"
                                         BorderBrush="#2196F3"
