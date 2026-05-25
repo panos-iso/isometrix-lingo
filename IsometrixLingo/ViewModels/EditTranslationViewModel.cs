@@ -72,6 +72,7 @@ public partial class EditTranslationViewModel : ViewModelBase
             {
                 LanguageCode = language,
                 LanguageName = LanguageHelper.GetLanguageName(language),
+                CurrentValue = value, // Add current value for side-by-side display
                 SuggestedValue = existingSuggestion
             });
         }
@@ -137,6 +138,9 @@ public partial class LanguageSuggestionItem : ObservableObject
 
     [ObservableProperty]
     private string _languageName = string.Empty;
+
+    [ObservableProperty]
+    private string _currentValue = string.Empty;
 
     [ObservableProperty]
     private string _suggestedValue = string.Empty;
