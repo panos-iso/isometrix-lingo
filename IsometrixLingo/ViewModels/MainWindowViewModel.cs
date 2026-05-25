@@ -1125,10 +1125,29 @@ public partial class MainWindowViewModel : ViewModelBase
                 }
             }
 
-            // Check for missing translations
-            // Note: HasMissingTranslations already considers a translation OK if it has either a value OR a suggestion
+            // Check for missing translations (mode-aware)
+            // Edit Mode: Missing = no actual value for en/es (suggestions don't count)
+            // Suggest Mode: Missing = no value AND no suggestion for en/es
             var keysWithMissingTranslations = _translationStore.GetAllKeys()
-                .Where(k => k.HasMissingTranslations)
+                .Where(k =>
+                {
+                    if (CurrentMode == EditMode.Edit)
+                    {
+                        // In Edit mode, only check if actual values exist (ignore suggestions)
+                        var hasEnglishValue = k.LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue);
+                        var hasSpanishValue = k.LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue);
+                        return !hasEnglishValue || !hasSpanishValue;
+                    }
+                    else
+                    {
+                        // In Suggest mode, check if value OR suggestion exists
+                        var hasEnglish = (k.LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue)) 
+                                        || k.SuggestedValues.ContainsKey("en");
+                        var hasSpanish = (k.LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue))
+                                        || k.SuggestedValues.ContainsKey("es");
+                        return !hasEnglish || !hasSpanish;
+                    }
+                })
                 .ToList();
 
             if (keysWithMissingTranslations.Count > 0)
