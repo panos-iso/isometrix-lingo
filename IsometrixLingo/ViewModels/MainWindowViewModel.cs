@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
@@ -50,6 +51,89 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _hasUnsavedChanges;
+
+    // Workflow state properties
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowEditStep), nameof(ShowExportStep), 
+                               nameof(Step1Background), nameof(Step2Background), nameof(Step3Background),
+                               nameof(Step1Status), nameof(Step2Status), nameof(Step3Status))]
+    private WorkflowStep _currentStep = WorkflowStep.Import;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Step1Background), nameof(Step1Foreground), nameof(Step1Status))]
+    private StepStatus _importStepStatus = StepStatus.InProgress;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Step2Background), nameof(Step2Foreground), nameof(Step2Status))]
+    private StepStatus _editStepStatus = StepStatus.NotStarted;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Step3Background), nameof(Step3Foreground), nameof(Step3Status))]
+    private StepStatus _exportStepStatus = StepStatus.NotStarted;
+
+    public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
+    public bool ShowEditStep => CurrentStep == WorkflowStep.Edit;
+    public bool ShowExportStep => CurrentStep == WorkflowStep.Export;
+
+    public SolidColorBrush Step1Background => ImportStepStatus switch
+    {
+        StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
+        StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
+        _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
+    };
+
+    public SolidColorBrush Step2Background => EditStepStatus switch
+    {
+        StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
+        StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
+        _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
+    };
+
+    public SolidColorBrush Step3Background => ExportStepStatus switch
+    {
+        StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
+        StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
+        _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
+    };
+
+    public SolidColorBrush Step1Foreground => ImportStepStatus switch
+    {
+        StepStatus.NotStarted => new SolidColorBrush(Colors.White),
+        _ => new SolidColorBrush(Colors.White)
+    };
+
+    public SolidColorBrush Step2Foreground => EditStepStatus switch
+    {
+        StepStatus.NotStarted => new SolidColorBrush(Colors.White),
+        _ => new SolidColorBrush(Colors.White)
+    };
+
+    public SolidColorBrush Step3Foreground => ExportStepStatus switch
+    {
+        StepStatus.NotStarted => new SolidColorBrush(Colors.White),
+        _ => new SolidColorBrush(Colors.White)
+    };
+
+    public string Step1Status => ImportStepStatus switch
+    {
+        StepStatus.Completed => "✓ Complete",
+        StepStatus.InProgress => "In Progress",
+        _ => "Not Started"
+    };
+
+    public string Step2Status => EditStepStatus switch
+    {
+        StepStatus.Completed => "✓ Complete",
+        StepStatus.InProgress => "In Progress",
+        _ => "Not Started"
+    };
+
+    public string Step3Status => ExportStepStatus switch
+    {
+        StepStatus.Completed => "✓ Complete",
+        StepStatus.InProgress => "In Progress",
+        _ => "Not Started"
+    };
 
     public bool CanImport => !HasKeys;
 
@@ -161,8 +245,9 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         UpdateFileFilters();
-        StatusMessage = $"Imported {files.Count} file(s) with {_translationStore.FilteredKeys.Count} translation keys.";
+        StatusMessage = $"Imported {files.Count} file(s) with {_translationStore.FilteredKeys.Count} translation keys. Click 'Confirm & Continue' to proceed.";
         HasKeys = _translationStore.GetAllKeys().Count > 0;
+        ImportStepStatus = StepStatus.InProgress;
         LanguagesChanged?.Invoke(this, EventArgs.Empty);
 
         // Auto-save imported progress
@@ -480,6 +565,176 @@ public partial class MainWindowViewModel : ViewModelBase
         HasUnsavedChanges = false;
         UpdateFileFilters();
         StatusMessage = "Ready. Click Import to load translation files.";
+    }
+
+    [RelayCommand]
+    private void ConfirmImport()
+    {
+        if (!HasKeys)
+        {
+            StatusMessage = "Please import at least one file before continuing.";
+            return;
+        }
+
+        ImportStepStatus = StepStatus.Completed;
+        EditStepStatus = StepStatus.InProgress;
+        CurrentStep = WorkflowStep.Edit;
+        StatusMessage = "Import complete. You can now edit translations or proceed to export.";
+    }
+
+    [RelayCommand]
+    private void CompleteEdit()
+    {
+        EditStepStatus = StepStatus.Completed;
+        ExportStepStatus = StepStatus.InProgress;
+        CurrentStep = WorkflowStep.Export;
+        StatusMessage = "Ready to export translations.";
+    }
+
+    [RelayCommand]
+    private void GoBackToEdit()
+    {
+        ExportStepStatus = StepStatus.NotStarted;
+        EditStepStatus = StepStatus.InProgress;
+        CurrentStep = WorkflowStep.Edit;
+        StatusMessage = "Returned to editing. Make your changes and proceed to export when ready.";
+    }
+
+    [RelayCommand]
+    private async Task ExportToZip()
+    {
+        var allKeys = _translationStore.GetAllKeys();
+
+        if (allKeys.Count == 0)
+        {
+            StatusMessage = "No translations to export.";
+            return;
+        }
+
+        // Create output directory if it doesn't exist
+        var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "output");
+        if (!Directory.Exists(outputPath))
+        {
+            Directory.CreateDirectory(outputPath);
+        }
+
+        // Create timestamped folder name
+        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var tempFolderName = $"exported_translations_{timestamp}";
+        var tempFolderPath = Path.Combine(Path.GetTempPath(), tempFolderName);
+        var zipFilePath = Path.Combine(outputPath, $"{tempFolderName}.zip");
+
+        try
+        {
+            // Create temporary folder for exported files
+            Directory.CreateDirectory(tempFolderPath);
+
+            // Group all keys by file type and export to temp folder
+            var jsonKeys = allKeys.Where(k => k.Source.Type == FileType.Json).ToList();
+            var resxKeys = allKeys.Where(k => k.Source.Type == FileType.Resx).ToList();
+
+            if (jsonKeys.Count > 0)
+            {
+                _jsonWriter.WriteFiles(jsonKeys, tempFolderPath, sourceFileName => _translationStore.GetJsonTemplate(sourceFileName));
+            }
+
+            if (resxKeys.Count > 0)
+            {
+                _resxWriter.WriteFiles(resxKeys, tempFolderPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName));
+            }
+
+            // Create ZIP file
+            if (File.Exists(zipFilePath))
+            {
+                File.Delete(zipFilePath);
+            }
+            ZipFile.CreateFromDirectory(tempFolderPath, zipFilePath);
+
+            // Clean up temp folder
+            Directory.Delete(tempFolderPath, true);
+
+            ExportStepStatus = StepStatus.Completed;
+            StatusMessage = $"Exported {allKeys.Count} translation key(s) to {zipFilePath}";
+
+            // Prompt to start over
+            await PromptToStartOverAfterExport();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Export failed: {ex.Message}";
+        }
+    }
+
+    private async Task PromptToStartOverAfterExport()
+    {
+        var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+
+        if (window == null) return;
+
+        var dialog = new Window
+        {
+            Title = "Export Complete",
+            Width = 400,
+            Height = 200,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        var panel = new StackPanel
+        {
+            Margin = new Thickness(20),
+            Spacing = 20
+        };
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Files exported successfully! Would you like to start a new session?",
+            TextWrapping = TextWrapping.Wrap,
+            FontWeight = FontWeight.SemiBold
+        });
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Starting over will clear all current translations and reset the workflow.",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 11,
+            Foreground = Brushes.Gray
+        });
+
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Spacing = 10
+        };
+
+        var startOverButton = new Button { Content = "Start New Session", Width = 150 };
+        var continueButton = new Button { Content = "Stay Here", Width = 120 };
+
+        bool shouldStartOver = false;
+
+        startOverButton.Click += (s, args) => { shouldStartOver = true; dialog.Close(); };
+        continueButton.Click += (s, args) => { shouldStartOver = false; dialog.Close(); };
+
+        buttonPanel.Children.Add(continueButton);
+        buttonPanel.Children.Add(startOverButton);
+
+        panel.Children.Add(buttonPanel);
+        dialog.Content = panel;
+
+        await dialog.ShowDialog(window);
+
+        if (shouldStartOver)
+        {
+            await StartOver();
+            // Reset workflow
+            CurrentStep = WorkflowStep.Import;
+            ImportStepStatus = StepStatus.InProgress;
+            EditStepStatus = StepStatus.NotStarted;
+            ExportStepStatus = StepStatus.NotStarted;
+        }
     }
 
     private void LoadProgress()

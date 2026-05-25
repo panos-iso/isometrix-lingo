@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Data;
@@ -22,6 +23,10 @@ public partial class MainWindow : Window
 
         DataContextChanged += OnDataContextChanged;
         Closing += OnClosing;
+
+        // TODO: Set up drag and drop for the DropZone in future version
+        // AddHandler(DragDrop.DropEvent, Drop);
+        // AddHandler(DragDrop.DragOverEvent, DragOver);
     }
 
     private async void OnClosing(object? sender, CancelEventArgs e)
