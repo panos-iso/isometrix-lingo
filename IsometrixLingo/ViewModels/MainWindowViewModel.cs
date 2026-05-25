@@ -60,7 +60,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     // Workflow state properties
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowEditStep), nameof(ShowExportStep), 
+    [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowEditStep), nameof(ShowExportStep),
                                nameof(Step1Background), nameof(Step2Background), nameof(Step3Background),
                                nameof(Step1Status), nameof(Step2Status), nameof(Step3Status))]
     private WorkflowStep _currentStep = WorkflowStep.Import;
@@ -218,7 +218,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 };
 
                 translationFiles.Add(translationFile);
-                
+
                 // Only add unique file names
                 if (!ImportedFileNames.Contains(fileName))
                 {
@@ -274,7 +274,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public async Task ImportDroppedFiles(IEnumerable<IStorageItem> storageItems)
     {
         var files = storageItems.ToList();
-        
+
         if (files.Count == 0)
         {
             return;
@@ -307,7 +307,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 };
 
                 translationFiles.Add(translationFile);
-                
+
                 // Only add unique file names
                 if (!ImportedFileNames.Contains(fileName))
                 {
@@ -618,7 +618,7 @@ public partial class MainWindowViewModel : ViewModelBase
             EditStepStatus = EditStepStatus,
             ExportStepStatus = ExportStepStatus
         };
-        
+
         _progressService.SaveProgress(sessionState);
         _translationStore.MarkAllChangesSaved();
         StatusMessage = "Progress saved successfully.";
@@ -663,15 +663,15 @@ public partial class MainWindowViewModel : ViewModelBase
             Spacing = 10
         };
 
-        var confirmButton = new Button 
-        { 
-            Content = "Yes, Start Over", 
+        var confirmButton = new Button
+        {
+            Content = "Yes, Start Over",
             Width = 130,
             HorizontalContentAlignment = HorizontalAlignment.Center
         };
-        var cancelButton = new Button 
-        { 
-            Content = "Cancel", 
+        var cancelButton = new Button
+        {
+            Content = "Cancel",
             Width = 100,
             HorizontalContentAlignment = HorizontalAlignment.Center
         };
@@ -697,13 +697,13 @@ public partial class MainWindowViewModel : ViewModelBase
         ImportedFileNames.Clear();
         HasKeys = false;
         HasUnsavedChanges = false;
-        
+
         // Reset workflow state
         CurrentStep = WorkflowStep.Import;
         ImportStepStatus = StepStatus.InProgress;
         EditStepStatus = StepStatus.NotStarted;
         ExportStepStatus = StepStatus.NotStarted;
-        
+
         UpdateFileFilters();
         StatusMessage = "Ready. Click Import to load translation files.";
     }
@@ -721,7 +721,7 @@ public partial class MainWindowViewModel : ViewModelBase
         EditStepStatus = StepStatus.InProgress;
         CurrentStep = WorkflowStep.Edit;
         StatusMessage = "Import complete. You can now edit translations or proceed to export.";
-        
+
         // Auto-save progress
         SaveProgress();
     }
@@ -733,7 +733,7 @@ public partial class MainWindowViewModel : ViewModelBase
         ExportStepStatus = StepStatus.InProgress;
         CurrentStep = WorkflowStep.Export;
         StatusMessage = "Ready to export translations.";
-        
+
         // Auto-save progress
         SaveProgress();
     }
@@ -745,7 +745,7 @@ public partial class MainWindowViewModel : ViewModelBase
         EditStepStatus = StepStatus.InProgress;
         CurrentStep = WorkflowStep.Edit;
         StatusMessage = "Returned to editing. Make your changes and proceed to export when ready.";
-        
+
         // Auto-save progress
         SaveProgress();
     }
@@ -954,15 +954,15 @@ public partial class MainWindowViewModel : ViewModelBase
             Spacing = 10
         };
 
-        var startOverButton = new Button 
-        { 
-            Content = "Start New Session", 
+        var startOverButton = new Button
+        {
+            Content = "Start New Session",
             Width = 150,
             HorizontalContentAlignment = HorizontalAlignment.Center
         };
-        var continueButton = new Button 
-        { 
-            Content = "Stay Here", 
+        var continueButton = new Button
+        {
+            Content = "Stay Here",
             Width = 120,
             HorizontalContentAlignment = HorizontalAlignment.Center
         };
@@ -998,28 +998,28 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             // Restore translation keys
             _translationStore.AddTranslations(sessionState.TranslationKeys);
-            
+
             // Restore templates
             _translationStore.RestoreResxTemplates(sessionState.ResxTemplates);
             _translationStore.RestoreJsonTemplates(sessionState.JsonTemplates);
-            
+
             // Restore imported file names
             ImportedFileNames.Clear();
             foreach (var fileName in sessionState.ImportedFileNames)
             {
                 ImportedFileNames.Add(fileName);
             }
-            
+
             // Restore workflow state
             CurrentStep = sessionState.CurrentStep;
             ImportStepStatus = sessionState.ImportStepStatus;
             EditStepStatus = sessionState.EditStepStatus;
             ExportStepStatus = sessionState.ExportStepStatus;
-            
+
             UpdateFileFilters();
             HasKeys = true;
             HasUnsavedChanges = false;
-            
+
             StatusMessage = $"Loaded {sessionState.TranslationKeys.Count} translation keys from saved progress.";
             LanguagesChanged?.Invoke(this, EventArgs.Empty);
         }

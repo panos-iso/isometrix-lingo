@@ -33,11 +33,13 @@ Download the latest release for your platform:
 **macOS:**
 
 1. Extract the downloaded tar.gz file:
+
    ```bash
    tar -xzf isometrix-lingo-v*-macos-arm64.tar
    ```
 
 2. Remove quarantine attribute (required for unsigned apps):
+
    ```bash
    xattr -d com.apple.quarantine IsometrixLingo.app
    ```

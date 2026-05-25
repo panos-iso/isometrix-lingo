@@ -33,7 +33,7 @@ public partial class MainWindow : Window
         DragDrop.AddDropHandler(DropZone, Drop);
         DragDrop.AddDragEnterHandler(DropZone, DragEnter);
         DragDrop.AddDragLeaveHandler(DropZone, DragLeave);
-        
+
         // Also set up on the overlay to catch all drag events across the entire area
         DragDrop.SetAllowDrop(DropOverlay, true);
         DragDrop.AddDragOverHandler(DropOverlay, DragOver);
@@ -264,7 +264,7 @@ public partial class MainWindow : Window
             if (DataContext is MainWindowViewModel viewModel)
             {
                 viewModel.StatusMessage = "Processing dropped files...";
-                
+
                 if (e.DataTransfer.Formats.Contains(DataFormat.File))
                 {
                     var files = e.DataTransfer.TryGetFiles();
