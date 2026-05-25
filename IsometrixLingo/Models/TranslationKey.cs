@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -120,5 +121,34 @@ public partial class TranslationKey : ObservableObject
         OnPropertyChanged(nameof(HasAnySuggestions));
         
         return true;
+    }
+
+    /// <summary>
+    /// Add or update a suggestion for a specific language.
+    /// If the suggestion value is null or whitespace, removes any existing suggestion.
+    /// </summary>
+    public void SetSuggestionForLanguage(string language, string? suggestionValue, string username)
+    {
+        if (!string.IsNullOrWhiteSpace(suggestionValue))
+        {
+            SuggestedValues[language] = new Suggestion
+            {
+                Value = suggestionValue,
+                Username = username,
+                Timestamp = DateTime.UtcNow
+            };
+        }
+        else if (SuggestedValues.ContainsKey(language))
+        {
+            // Remove suggestion if value is empty/whitespace
+            SuggestedValues.Remove(language);
+        }
+        
+        // Update missing translations status
+        UpdateMissingTranslationsStatus();
+        
+        // Trigger property change notifications to refresh UI bindings
+        OnPropertyChanged(nameof(SuggestedValues));
+        OnPropertyChanged(nameof(HasAnySuggestions));
     }
 }

@@ -91,27 +91,11 @@ public partial class EditTranslationViewModel : ViewModelBase
         }
         else
         {
-            // Suggest Mode: update or add suggestions
+            // Suggest Mode: update or add suggestions using TranslationKey's method
             foreach (var item in LanguageSuggestions)
             {
-                if (!string.IsNullOrWhiteSpace(item.SuggestedValue))
-                {
-                    _translationKey.SuggestedValues[item.LanguageCode] = new Suggestion
-                    {
-                        Value = item.SuggestedValue,
-                        Username = Username,
-                        Timestamp = DateTime.UtcNow
-                    };
-                }
-                else if (_translationKey.SuggestedValues.ContainsKey(item.LanguageCode))
-                {
-                    // Remove suggestion if field was cleared
-                    _translationKey.SuggestedValues.Remove(item.LanguageCode);
-                }
+                _translationKey.SetSuggestionForLanguage(item.LanguageCode, item.SuggestedValue, Username);
             }
-            
-            // Update missing translations status after modifying suggestions
-            _translationKey.UpdateMissingTranslationsStatus();
         }
     }
 }
