@@ -625,21 +625,29 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void SaveProgress()
     {
-        var sessionState = new SessionState
+        try
         {
-            TranslationKeys = _translationStore.GetAllKeys(),
-            ImportedFileNames = ImportedFileNames.ToList(),
-            ResxTemplates = _translationStore.GetAllResxTemplates(),
-            JsonTemplates = _translationStore.GetAllJsonTemplates(),
-            CurrentStep = CurrentStep,
-            ImportStepStatus = ImportStepStatus,
-            EditStepStatus = EditStepStatus,
-            ExportStepStatus = ExportStepStatus
-        };
+            var sessionState = new SessionState
+            {
+                TranslationKeys = _translationStore.GetAllKeys(),
+                ImportedFileNames = ImportedFileNames.ToList(),
+                ResxTemplates = _translationStore.GetAllResxTemplates(),
+                JsonTemplates = _translationStore.GetAllJsonTemplates(),
+                CurrentStep = CurrentStep,
+                ImportStepStatus = ImportStepStatus,
+                EditStepStatus = EditStepStatus,
+                ExportStepStatus = ExportStepStatus
+            };
 
-        _progressService.SaveProgress(sessionState);
-        _translationStore.MarkAllChangesSaved();
-        StatusMessage = "Progress saved successfully.";
+            _progressService.SaveProgress(sessionState);
+            _translationStore.MarkAllChangesSaved();
+            StatusMessage = "Progress saved successfully.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Warning: Could not save progress - {ex.Message}";
+            // Don't re-throw - saving progress is not critical enough to crash the app
+        }
     }
 
     [RelayCommand]
@@ -729,43 +737,67 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void ConfirmImport()
     {
-        if (!HasKeys)
+        try
         {
-            StatusMessage = "Please import at least one file before continuing.";
-            return;
+            if (!HasKeys)
+            {
+                StatusMessage = "Please import at least one file before continuing.";
+                return;
+            }
+
+            ImportStepStatus = StepStatus.Completed;
+            EditStepStatus = StepStatus.InProgress;
+            CurrentStep = WorkflowStep.Edit;
+            StatusMessage = "Import complete. You can now edit translations or proceed to export.";
+
+            // Auto-save progress
+            SaveProgress();
         }
-
-        ImportStepStatus = StepStatus.Completed;
-        EditStepStatus = StepStatus.InProgress;
-        CurrentStep = WorkflowStep.Edit;
-        StatusMessage = "Import complete. You can now edit translations or proceed to export.";
-
-        // Auto-save progress
-        SaveProgress();
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error confirming import: {ex.Message}";
+            // Don't re-throw - keep the app running
+        }
     }
 
     [RelayCommand]
     private void CompleteEdit()
     {
-        EditStepStatus = StepStatus.Completed;
-        ExportStepStatus = StepStatus.InProgress;
-        CurrentStep = WorkflowStep.Export;
-        StatusMessage = "Ready to export translations.";
+        try
+        {
+            EditStepStatus = StepStatus.Completed;
+            ExportStepStatus = StepStatus.InProgress;
+            CurrentStep = WorkflowStep.Export;
+            StatusMessage = "Ready to export translations.";
 
-        // Auto-save progress
-        SaveProgress();
+            // Auto-save progress
+            SaveProgress();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error completing edit step: {ex.Message}";
+            // Don't re-throw - keep the app running
+        }
     }
 
     [RelayCommand]
     private void GoBackToEdit()
     {
-        ExportStepStatus = StepStatus.NotStarted;
-        EditStepStatus = StepStatus.InProgress;
-        CurrentStep = WorkflowStep.Edit;
-        StatusMessage = "Returned to editing. Make your changes and proceed to export when ready.";
+        try
+        {
+            ExportStepStatus = StepStatus.NotStarted;
+            EditStepStatus = StepStatus.InProgress;
+            CurrentStep = WorkflowStep.Edit;
+            StatusMessage = "Returned to editing. Make your changes and proceed to export when ready.";
 
-        // Auto-save progress
-        SaveProgress();
+            // Auto-save progress
+            SaveProgress();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error returning to edit step: {ex.Message}";
+            // Don't re-throw - keep the app running
+        }
     }
 
     [RelayCommand]
