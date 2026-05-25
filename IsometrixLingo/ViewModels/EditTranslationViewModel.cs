@@ -55,12 +55,20 @@ public partial class EditTranslationViewModel : ViewModelBase
                 ? existingValue
                 : string.Empty;
 
+            var hasSuggestion = translationKey.SuggestedValues.TryGetValue(language, out var suggestionObj);
+            var suggestionText = hasSuggestion
+                ? $"→ {suggestionObj!.Value} ({suggestionObj.Username}, {suggestionObj.Timestamp:MMM dd})"
+                : string.Empty;
+
             LanguageValues.Add(new LanguageValueItem
             {
                 LanguageCode = language,
                 LanguageName = LanguageHelper.GetLanguageName(language),
                 Value = value,
-                IsReadOnly = mode == EditMode.Suggest // In Suggest Mode, actual values are read-only
+                IsReadOnly = mode == EditMode.Suggest, // In Suggest Mode, actual values are read-only
+                HasSuggestion = hasSuggestion,
+                SuggestionText = suggestionText,
+                Suggestion = hasSuggestion ? suggestionObj : null
             });
 
             // Load existing suggestion if any
@@ -87,6 +95,12 @@ public partial class EditTranslationViewModel : ViewModelBase
             foreach (var item in LanguageValues)
             {
                 _translationStore.UpdateTranslation(_originalKey, item.LanguageCode, item.Value);
+                
+                // If there was a suggestion and user manually edited, remove the suggestion
+                if (item.HasSuggestion)
+                {
+                    _translationKey.RejectSuggestionForLanguage(item.LanguageCode);
+                }
             }
         }
         else
@@ -96,6 +110,41 @@ public partial class EditTranslationViewModel : ViewModelBase
             {
                 _translationKey.SetSuggestionForLanguage(item.LanguageCode, item.SuggestedValue, Username);
             }
+        }
+    }
+    
+    [RelayCommand]
+    private void AcceptSuggestion(LanguageValueItem item)
+    {
+        if (item.Suggestion == null) return;
+        
+        // Apply suggestion value to the text box
+        item.Value = item.Suggestion.Value;
+        
+        // Remove the suggestion from the translation key
+        var acceptedValue = _translationKey.AcceptSuggestionForLanguage(item.LanguageCode);
+        
+        if (acceptedValue != null)
+        {
+            // Update UI to hide suggestion
+            item.HasSuggestion = false;
+            item.SuggestionText = string.Empty;
+            item.Suggestion = null;
+        }
+    }
+    
+    [RelayCommand]
+    private void RejectSuggestion(LanguageValueItem item)
+    {
+        // Remove the suggestion from the translation key
+        var wasRejected = _translationKey.RejectSuggestionForLanguage(item.LanguageCode);
+        
+        if (wasRejected)
+        {
+            // Update UI to hide suggestion
+            item.HasSuggestion = false;
+            item.SuggestionText = string.Empty;
+            item.Suggestion = null;
         }
     }
 }
@@ -113,6 +162,14 @@ public partial class LanguageValueItem : ObservableObject
 
     [ObservableProperty]
     private bool _isReadOnly = false;
+    
+    [ObservableProperty]
+    private bool _hasSuggestion = false;
+    
+    [ObservableProperty]
+    private string _suggestionText = string.Empty;
+    
+    public Suggestion? Suggestion { get; set; }
 }
 
 public partial class LanguageSuggestionItem : ObservableObject

@@ -61,6 +61,40 @@
                                             TextWrapping="Wrap"
                                             MinHeight="60"
                                             MaxHeight="100"/>
+                                    
+                                    <!-- Suggestion display with Accept/Reject buttons -->
+                                    <Grid IsVisible="{Binding HasSuggestion}" ColumnDefinitions="*,Auto" Margin="0,5,0,0">
+                                        <TextBlock Grid.Column="0"
+                                                  Text="{Binding SuggestionText}"
+                                                  FontSize="11"
+                                                  Foreground="White"
+                                                  TextWrapping="Wrap"
+                                                  VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" Margin="10,0,0,0">
+                                            <Button Content="✓"
+                                                   FontSize="14"
+                                                   Foreground="#4CAF50"
+                                                   Background="Transparent"
+                                                   BorderBrush="#4CAF50"
+                                                   BorderThickness="1"
+                                                   Padding="6,2"
+                                                   CornerRadius="3"
+                                                   Command="{Binding $parent[Window].DataContext.AcceptSuggestionCommand}"
+                                                   CommandParameter="{Binding}"
+                                                   ToolTip.Tip="Accept suggestion"/>
+                                            <Button Content="✗"
+                                                   FontSize="14"
+                                                   Foreground="#F44336"
+                                                   Background="Transparent"
+                                                   BorderBrush="#F44336"
+                                                   BorderThickness="1"
+                                                   Padding="6,2"
+                                                   CornerRadius="3"
+                                                   Command="{Binding $parent[Window].DataContext.RejectSuggestionCommand}"
+                                                   CommandParameter="{Binding}"
+                                                   ToolTip.Tip="Reject suggestion"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
