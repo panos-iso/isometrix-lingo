@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     private static readonly TranslationValueConverter TranslationConverter = new();
     private static readonly ModifiedCellBackgroundConverter ModifiedBackgroundConverter = new();
     private static readonly ModifiedCellBorderConverter ModifiedBorderConverter = new();
+    private static readonly ShowOriginalTooltipConverter ShowOriginalTooltipConverter = new();
 
     public MainWindow()
     {
@@ -276,14 +277,20 @@ public partial class MainWindow : Window
                     // Bind IsEnabled to IsModified
                     toggleButton.Bind(Button.IsEnabledProperty, new Binding("IsModified") { Source = key });
                     
+                    // Bind tooltip to ShowOriginalForThisRow for context-aware text
+                    var tooltipBinding = new Binding("ShowOriginalForThisRow")
+                    {
+                        Source = key,
+                        Converter = ShowOriginalTooltipConverter
+                    };
+                    toggleButton.Bind(ToolTip.TipProperty, tooltipBinding);
+                    
                     // Bind Command to toggle ShowOriginalForThisRow
                     toggleButton.Click += (s, e) =>
                     {
                         key.ShowOriginalForThisRow = !key.ShowOriginalForThisRow;
                     };
                 }
-                
-                ToolTip.SetTip(toggleButton, "Show original value");
 
                 // Edit button
                 var editButton = new Button

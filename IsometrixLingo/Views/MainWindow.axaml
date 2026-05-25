@@ -16,6 +16,7 @@
         <converters:SourceFileConverter x:Key="SourceFileConverter"/>
         <converters:SourceFileDisplayConverter x:Key="SourceFileDisplayConverter"/>
         <converters:ShowFiltersTextConverter x:Key="ShowFiltersTextConverter"/>
+        <converters:ShowOriginalTooltipConverter x:Key="ShowOriginalTooltipConverter"/>
     </Window.Resources>
     
     <Window.Styles>
