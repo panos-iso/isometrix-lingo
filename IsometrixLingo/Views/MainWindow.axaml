@@ -126,7 +126,7 @@
                                 Command="{Binding StartOverCommand}"
                                 IsEnabled="{Binding HasKeys}"
                                 Padding="15,8"/>
-                        <Button Content="Confirm &amp; Continue to Edit →"
+                        <Button Content="Next →"
                                 Classes="PrimaryButton"
                                 Command="{Binding ConfirmImportCommand}"
                                 IsEnabled="{Binding HasKeys}"
@@ -243,7 +243,110 @@
                     </ScrollViewer>
                 </DockPanel>
 
-            <!-- Step 2: Edit Translations -->
+            <!-- Step 2: File Mapping -->
+            <DockPanel IsVisible="{Binding ShowFileMappingStep}" LastChildFill="True">
+                <!-- Buttons at bottom -->
+                <StackPanel DockPanel.Dock="Bottom"
+                            Orientation="Horizontal" 
+                            HorizontalAlignment="Right" 
+                            Spacing="10"
+                            Margin="0,15,0,0">
+                    <Button Content="{Binding StartOverButtonText}"
+                            Command="{Binding StartOverCommand}"
+                            Padding="15,8"/>
+                    <Button Content="Next →"
+                            Classes="PrimaryButton"
+                            Command="{Binding ConfirmFileMappingCommand}"
+                            CommandParameter="{Binding $parent[Window]}"
+                            Padding="15,8"
+                            FontWeight="SemiBold"/>
+                </StackPanel>
+
+                <!-- Main content -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="Step 2: Confirm File Pairs"
+                                   FontSize="20"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                   Margin="0,0,0,5"/>
+                        
+                        <TextBlock Text="Review the detected file pairs below. For missing pair files, you can create empty files with all keys but no values."
+                                   TextWrapping="Wrap"
+                                   FontSize="14"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                   Margin="0,0,0,10"/>
+
+                        <!-- File Pairs List -->
+                        <ItemsControl ItemsSource="{Binding FilePairs}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Spacing="10"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                            BorderThickness="1"
+                                            Background="{DynamicResource SystemControlAcrylicWindowBrush}"
+                                            CornerRadius="8"
+                                            Padding="15">
+                                        <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+                                            <!-- Header -->
+                                            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{Binding DisplayName}"
+                                                           FontSize="16"
+                                                           FontWeight="SemiBold"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding StatusText}"
+                                                           FontSize="14"
+                                                           VerticalAlignment="Center"/>
+                                            </Grid>
+
+                                            <!-- English File -->
+                                            <Grid Grid.Row="1" ColumnDefinitions="100,*,Auto" Margin="0,5,0,0">
+                                                <TextBlock Grid.Column="0"
+                                                           Text="English:"
+                                                           FontWeight="SemiBold"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding EnglishFileName, FallbackValue='(missing)'}"
+                                                           VerticalAlignment="Center"
+                                                           Margin="10,0,0,0"/>
+                                                <CheckBox Grid.Column="2"
+                                                          Content="Create empty file"
+                                                          IsChecked="{Binding CreateMissingEnglish}"
+                                                          IsVisible="{Binding !HasEnglishFile}"
+                                                          VerticalAlignment="Center"/>
+                                            </Grid>
+
+                                            <!-- Spanish File -->
+                                            <Grid Grid.Row="2" ColumnDefinitions="100,*,Auto" Margin="0,5,0,0">
+                                                <TextBlock Grid.Column="0"
+                                                           Text="Spanish:"
+                                                           FontWeight="SemiBold"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding SpanishFileName, FallbackValue='(missing)'}"
+                                                           VerticalAlignment="Center"
+                                                           Margin="10,0,0,0"/>
+                                                <CheckBox Grid.Column="2"
+                                                          Content="Create empty file"
+                                                          IsChecked="{Binding CreateMissingSpanish}"
+                                                          IsVisible="{Binding !HasSpanishFile}"
+                                                          VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- Step 3: Edit Translations -->
             <DockPanel IsVisible="{Binding ShowEditStep}" LastChildFill="True">
                 <!-- Bottom buttons with Save Progress on left, workflow buttons on right -->
                 <Grid DockPanel.Dock="Bottom" Margin="0,15,0,0">
@@ -268,7 +371,7 @@
                         <Button Content="{Binding StartOverButtonText}"
                                 Command="{Binding StartOverCommand}"
                                 Padding="15,8"/>
-                        <Button Content="Complete &amp; Continue to Export →"
+                        <Button Content="Next →"
                                 Classes="PrimaryButton"
                                 Command="{Binding CompleteEditCommand}"
                                 CommandParameter="{Binding $parent[Window]}"

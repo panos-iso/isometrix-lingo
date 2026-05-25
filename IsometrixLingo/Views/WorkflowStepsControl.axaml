@@ -8,7 +8,7 @@
              x:DataType="vm:MainWindowViewModel">
     
     <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" BorderThickness="0,0,0,1" Padding="10">
-        <Grid ColumnDefinitions="*,*,*">
+        <Grid ColumnDefinitions="*,*,*,*">
             <!-- Step 1: Import -->
             <Border Grid.Column="0" 
                     Background="{Binding Step1Background}"
@@ -36,7 +36,7 @@
                 </StackPanel>
             </Border>
 
-            <!-- Step 2: Edit -->
+            <!-- Step 2: File Mapping -->
             <Border Grid.Column="1" 
                     Background="{Binding Step2Background}"
                     CornerRadius="4"
@@ -48,7 +48,7 @@
                                Foreground="{Binding Step2Foreground}"
                                Opacity="0.8"
                                HorizontalAlignment="Center"/>
-                    <TextBlock Text="Edit Translations" 
+                    <TextBlock Text="Confirm Pairs" 
                                FontSize="14" 
                                FontWeight="SemiBold"
                                Foreground="{Binding Step2Foreground}"
@@ -63,11 +63,11 @@
                 </StackPanel>
             </Border>
 
-            <!-- Step 3: Export -->
+            <!-- Step 3: Edit -->
             <Border Grid.Column="2" 
                     Background="{Binding Step3Background}"
                     CornerRadius="4"
-                    Margin="5,0,0,0"
+                    Margin="5,0,5,0"
                     Padding="15,10">
                 <StackPanel>
                     <TextBlock Text="Step 3" 
@@ -75,7 +75,7 @@
                                Foreground="{Binding Step3Foreground}"
                                Opacity="0.8"
                                HorizontalAlignment="Center"/>
-                    <TextBlock Text="Export Files" 
+                    <TextBlock Text="Edit Translations" 
                                FontSize="14" 
                                FontWeight="SemiBold"
                                Foreground="{Binding Step3Foreground}"
@@ -84,6 +84,33 @@
                     <TextBlock Text="{Binding Step3Status}" 
                                FontSize="11" 
                                Foreground="{Binding Step3Foreground}"
+                               Opacity="0.9"
+                               HorizontalAlignment="Center"
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Step 4: Export -->
+            <Border Grid.Column="3" 
+                    Background="{Binding Step4Background}"
+                    CornerRadius="4"
+                    Margin="5,0,0,0"
+                    Padding="15,10">
+                <StackPanel>
+                    <TextBlock Text="Step 4" 
+                               FontSize="12" 
+                               Foreground="{Binding Step4Foreground}"
+                               Opacity="0.8"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Export Files" 
+                               FontSize="14" 
+                               FontWeight="SemiBold"
+                               Foreground="{Binding Step4Foreground}"
+                               HorizontalAlignment="Center"
+                               Margin="0,2,0,0"/>
+                    <TextBlock Text="{Binding Step4Status}" 
+                               FontSize="11" 
+                               Foreground="{Binding Step4Foreground}"
                                Opacity="0.9"
                                HorizontalAlignment="Center"
                                Margin="0,2,0,0"/>
