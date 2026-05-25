@@ -58,11 +58,14 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<string> _importedFileNames = new();
 
+    [ObservableProperty]
+    private ObservableCollection<string> _ignoredFileNames = new();
+
     // Workflow state properties
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowEditStep), nameof(ShowExportStep),
-                               nameof(Step1Background), nameof(Step2Background), nameof(Step3Background),
-                               nameof(Step1Status), nameof(Step2Status), nameof(Step3Status))]
+    [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowFileMappingStep), nameof(ShowEditStep), nameof(ShowExportStep),
+                               nameof(Step1Background), nameof(Step2Background), nameof(Step3Background), nameof(Step4Background),
+                               nameof(Step1Status), nameof(Step2Status), nameof(Step3Status), nameof(Step4Status))]
     private WorkflowStep _currentStep = WorkflowStep.Import;
 
     [ObservableProperty]
@@ -71,10 +74,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Step2Background), nameof(Step2Foreground), nameof(Step2Status))]
+    private StepStatus _fileMappingStepStatus = StepStatus.NotStarted;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Step3Background), nameof(Step3Foreground), nameof(Step3Status))]
     private StepStatus _editStepStatus = StepStatus.NotStarted;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Step3Background), nameof(Step3Foreground), nameof(Step3Status), nameof(StartOverButtonText))]
+    [NotifyPropertyChangedFor(nameof(Step4Background), nameof(Step4Foreground), nameof(Step4Status), nameof(StartOverButtonText))]
     private StepStatus _exportStepStatus = StepStatus.NotStarted;
 
     [ObservableProperty]
@@ -86,7 +93,11 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _showFilters = true;
 
+    [ObservableProperty]
+    private ObservableCollection<FilePair> _filePairs = new();
+
     public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
+    public bool ShowFileMappingStep => CurrentStep == WorkflowStep.FileMapping;
     public bool ShowEditStep => CurrentStep == WorkflowStep.Edit;
     public bool ShowExportStep => CurrentStep == WorkflowStep.Export;
 
@@ -99,14 +110,21 @@ public partial class MainWindowViewModel : ViewModelBase
         _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
     };
 
-    public SolidColorBrush Step2Background => EditStepStatus switch
+    public SolidColorBrush Step2Background => FileMappingStepStatus switch
     {
         StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
         StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
         _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
     };
 
-    public SolidColorBrush Step3Background => ExportStepStatus switch
+    public SolidColorBrush Step3Background => EditStepStatus switch
+    {
+        StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
+        StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
+        _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
+    };
+
+    public SolidColorBrush Step4Background => ExportStepStatus switch
     {
         StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
         StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
@@ -119,13 +137,19 @@ public partial class MainWindowViewModel : ViewModelBase
         _ => new SolidColorBrush(Colors.White)
     };
 
-    public SolidColorBrush Step2Foreground => EditStepStatus switch
+    public SolidColorBrush Step2Foreground => FileMappingStepStatus switch
     {
         StepStatus.NotStarted => new SolidColorBrush(Colors.White),
         _ => new SolidColorBrush(Colors.White)
     };
 
-    public SolidColorBrush Step3Foreground => ExportStepStatus switch
+    public SolidColorBrush Step3Foreground => EditStepStatus switch
+    {
+        StepStatus.NotStarted => new SolidColorBrush(Colors.White),
+        _ => new SolidColorBrush(Colors.White)
+    };
+
+    public SolidColorBrush Step4Foreground => ExportStepStatus switch
     {
         StepStatus.NotStarted => new SolidColorBrush(Colors.White),
         _ => new SolidColorBrush(Colors.White)
@@ -138,14 +162,21 @@ public partial class MainWindowViewModel : ViewModelBase
         _ => "Not Started"
     };
 
-    public string Step2Status => EditStepStatus switch
+    public string Step2Status => FileMappingStepStatus switch
     {
         StepStatus.Completed => "✓ Complete",
         StepStatus.InProgress => "In Progress",
         _ => "Not Started"
     };
 
-    public string Step3Status => ExportStepStatus switch
+    public string Step3Status => EditStepStatus switch
+    {
+        StepStatus.Completed => "✓ Complete",
+        StepStatus.InProgress => "In Progress",
+        _ => "Not Started"
+    };
+
+    public string Step4Status => ExportStepStatus switch
     {
         StepStatus.Completed => "✓ Complete",
         StepStatus.InProgress => "In Progress",
@@ -221,6 +252,25 @@ public partial class MainWindowViewModel : ViewModelBase
                     var fileName = Path.GetFileName(filePath);
                     var extension = Path.GetExtension(filePath).ToLower();
 
+                    // Check for duplicate files (case-insensitive)
+                    if (ImportedFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)) ||
+                        IgnoredFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        StatusMessage = $"File '{fileName}' has already been imported. Skipping duplicate.";
+                        continue;
+                    }
+
+                    // Check if language is supported (en or es only)
+                    var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
+                    var language = ExtractLanguage(fileName, fileType);
+                    
+                    if (string.IsNullOrEmpty(language) || (language != "en" && language != "es"))
+                    {
+                        IgnoredFileNames.Add(fileName);
+                        StatusMessage = $"File '{fileName}' ignored - unsupported language. Only English (en) and Spanish (es) are supported.";
+                        continue;
+                    }
+
                     TranslationFile translationFile = extension switch
                     {
                         ".json" => _jsonReader.ReadFile(filePath),
@@ -229,12 +279,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     };
 
                     translationFiles.Add(translationFile);
-
-                    // Only add unique file names
-                    if (!ImportedFileNames.Contains(fileName))
-                    {
-                        ImportedFileNames.Add(fileName);
-                    }
+                    ImportedFileNames.Add(fileName);
                 }
                 catch (Exception ex)
                 {
@@ -319,6 +364,25 @@ public partial class MainWindowViewModel : ViewModelBase
                     if (extension != ".json" && extension != ".resx")
                         continue;
 
+                    // Check for duplicate files (case-insensitive)
+                    if (ImportedFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)) ||
+                        IgnoredFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        StatusMessage = $"File '{fileName}' has already been imported. Skipping duplicate.";
+                        continue;
+                    }
+
+                    // Check if language is supported (en or es only)
+                    var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
+                    var language = ExtractLanguage(fileName, fileType);
+                    
+                    if (string.IsNullOrEmpty(language) || (language != "en" && language != "es"))
+                    {
+                        IgnoredFileNames.Add(fileName);
+                        StatusMessage = $"File '{fileName}' ignored - unsupported language. Only English (en) and Spanish (es) are supported.";
+                        continue;
+                    }
+
                     TranslationFile translationFile = extension switch
                     {
                         ".json" => _jsonReader.ReadFile(filePath),
@@ -327,12 +391,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     };
 
                     translationFiles.Add(translationFile);
-
-                    // Only add unique file names
-                    if (!ImportedFileNames.Contains(fileName))
-                    {
-                        ImportedFileNames.Add(fileName);
-                    }
+                    ImportedFileNames.Add(fileName);
                 }
                 catch (Exception ex)
                 {
@@ -541,6 +600,20 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        // Detect new files that will be created
+        var newFiles = DetectNewFilesForExport(allKeys);
+        
+        // If there are new files, show confirmation
+        if (newFiles.Count > 0)
+        {
+            var confirmed = await ShowNewFilesConfirmation(window, newFiles);
+            if (!confirmed)
+            {
+                StatusMessage = "Export cancelled.";
+                return;
+            }
+        }
+
         // Default to output directory in current working directory
         var defaultOutputPath = Path.Combine(Directory.GetCurrentDirectory(), "output");
 
@@ -584,6 +657,167 @@ public partial class MainWindowViewModel : ViewModelBase
 
         // Prompt user for next action after export
         await PromptAfterExport(window);
+    }
+
+    private List<string> DetectNewFilesForExport(List<TranslationKey> allKeys)
+    {
+        var newFiles = new List<string>();
+        var importedFileNamesLower = new HashSet<string>(
+            ImportedFileNames.Select(f => f.ToLower()), 
+            StringComparer.OrdinalIgnoreCase
+        );
+
+        // Group keys by source file
+        var groupedByFile = allKeys.GroupBy(k => k.Source.Name);
+
+        foreach (var fileGroup in groupedByFile)
+        {
+            var sourceFile = fileGroup.Key;
+            var fileKeys = fileGroup.ToList();
+            var fileType = fileKeys.First().Source.Type;
+
+            // Get all languages for this file
+            var languages = fileKeys
+                .SelectMany(k => k.LanguageValues.Keys)
+                .Distinct()
+                .ToList();
+
+            // Check each language file
+            foreach (var language in languages)
+            {
+                string fileName;
+                if (fileType == FileType.Json)
+                {
+                    fileName = $"{sourceFile}.{language}.json";
+                }
+                else // RESX
+                {
+                    fileName = language == "en" 
+                        ? $"{sourceFile}.resx" 
+                        : $"{sourceFile}_{language}.resx";
+                }
+
+                if (!importedFileNamesLower.Contains(fileName.ToLower()))
+                {
+                    newFiles.Add(fileName);
+                }
+            }
+        }
+
+        return newFiles;
+    }
+
+    private async Task<bool> ShowNewFilesConfirmation(Window window, List<string> newFiles)
+    {
+        var dialog = new Window
+        {
+            Title = "Confirm New Files",
+            Width = 500,
+            Height = 350,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        var mainPanel = new DockPanel
+        {
+            Margin = new Thickness(20),
+            LastChildFill = true
+        };
+
+        // Header
+        var headerPanel = new StackPanel { Spacing = 10 };
+        DockPanel.SetDock(headerPanel, Dock.Top);
+
+        headerPanel.Children.Add(new TextBlock
+        {
+            Text = "⚠ New Files Will Be Created",
+            FontSize = 16,
+            FontWeight = FontWeight.Bold,
+            Foreground = new SolidColorBrush(Color.FromRgb(255, 152, 0)) // Orange
+        });
+
+        headerPanel.Children.Add(new TextBlock
+        {
+            Text = "The following files did not exist in your original import but will be created during export:",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 10)
+        });
+
+        mainPanel.Children.Add(headerPanel);
+
+        // Files list in scrollable area
+        var scrollViewer = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Margin = new Thickness(0, 10, 0, 15)
+        };
+        DockPanel.SetDock(scrollViewer, Dock.Top);
+
+        var filesList = new StackPanel { Spacing = 5 };
+        foreach (var file in newFiles)
+        {
+            filesList.Children.Add(new TextBlock
+            {
+                Text = $"• {file}",
+                FontFamily = new FontFamily("Courier New, monospace"),
+                Margin = new Thickness(10, 0, 0, 0)
+            });
+        }
+
+        scrollViewer.Content = filesList;
+        mainPanel.Children.Add(scrollViewer);
+
+        // Confirmation message
+        var confirmPanel = new StackPanel { Spacing = 10 };
+        DockPanel.SetDock(confirmPanel, Dock.Top);
+
+        confirmPanel.Children.Add(new TextBlock
+        {
+            Text = "Do you want to proceed with creating these files?",
+            FontWeight = FontWeight.SemiBold
+        });
+
+        mainPanel.Children.Add(confirmPanel);
+
+        // Buttons
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = 10,
+            Margin = new Thickness(0, 15, 0, 0)
+        };
+        DockPanel.SetDock(buttonPanel, Dock.Bottom);
+
+        var proceedButton = new Button
+        {
+            Content = "Yes, Create Files",
+            Width = 130,
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
+
+        var cancelButton = new Button
+        {
+            Content = "Cancel",
+            Width = 80,
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
+
+        bool confirmed = false;
+
+        proceedButton.Click += (s, args) => { confirmed = true; dialog.Close(); };
+        cancelButton.Click += (s, args) => { confirmed = false; dialog.Close(); };
+
+        buttonPanel.Children.Add(cancelButton);
+        buttonPanel.Children.Add(proceedButton);
+
+        mainPanel.Children.Add(buttonPanel);
+        mainPanel.Children.Add(new Border()); // Filler
+
+        dialog.Content = mainPanel;
+        await dialog.ShowDialog(window);
+
+        return confirmed;
     }
 
     private async Task PromptAfterExport(Window window)
@@ -667,6 +901,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 JsonTemplates = _translationStore.GetAllJsonTemplates(),
                 CurrentStep = CurrentStep,
                 ImportStepStatus = ImportStepStatus,
+                FileMappingStepStatus = FileMappingStepStatus,
                 EditStepStatus = EditStepStatus,
                 ExportStepStatus = ExportStepStatus
             };
@@ -753,12 +988,15 @@ public partial class MainWindowViewModel : ViewModelBase
         _translationStore.Clear();
         _progressService.ClearProgress();
         ImportedFileNames.Clear();
+        IgnoredFileNames.Clear();
+        FilePairs.Clear();
         HasKeys = false;
         HasUnsavedChanges = false;
 
         // Reset workflow state
         CurrentStep = WorkflowStep.Import;
         ImportStepStatus = StepStatus.InProgress;
+        FileMappingStepStatus = StepStatus.NotStarted;
         EditStepStatus = StepStatus.NotStarted;
         ExportStepStatus = StepStatus.NotStarted;
 
@@ -778,9 +1016,13 @@ public partial class MainWindowViewModel : ViewModelBase
             }
 
             ImportStepStatus = StepStatus.Completed;
-            EditStepStatus = StepStatus.InProgress;
-            CurrentStep = WorkflowStep.Edit;
-            StatusMessage = "Import complete. You can now edit translations or proceed to export.";
+            FileMappingStepStatus = StepStatus.InProgress;
+            CurrentStep = WorkflowStep.FileMapping;
+
+            // Generate file pairs
+            DetectFilePairs();
+
+            StatusMessage = "Import complete. Review file mappings and confirm to continue.";
 
             // Auto-save progress
             SaveProgress();
@@ -1133,8 +1375,15 @@ public partial class MainWindowViewModel : ViewModelBase
             // Restore workflow state
             CurrentStep = sessionState.CurrentStep;
             ImportStepStatus = sessionState.ImportStepStatus;
+            FileMappingStepStatus = sessionState.FileMappingStepStatus;
             EditStepStatus = sessionState.EditStepStatus;
             ExportStepStatus = sessionState.ExportStepStatus;
+
+            // Regenerate file pairs if we're on the FileMapping step
+            if (CurrentStep == WorkflowStep.FileMapping || FileMappingStepStatus != StepStatus.NotStarted)
+            {
+                DetectFilePairs();
+            }
 
             UpdateFileFilters();
             HasKeys = true;
@@ -1161,6 +1410,177 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             Username = settings.Username;
         }
+    }
+
+    private void DetectFilePairs()
+    {
+        FilePairs.Clear();
+
+        // Group imported files by base name and file type
+        var fileGroups = ImportedFileNames
+            .GroupBy(fileName =>
+            {
+                var extension = Path.GetExtension(fileName).ToLower();
+                var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
+                var baseName = ExtractBaseName(fileName, fileType);
+                return new { BaseName = baseName, FileType = fileType };
+            })
+            .ToList();
+
+        foreach (var group in fileGroups)
+        {
+            var pair = new FilePair
+            {
+                BaseName = group.Key.BaseName,
+                FileType = group.Key.FileType
+            };
+
+            // Find English and Spanish files in the group
+            foreach (var fileName in group)
+            {
+                var language = ExtractLanguage(fileName, group.Key.FileType);
+                if (language == "en")
+                {
+                    pair.EnglishFileName = fileName;
+                    pair.HasEnglishFile = true;
+                }
+                else if (language == "es")
+                {
+                    pair.SpanishFileName = fileName;
+                    pair.HasSpanishFile = true;
+                }
+            }
+
+            FilePairs.Add(pair);
+        }
+    }
+
+    private string ExtractBaseName(string fileName, FileType fileType)
+    {
+        if (fileType == FileType.Json)
+        {
+            // Remove .en.json or .es.json
+            return fileName.Replace(".en.json", "").Replace(".es.json", "");
+        }
+        else // RESX
+        {
+            // Remove _es.resx or .resx
+            return fileName.Replace("_es.resx", "").Replace(".resx", "");
+        }
+    }
+
+    private string ExtractLanguage(string fileName, FileType fileType)
+    {
+        if (fileType == FileType.Json)
+        {
+            if (fileName.Contains(".en.json", StringComparison.OrdinalIgnoreCase))
+                return "en";
+            if (fileName.Contains(".es.json", StringComparison.OrdinalIgnoreCase))
+                return "es";
+        }
+        else // RESX
+        {
+            if (fileName.Contains("_es.resx", StringComparison.OrdinalIgnoreCase))
+                return "es";
+            if (fileName.EndsWith(".resx", StringComparison.OrdinalIgnoreCase) &&
+                !fileName.Contains("_es.resx", StringComparison.OrdinalIgnoreCase))
+                return "en";
+        }
+
+        return string.Empty;
+    }
+
+    [RelayCommand]
+    private async Task ConfirmFileMapping(Window? window)
+    {
+        try
+        {
+            // Create missing files if requested
+            foreach (var pair in FilePairs)
+            {
+                if (pair.CreateMissingEnglish && !pair.HasEnglishFile)
+                {
+                    await CreateMissingFile(pair, "en");
+                }
+
+                if (pair.CreateMissingSpanish && !pair.HasSpanishFile)
+                {
+                    await CreateMissingFile(pair, "es");
+                }
+            }
+
+            FileMappingStepStatus = StepStatus.Completed;
+            EditStepStatus = StepStatus.InProgress;
+            CurrentStep = WorkflowStep.Edit;
+            StatusMessage = "File mapping confirmed. You can now edit translations or proceed to export.";
+
+            // Auto-save progress
+            SaveProgress();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error confirming file mapping: {ex.Message}";
+            // Don't re-throw - keep the app running
+        }
+    }
+
+    private async Task CreateMissingFile(FilePair pair, string language)
+    {
+        // Create a new translation file with empty values for all keys from the existing pair file
+        var existingFileName = language == "en" ? pair.SpanishFileName : pair.EnglishFileName;
+        if (string.IsNullOrEmpty(existingFileName))
+            return;
+
+        // Generate the missing file name
+        string newFileName;
+        if (pair.FileType == FileType.Json)
+        {
+            newFileName = $"{pair.BaseName}.{language}.json";
+        }
+        else // RESX
+        {
+            newFileName = language == "es" ? $"{pair.BaseName}_es.resx" : $"{pair.BaseName}.resx";
+        }
+
+        // Get all keys from the existing file
+        var existingKeys = _translationStore.GetAllKeys()
+            .Where(k => k.Source.Name == pair.BaseName && k.Source.Type == pair.FileType)
+            .ToList();
+
+        // Create new translation file entries with empty values
+        foreach (var key in existingKeys)
+        {
+            // Add empty value for the new language
+            if (!key.LanguageValues.ContainsKey(language))
+            {
+                var newValues = new Dictionary<string, string>(key.LanguageValues)
+                {
+                    [language] = string.Empty
+                };
+                key.LanguageValues = newValues;
+                key.UpdateMissingTranslationsStatus();
+            }
+        }
+
+        // Add to imported file names
+        if (!ImportedFileNames.Any(f => string.Equals(f, newFileName, StringComparison.OrdinalIgnoreCase)))
+        {
+            ImportedFileNames.Add(newFileName);
+        }
+
+        // Update the pair
+        if (language == "en")
+        {
+            pair.EnglishFileName = newFileName;
+            pair.HasEnglishFile = true;
+        }
+        else
+        {
+            pair.SpanishFileName = newFileName;
+            pair.HasSpanishFile = true;
+        }
+
+        StatusMessage = $"Created empty file: {newFileName}";
     }
 
     [RelayCommand]

@@ -78,8 +78,10 @@ public class ResxTranslationFileWriter
                     // Find the translation key for this data element
                     var translationKey = keys.FirstOrDefault(k => k.Key == keyName);
 
-                    if (translationKey != null && translationKey.LanguageValues.TryGetValue(language, out var value))
+                    if (translationKey != null)
                     {
+                        // Use actual value if exists, otherwise empty string
+                        var value = translationKey.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
                         // Update the value in the existing data element
                         var valueElement = dataElement.Element("value");
                         if (valueElement != null)
@@ -98,8 +100,9 @@ public class ResxTranslationFileWriter
             // Add new data elements for keys that weren't in the template
             foreach (var key in keys.OrderBy(k => k.Key))
             {
-                if (!processedKeys.Contains(key.Key) && key.LanguageValues.TryGetValue(language, out var value))
+                if (!processedKeys.Contains(key.Key))
                 {
+                    var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
                     var dataElement = new XElement("data",
                         new XAttribute("name", key.Key),
                         new XAttribute(XNamespace.Xml + "space", "preserve"),
@@ -118,16 +121,14 @@ public class ResxTranslationFileWriter
             // Add data elements for each key
             foreach (var key in keys.OrderBy(k => k.Key))
             {
-                if (key.LanguageValues.TryGetValue(language, out var value))
-                {
-                    var dataElement = new XElement("data",
-                        new XAttribute("name", key.Key),
-                        new XAttribute(XNamespace.Xml + "space", "preserve"),
-                        new XElement("value", value)
-                    );
+                var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+                var dataElement = new XElement("data",
+                    new XAttribute("name", key.Key),
+                    new XAttribute(XNamespace.Xml + "space", "preserve"),
+                    new XElement("value", value)
+                );
 
-                    root.Add(dataElement);
-                }
+                root.Add(dataElement);
             }
         }
 

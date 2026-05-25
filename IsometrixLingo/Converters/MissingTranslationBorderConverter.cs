@@ -6,7 +6,7 @@ using Avalonia.Media;
 namespace IsometrixLingo.Converters;
 
 /// <summary>
-/// Converter that returns a red border brush when a translation key has missing translations
+/// Converter that returns a red/rose background color when a translation key has missing translations
 /// </summary>
 public class MissingTranslationBorderConverter : IValueConverter
 {
@@ -14,10 +14,10 @@ public class MissingTranslationBorderConverter : IValueConverter
     {
         if (value is bool hasMissingTranslations && hasMissingTranslations)
         {
-            return new SolidColorBrush(Color.FromRgb(220, 53, 69)); // Bootstrap danger red
+            return new SolidColorBrush(Color.FromArgb(70, 255, 80, 80)); // More visible red background
         }
 
-        return null; // No border
+        return Brushes.Transparent; // Transparent background for normal rows
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

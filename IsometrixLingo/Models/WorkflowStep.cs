@@ -3,8 +3,9 @@ namespace IsometrixLingo.Models;
 public enum WorkflowStep
 {
     Import = 1,
-    Edit = 2,
-    Export = 3
+    FileMapping = 2,
+    Edit = 3,
+    Export = 4
 }
 
 public enum StepStatus
