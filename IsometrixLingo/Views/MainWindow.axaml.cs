@@ -270,7 +270,7 @@ public partial class MainWindow : Window
                         var suggestionTextBlock = new TextBlock
                         {
                             FontSize = 11,
-                            Foreground = Brushes.Gray,
+                            Foreground = Brushes.White,
                             TextWrapping = Avalonia.Media.TextWrapping.Wrap,
                             Margin = new Avalonia.Thickness(0, 2, 0, 0)
                         };
