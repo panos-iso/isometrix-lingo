@@ -1099,29 +1099,34 @@ public partial class MainWindowViewModel : ViewModelBase
                 return;
             }
 
-            // Check for unresolved suggestions
-            var keysWithSuggestions = _translationStore.GetAllKeys()
-                .Where(k => k.HasAnySuggestions)
-                .ToList();
-
-            if (keysWithSuggestions.Count > 0)
+            // Check for unresolved suggestions (only in Edit mode)
+            // In Suggest mode, having suggestions is the whole point - don't warn about them
+            if (CurrentMode == EditMode.Edit)
             {
-                var totalSuggestions = keysWithSuggestions.Sum(k => k.SuggestedValues.Count);
-                var message = $"There are {totalSuggestions} unresolved suggestion(s) across {keysWithSuggestions.Count} key(s).\n\n" +
-                              "These suggestions have not been accepted or rejected.\n\n" +
-                              "Do you want to stay and review the suggestions, or continue to export anyway?";
+                var keysWithSuggestions = _translationStore.GetAllKeys()
+                    .Where(k => k.HasAnySuggestions)
+                    .ToList();
 
-                var dialog = new ConfirmationDialog(message);
-                var result = await dialog.ShowDialog<bool?>(window);
-
-                if (result != true)
+                if (keysWithSuggestions.Count > 0)
                 {
-                    StatusMessage = "Review suggestions before exporting.";
-                    return;
+                    var totalSuggestions = keysWithSuggestions.Sum(k => k.SuggestedValues.Count);
+                    var message = $"There are {totalSuggestions} unresolved suggestion(s) across {keysWithSuggestions.Count} key(s).\n\n" +
+                                  "These suggestions have not been accepted or rejected.\n\n" +
+                                  "Do you want to stay and review the suggestions, or continue to export anyway?";
+
+                    var dialog = new ConfirmationDialog(message);
+                    var result = await dialog.ShowDialog<bool?>(window);
+
+                    if (result != true)
+                    {
+                        StatusMessage = "Review suggestions before exporting.";
+                        return;
+                    }
                 }
             }
 
             // Check for missing translations
+            // Note: HasMissingTranslations already considers a translation OK if it has either a value OR a suggestion
             var keysWithMissingTranslations = _translationStore.GetAllKeys()
                 .Where(k => k.HasMissingTranslations)
                 .ToList();
