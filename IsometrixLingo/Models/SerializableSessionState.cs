@@ -28,6 +28,7 @@ public class SerializableTranslationKey
     public bool IsModified { get; set; }
     public Dictionary<string, string> OriginalValues { get; set; } = new();
     public List<string> ModifiedLanguages { get; set; } = new();
+    public bool ShowOriginalForThisRow { get; set; }
 }
 
 /// <summary>

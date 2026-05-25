@@ -232,7 +232,8 @@ public partial class MainWindow : Window
                         {
                             new Binding("LanguageValues"), // Dictionary that changes
                             new Binding("OriginalValues"), // Original values
-                            new Binding("ShowOriginalValues") { Source = viewModel } // Toggle from ViewModel
+                            new Binding("ShowOriginalValues") { Source = viewModel }, // Global toggle from ViewModel
+                            new Binding("ShowOriginalForThisRow") // Per-row toggle
                         },
                         ConverterParameter = language
                     };
@@ -250,22 +251,56 @@ public partial class MainWindow : Window
         {
             Header = "Actions",
             Width = DataGridLength.Auto,
-            MinWidth = 60,
+            MinWidth = 100,
             CellTemplate = new FuncDataTemplate<object>((data, _) =>
             {
-                var button = new Button
+                var panel = new StackPanel
+                {
+                    Orientation = Avalonia.Layout.Orientation.Horizontal,
+                    Spacing = 5,
+                    Margin = new Avalonia.Thickness(5, 2)
+                };
+
+                // Show Original toggle button
+                var toggleButton = new Button
+                {
+                    Content = "👁",
+                    FontSize = 18,
+                    Padding = new Avalonia.Thickness(8, 4),
+                    HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                    VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center
+                };
+                
+                if (data is TranslationKey key)
+                {
+                    // Bind IsEnabled to IsModified
+                    toggleButton.Bind(Button.IsEnabledProperty, new Binding("IsModified") { Source = key });
+                    
+                    // Bind Command to toggle ShowOriginalForThisRow
+                    toggleButton.Click += (s, e) =>
+                    {
+                        key.ShowOriginalForThisRow = !key.ShowOriginalForThisRow;
+                    };
+                }
+                
+                ToolTip.SetTip(toggleButton, "Show original value");
+
+                // Edit button
+                var editButton = new Button
                 {
                     Content = "📝",
                     FontSize = 18,
                     Padding = new Avalonia.Thickness(8, 4),
-                    Margin = new Avalonia.Thickness(5, 2),
                     HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                     VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center,
                     Command = viewModel.EditTranslationCommand,
                     CommandParameter = data
                 };
-                ToolTip.SetTip(button, "Edit translation");
-                return button;
+                ToolTip.SetTip(editButton, "Edit translation");
+
+                panel.Children.Add(toggleButton);
+                panel.Children.Add(editButton);
+                return panel;
             })
         };
         TranslationsGrid.Columns.Add(actionsColumn);

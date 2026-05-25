@@ -36,7 +36,8 @@ public class ProgressService
                 LanguageValues = new Dictionary<string, string>(tk.LanguageValues),
                 IsModified = tk.IsModified,
                 OriginalValues = new Dictionary<string, string>(tk.OriginalValues),
-                ModifiedLanguages = tk.ModifiedLanguages.ToList()
+                ModifiedLanguages = tk.ModifiedLanguages.ToList(),
+                ShowOriginalForThisRow = tk.ShowOriginalForThisRow
             }).ToList(),
             ImportedFileNames = state.ImportedFileNames,
             ResxTemplates = state.ResxTemplates,
@@ -86,7 +87,8 @@ public class ProgressService
                     LanguageValues = new Dictionary<string, string>(stk.LanguageValues),
                     IsModified = stk.IsModified,
                     OriginalValues = new Dictionary<string, string>(stk.OriginalValues),
-                    ModifiedLanguages = new HashSet<string>(stk.ModifiedLanguages)
+                    ModifiedLanguages = new HashSet<string>(stk.ModifiedLanguages),
+                    ShowOriginalForThisRow = stk.ShowOriginalForThisRow
                 }).ToList(),
                 ImportedFileNames = serializableState.ImportedFileNames,
                 ResxTemplates = serializableState.ResxTemplates,

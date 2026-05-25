@@ -23,6 +23,9 @@ public partial class TranslationKey : ObservableObject
     [ObservableProperty]
     private HashSet<string> _modifiedLanguages = new();
 
+    [ObservableProperty]
+    private bool _showOriginalForThisRow;
+
     /// <summary>
     /// Check if a specific language value has been modified
     /// </summary>

@@ -477,6 +477,15 @@ public partial class MainWindowViewModel : ViewModelBase
         UpdateStatusMessage();
     }
 
+    partial void OnShowOriginalValuesChanged(bool value)
+    {
+        // Reset all per-row toggles when global toggle changes
+        foreach (var key in _translationStore.GetAllKeys())
+        {
+            key.ShowOriginalForThisRow = false;
+        }
+    }
+
     private void UpdateStatusMessage()
     {
         var filteredCount = _translationStore.FilteredKeys.Count;

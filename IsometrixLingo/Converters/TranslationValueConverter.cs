@@ -14,22 +14,23 @@ public class TranslationValueConverter : IMultiValueConverter
 {
     public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (values.Count < 3 || parameter is not string language)
+        if (values.Count < 4 || parameter is not string language)
         {
             return string.Empty;
         }
 
         var languageValues = values[0] as Dictionary<string, string>;
         var originalValues = values[1] as Dictionary<string, string>;
-        var showOriginal = values[2] is bool show && show;
+        var globalShowOriginal = values[2] is bool globalShow && globalShow;
+        var rowShowOriginal = values[3] is bool rowShow && rowShow;
 
         if (string.IsNullOrEmpty(language))
         {
             return string.Empty;
         }
 
-        // If showing original and we have an original value, show it
-        if (showOriginal && originalValues?.TryGetValue(language, out var originalValue) == true)
+        // If showing original (either global or per-row) and we have an original value, show it
+        if ((globalShowOriginal || rowShowOriginal) && originalValues?.TryGetValue(language, out var originalValue) == true)
         {
             return originalValue;
         }
