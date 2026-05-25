@@ -487,6 +487,8 @@ public partial class MainWindowViewModel : ViewModelBase
         var addKeyViewModel = new AddKeyViewModel(
             _translationStore.SourceFiles,
             _translationStore.Languages,
+            CurrentMode,
+            Username,
             SelectedSourceFile  // Pass current filter selection as default
         );
 
@@ -503,7 +505,9 @@ public partial class MainWindowViewModel : ViewModelBase
             _translationStore.AddKey(newKey);
             HasKeys = true;
             UpdateFileFilters();
-            StatusMessage = $"Added new key '{newKey.Key}' to {newKey.Source.Name}.";
+            
+            var modeText = CurrentMode == EditMode.Edit ? "values" : "suggestions";
+            StatusMessage = $"Added new key '{newKey.Key}' with {modeText} to {newKey.Source.Name}.";
             LanguagesChanged?.Invoke(this, EventArgs.Empty);
         }
     }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -15,12 +16,21 @@ public partial class AddKeyViewModel : ViewModelBase
     [ObservableProperty]
     private SourceFile? _selectedSourceFile;
 
+    [ObservableProperty]
+    private EditMode _currentMode = EditMode.Edit;
+
+    [ObservableProperty]
+    private string _username = "User";
+
     public ObservableCollection<SourceFile> AvailableSourceFiles { get; } = new();
     public ObservableCollection<string> AvailableLanguages { get; } = new();
     public ObservableCollection<LanguageValueItem> LanguageValues { get; } = new();
 
-    public AddKeyViewModel(IEnumerable<SourceFile> sourceFiles, IEnumerable<string> languages, SourceFile? defaultSourceFile = null)
+    public AddKeyViewModel(IEnumerable<SourceFile> sourceFiles, IEnumerable<string> languages, EditMode mode, string username, SourceFile? defaultSourceFile = null)
     {
+        CurrentMode = mode;
+        Username = username;
+
         foreach (var file in sourceFiles)
         {
             AvailableSourceFiles.Add(file);
@@ -51,12 +61,27 @@ public partial class AddKeyViewModel : ViewModelBase
         {
             Key = KeyName.Trim(),
             Source = SelectedSourceFile!,
-            LanguageValues = new Dictionary<string, string>()
+            LanguageValues = new Dictionary<string, string>(),
+            SuggestedValues = new Dictionary<string, Suggestion>()
         };
 
         foreach (var langValue in LanguageValues.Where(lv => !string.IsNullOrWhiteSpace(lv.Value)))
         {
-            translationKey.LanguageValues[langValue.LanguageCode] = langValue.Value;
+            if (CurrentMode == EditMode.Edit)
+            {
+                // In Edit Mode: add as actual values
+                translationKey.LanguageValues[langValue.LanguageCode] = langValue.Value;
+            }
+            else
+            {
+                // In Suggest Mode: add as suggestions
+                translationKey.SuggestedValues[langValue.LanguageCode] = new Suggestion
+                {
+                    Value = langValue.Value,
+                    Username = Username,
+                    Timestamp = DateTime.UtcNow
+                };
+            }
         }
 
         return translationKey;

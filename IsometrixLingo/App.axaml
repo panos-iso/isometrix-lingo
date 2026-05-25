@@ -17,6 +17,8 @@
         <converters:HasSuggestionConverter x:Key="HasSuggestionConverter"/>
         <converters:SuggestionTextConverter x:Key="SuggestionTextConverter"/>
         <converters:EditModeAndHasSuggestionConverter x:Key="EditModeAndHasSuggestionConverter"/>
+        <converters:AddKeyDialogTitleConverter x:Key="AddKeyDialogTitleConverter"/>
+        <converters:AddKeyGuidanceConverter x:Key="AddKeyGuidanceConverter"/>
     </Application.Resources>
   
     <Application.Styles>

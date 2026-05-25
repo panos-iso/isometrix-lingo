@@ -7,12 +7,14 @@
         mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="600"
         x:Class="IsometrixLingo.Views.AddKeyDialog"
         x:DataType="vm:AddKeyViewModel"
-        Title="Add New Translation Key"
+        Title="{Binding CurrentMode, Converter={StaticResource AddKeyDialogTitleConverter}}"
         Width="500" Height="600"
         WindowStartupLocation="CenterOwner">
 
     <Window.Resources>
         <converters:SourceFileConverter x:Key="SourceFileConverter"/>
+        <converters:AddKeyDialogTitleConverter x:Key="AddKeyDialogTitleConverter"/>
+        <converters:AddKeyGuidanceConverter x:Key="AddKeyGuidanceConverter"/>
     </Window.Resources>
 
     <DockPanel Margin="20">
@@ -49,8 +51,9 @@
 
                 <!-- Language Values -->
                 <StackPanel>
-                    <TextBlock Text="Translations (Optional)" FontWeight="Bold" Margin="0,0,0,5"/>
-                    <TextBlock Text="You can add translations now or edit them later" 
+                    <TextBlock Text="{Binding CurrentMode, Converter={StaticResource AddKeyGuidanceConverter}, ConverterParameter='header'}" 
+                               FontWeight="Bold" Margin="0,0,0,5"/>
+                    <TextBlock Text="{Binding CurrentMode, Converter={StaticResource AddKeyGuidanceConverter}, ConverterParameter='subtext'}" 
                                FontSize="11" Foreground="Gray" Margin="0,0,0,10"/>
                     
                     <ItemsControl ItemsSource="{Binding LanguageValues}">
