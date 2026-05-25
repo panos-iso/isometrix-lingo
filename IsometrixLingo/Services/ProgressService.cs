@@ -34,6 +34,15 @@ public class ProgressService
                     Type = tk.Source.Type
                 },
                 LanguageValues = new Dictionary<string, string>(tk.LanguageValues),
+                SuggestedValues = tk.SuggestedValues.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => new SerializableSuggestion
+                    {
+                        Value = kvp.Value.Value,
+                        Username = kvp.Value.Username,
+                        Timestamp = kvp.Value.Timestamp
+                    }
+                ),
                 IsModified = tk.IsModified,
                 OriginalValues = new Dictionary<string, string>(tk.OriginalValues),
                 ModifiedLanguages = tk.ModifiedLanguages.ToList(),
@@ -44,8 +53,10 @@ public class ProgressService
             JsonTemplates = state.JsonTemplates,
             CurrentStep = state.CurrentStep,
             ImportStepStatus = state.ImportStepStatus,
+            ModeSelectionStepStatus = state.ModeSelectionStepStatus,
             EditStepStatus = state.EditStepStatus,
-            ExportStepStatus = state.ExportStepStatus
+            ExportStepStatus = state.ExportStepStatus,
+            CurrentMode = state.CurrentMode
         };
 
         var json = JsonSerializer.Serialize(serializableState, AppJsonSerializerContext.Default.SerializableSessionState);
@@ -79,6 +90,15 @@ public class ProgressService
                         Key = stk.Key,
                         Source = new SourceFile(stk.Source.Name, stk.Source.Type),
                         LanguageValues = new Dictionary<string, string>(stk.LanguageValues),
+                        SuggestedValues = stk.SuggestedValues.ToDictionary(
+                            kvp => kvp.Key,
+                            kvp => new Suggestion
+                            {
+                                Value = kvp.Value.Value,
+                                Username = kvp.Value.Username,
+                                Timestamp = kvp.Value.Timestamp
+                            }
+                        ),
                         IsModified = stk.IsModified,
                         OriginalValues = new Dictionary<string, string>(stk.OriginalValues),
                         ModifiedLanguages = new HashSet<string>(stk.ModifiedLanguages),
@@ -92,8 +112,10 @@ public class ProgressService
                 JsonTemplates = serializableState.JsonTemplates,
                 CurrentStep = serializableState.CurrentStep,
                 ImportStepStatus = serializableState.ImportStepStatus,
+                ModeSelectionStepStatus = serializableState.ModeSelectionStepStatus,
                 EditStepStatus = serializableState.EditStepStatus,
-                ExportStepStatus = serializableState.ExportStepStatus
+                ExportStepStatus = serializableState.ExportStepStatus,
+                CurrentMode = serializableState.CurrentMode
             };
 
             return sessionState;

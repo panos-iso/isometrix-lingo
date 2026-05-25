@@ -932,8 +932,10 @@ public partial class MainWindowViewModel : ViewModelBase
                 CurrentStep = CurrentStep,
                 ImportStepStatus = ImportStepStatus,
                 FileMappingStepStatus = FileMappingStepStatus,
+                ModeSelectionStepStatus = ModeSelectionStepStatus,
                 EditStepStatus = EditStepStatus,
-                ExportStepStatus = ExportStepStatus
+                ExportStepStatus = ExportStepStatus,
+                CurrentMode = CurrentMode
             };
 
             _progressService.SaveProgress(sessionState);
@@ -1409,8 +1411,10 @@ public partial class MainWindowViewModel : ViewModelBase
             CurrentStep = sessionState.CurrentStep;
             ImportStepStatus = sessionState.ImportStepStatus;
             FileMappingStepStatus = sessionState.FileMappingStepStatus;
+            ModeSelectionStepStatus = sessionState.ModeSelectionStepStatus;
             EditStepStatus = sessionState.EditStepStatus;
             ExportStepStatus = sessionState.ExportStepStatus;
+            CurrentMode = sessionState.CurrentMode;
 
             // Regenerate file pairs if we're on the FileMapping step
             if (CurrentStep == WorkflowStep.FileMapping || FileMappingStepStatus != StepStatus.NotStarted)
