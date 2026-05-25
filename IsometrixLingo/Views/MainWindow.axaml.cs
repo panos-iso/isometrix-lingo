@@ -273,7 +273,7 @@ public partial class MainWindow : Window
                     HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                     VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center
                 };
-                
+
                 if (data is TranslationKey key)
                 {
                     // Bind IsEnabled to IsModified AND NOT ShowOriginalValues
@@ -287,7 +287,7 @@ public partial class MainWindow : Window
                         }
                     };
                     toggleButton.Bind(Button.IsEnabledProperty, enabledBinding);
-                    
+
                     // Bind tooltip to ShowOriginalForThisRow for context-aware text
                     var tooltipBinding = new Binding("ShowOriginalForThisRow")
                     {
@@ -295,7 +295,7 @@ public partial class MainWindow : Window
                         Converter = ShowOriginalTooltipConverter
                     };
                     toggleButton.Bind(ToolTip.TipProperty, tooltipBinding);
-                    
+
                     // Bind Command to toggle ShowOriginalForThisRow
                     toggleButton.Click += (s, e) =>
                     {

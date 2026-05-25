@@ -17,6 +17,7 @@ public class TranslationStore
     private static readonly List<string> _supportedLanguages = new() { "en", "es" };
     private List<SourceFile>? _currentFileFilter = null;
     private string _currentSearchTerm = string.Empty;
+    private bool _showOnlyMissingTranslations = false;
     private bool _hasUnsavedChanges = false;
 
     public ObservableCollection<TranslationKey> FilteredKeys => _filteredKeys;
@@ -92,6 +93,12 @@ public class TranslationStore
         ApplyFilters();
     }
 
+    public void FilterByMissingTranslations(bool showOnlyMissing)
+    {
+        _showOnlyMissingTranslations = showOnlyMissing;
+        ApplyFilters();
+    }
+
     private void ApplyFilters()
     {
         _filteredKeys.Clear();
@@ -117,6 +124,12 @@ public class TranslationStore
                 k.Key.ToLowerInvariant().Contains(term) ||
                 k.LanguageValues.Any(lv => lv.Value.ToLowerInvariant().Contains(term))
             );
+        }
+
+        // Apply missing translations filter if enabled
+        if (_showOnlyMissingTranslations)
+        {
+            keysToShow = keysToShow.Where(k => k.HasMissingTranslations);
         }
 
         foreach (var key in keysToShow)
@@ -147,10 +160,10 @@ public class TranslationStore
             // Store original value if this is the first edit for this language
             if (!translationKey.OriginalValues.ContainsKey(language))
             {
-                var original = translationKey.LanguageValues.TryGetValue(language, out var originalValue) 
-                    ? originalValue 
+                var original = translationKey.LanguageValues.TryGetValue(language, out var originalValue)
+                    ? originalValue
                     : string.Empty;
-                
+
                 // Create new dictionary to trigger property change
                 var newOriginals = new Dictionary<string, string>(translationKey.OriginalValues)
                 {
@@ -165,11 +178,11 @@ public class TranslationStore
                 [language] = newValue
             };
             translationKey.LanguageValues = newValues;
-            
+
             // Check if value actually changed from original
             var originalStoredValue = translationKey.OriginalValues[language];
             var newModified = new HashSet<string>(translationKey.ModifiedLanguages);
-            
+
             if (newValue != originalStoredValue)
             {
                 newModified.Add(language);
@@ -181,8 +194,9 @@ public class TranslationStore
                 newModified.Remove(language);
                 translationKey.IsModified = newModified.Count > 0;
             }
-            
+
             translationKey.ModifiedLanguages = newModified;
+            translationKey.UpdateMissingTranslationsStatus();
 
             SetUnsavedChanges(true);
         }
@@ -207,6 +221,7 @@ public class TranslationStore
     public void AddKey(TranslationKey key)
     {
         _allKeys.Add(key);
+        key.UpdateMissingTranslationsStatus();
 
         // Add source file if not already tracked
         if (!_sourceFiles.Any(sf => sf.Name == key.Source.Name && sf.Type == key.Source.Type))

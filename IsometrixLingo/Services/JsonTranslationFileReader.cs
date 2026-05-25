@@ -101,6 +101,7 @@ public class JsonTranslationFileReader
                     translationKey.LanguageValues[language] = string.Empty;
                 }
             }
+            translationKey.UpdateMissingTranslationsStatus();
         }
 
         return consolidatedKeys.Values.ToList();

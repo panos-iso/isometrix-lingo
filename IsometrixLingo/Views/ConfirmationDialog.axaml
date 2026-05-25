@@ -1,0 +1,39 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="200"
+        x:Class="IsometrixLingo.Views.ConfirmationDialog"
+        Title="Confirm Export"
+        Width="500" Height="200"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+    
+    <Grid Margin="20" RowDefinitions="*,Auto">
+        <StackPanel Grid.Row="0" Spacing="15" VerticalAlignment="Center">
+            <TextBlock Text="⚠️ Missing Translations Detected"
+                       FontSize="18"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"/>
+            <TextBlock x:Name="MessageText"
+                       TextWrapping="Wrap"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"/>
+        </StackPanel>
+        
+        <StackPanel Grid.Row="1" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Center" 
+                    Spacing="15"
+                    Margin="0,20,0,0">
+            <Button Content="Stay and Add Missing Terms"
+                    Click="OnStayClicked"
+                    Padding="15,8"
+                    MinWidth="180"/>
+            <Button Content="Continue Anyway"
+                    Click="OnContinueClicked"
+                    Padding="15,8"
+                    MinWidth="130"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -81,6 +81,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _showOriginalValues;
 
     [ObservableProperty]
+    private bool _showOnlyMissingTranslations;
+
+    [ObservableProperty]
     private bool _showFilters = true;
 
     public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
@@ -469,6 +472,7 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedSourceFile = null;
         SearchText = string.Empty;
         ShowOriginalValues = false;
+        ShowOnlyMissingTranslations = false;
         _translationStore.FilterBySourceFiles(null!);
         _translationStore.FilterBySearchTerm(string.Empty);
         UpdateStatusMessage();
@@ -483,6 +487,12 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnSearchTextChanged(string value)
     {
         _translationStore.FilterBySearchTerm(value);
+        UpdateStatusMessage();
+    }
+
+    partial void OnShowOnlyMissingTranslationsChanged(bool value)
+    {
+        _translationStore.FilterByMissingTranslations(value);
         UpdateStatusMessage();
     }
 
@@ -783,10 +793,31 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void CompleteEdit()
+    private async Task CompleteEdit(Window window)
     {
         try
         {
+            // Check for missing translations
+            var keysWithMissingTranslations = _translationStore.GetAllKeys()
+                .Where(k => k.HasMissingTranslations)
+                .ToList();
+
+            if (keysWithMissingTranslations.Count > 0)
+            {
+                var message = $"There are {keysWithMissingTranslations.Count} translation key(s) with missing terms.\n\n" +
+                              "Do you want to stay and add the missing translations, or continue to export anyway?";
+
+                var dialog = new ConfirmationDialog(message);
+                var continueToExport = await dialog.ShowDialog<bool>(window);
+
+                if (!continueToExport)
+                {
+                    // User chose to stay and add missing terms
+                    StatusMessage = "Add missing translations before exporting.";
+                    return;
+                }
+            }
+
             EditStepStatus = StepStatus.Completed;
             ExportStepStatus = StepStatus.InProgress;
             CurrentStep = WorkflowStep.Export;

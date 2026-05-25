@@ -117,6 +117,11 @@ public class ResxTranslationFileReader
             }
         }
 
+        foreach (var key in consolidatedKeys.Values)
+        {
+            key.UpdateMissingTranslationsStatus();
+        }
+
         return consolidatedKeys.Values.OrderBy(k => k.Key).ToList();
     }
 
