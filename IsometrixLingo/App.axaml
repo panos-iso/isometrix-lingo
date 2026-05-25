@@ -14,6 +14,8 @@
         <converters:EditModeColorConverter x:Key="EditModeColorConverter"/>
         <converters:EditModeTextConverter x:Key="EditModeTextConverter"/>
         <converters:EditModeTooltipConverter x:Key="EditModeTooltipConverter"/>
+        <converters:HasSuggestionConverter x:Key="HasSuggestionConverter"/>
+        <converters:SuggestionTextConverter x:Key="SuggestionTextConverter"/>
     </Application.Resources>
   
     <Application.Styles>

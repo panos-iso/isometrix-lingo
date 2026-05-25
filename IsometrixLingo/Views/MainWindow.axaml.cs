@@ -163,10 +163,44 @@ public partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel viewModel)
             return;
 
-        // Remove existing language columns and Actions (keep Key and Source File)
-        while (TranslationsGrid.Columns.Count > 2)
+        // Remove existing columns after Key, Source File, and Indicator (keep first 3)
+        while (TranslationsGrid.Columns.Count > 3)
         {
-            TranslationsGrid.Columns.RemoveAt(2);
+            TranslationsGrid.Columns.RemoveAt(3);
+        }
+
+        // Add indicator column if not present (at index 2, after Key and Source File)
+        if (TranslationsGrid.Columns.Count == 2)
+        {
+            var indicatorColumn = new DataGridTemplateColumn
+            {
+                Header = "",
+                Width = DataGridLength.Auto,
+                MinWidth = 30,
+                CellTemplate = new FuncDataTemplate<object>((data, _) =>
+                {
+                    var textBlock = new TextBlock
+                    {
+                        Text = "💡",
+                        FontSize = 16,
+                        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                        Margin = new Avalonia.Thickness(5, 0)
+                    };
+
+                    if (data is TranslationKey key)
+                    {
+                        var binding = new Binding("HasAnySuggestions")
+                        {
+                            Source = key
+                        };
+                        textBlock.Bind(TextBlock.IsVisibleProperty, binding);
+                    }
+
+                    return textBlock;
+                })
+            };
+            TranslationsGrid.Columns.Insert(2, indicatorColumn);
         }
 
         // Add a column for each language
@@ -178,22 +212,23 @@ public partial class MainWindow : Window
                 Header = languageName,
                 Width = new DataGridLength(1, DataGridLengthUnitType.Star),
                 MinWidth = 120,
-                CellTemplate = new FuncDataTemplate<object>((_, _) =>
+                CellTemplate = new FuncDataTemplate<object>((data, _) =>
                 {
                     // Create a border to apply background color and left border for highlighting
                     var border = new Border
                     {
-                        Padding = new Avalonia.Thickness(5, 2),
+                        Padding = new Avalonia.Thickness(5, 4),
                         BorderThickness = new Avalonia.Thickness(3, 0, 0, 0) // Left border
                     };
 
-                    // Bind background to highlight modified cells
+                    // Bind background to highlight modified cells and cells with suggestions
                     var backgroundBinding = new MultiBinding
                     {
                         Converter = ModifiedBackgroundConverter,
                         Bindings =
                         {
                             new Binding("ModifiedLanguages"), // HashSet that changes
+                            new Binding("."), // The TranslationKey itself for suggestion check
                             new Binding(language) // Just a constant for the language parameter
                         },
                         ConverterParameter = language
@@ -213,7 +248,15 @@ public partial class MainWindow : Window
                     };
                     border.Bind(Border.BorderBrushProperty, borderBinding);
 
-                    var textBlock = new TextBlock
+                    // Create a StackPanel to hold actual value and suggestion
+                    var stackPanel = new StackPanel
+                    {
+                        Orientation = Avalonia.Layout.Orientation.Vertical,
+                        Spacing = 2
+                    };
+
+                    // Actual value TextBlock
+                    var actualValueTextBlock = new TextBlock
                     {
                         TextWrapping = Avalonia.Media.TextWrapping.NoWrap,
                         TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
@@ -234,9 +277,50 @@ public partial class MainWindow : Window
                         ConverterParameter = language,
                         Mode = BindingMode.OneWay
                     };
-                    textBlock.Bind(TextBlock.TextProperty, textBinding);
+                    actualValueTextBlock.Bind(TextBlock.TextProperty, textBinding);
 
-                    border.Child = textBlock;
+                    stackPanel.Children.Add(actualValueTextBlock);
+
+                    // Suggestion TextBlock (only visible if there's a suggestion)
+                    if (data is TranslationKey key)
+                    {
+                        var suggestionTextBlock = new TextBlock
+                        {
+                            FontSize = 11,
+                            Foreground = new SolidColorBrush(Color.FromArgb(180, 120, 120, 120)), // Gray with transparency
+                            TextWrapping = Avalonia.Media.TextWrapping.NoWrap,
+                            TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
+                            Margin = new Avalonia.Thickness(0, 0, 0, 0)
+                        };
+
+                        // Bind suggestion text
+                        var suggestionTextBinding = new MultiBinding
+                        {
+                            Converter = new SuggestionTextConverter(),
+                            Bindings =
+                            {
+                                new Binding(".") { Source = key }
+                            },
+                            ConverterParameter = language
+                        };
+                        suggestionTextBlock.Bind(TextBlock.TextProperty, suggestionTextBinding);
+
+                        // Bind visibility - only show if there's a suggestion
+                        var suggestionVisibilityBinding = new MultiBinding
+                        {
+                            Converter = new HasSuggestionConverter(),
+                            Bindings =
+                            {
+                                new Binding(".") { Source = key }
+                            },
+                            ConverterParameter = language
+                        };
+                        suggestionTextBlock.Bind(TextBlock.IsVisibleProperty, suggestionVisibilityBinding);
+
+                        stackPanel.Children.Add(suggestionTextBlock);
+                    }
+
+                    border.Child = stackPanel;
                     return border;
                 })
             };
