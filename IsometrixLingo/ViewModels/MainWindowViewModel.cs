@@ -326,38 +326,16 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        // Group by base file name and type
-        var grouped = translationFiles
-            .GroupBy(tf => (Path.GetFileNameWithoutExtension(tf.FilePath.Replace("_en", "").Replace("_es", "")), tf.FileType));
+        // Group files by base name and file type, then consolidate
+        var groupedFiles = translationFiles
+            .GroupBy(tf => (ExtractBaseFileName(tf.FilePath, tf.FileType), tf.FileType))
+            .ToList();
 
-        foreach (var group in grouped)
+        foreach (var group in groupedFiles)
         {
-            // Consolidate all keys from the same source file across languages
-            var consolidated = new List<TranslationKey>();
-            var allKeys = group.SelectMany(tf => tf.Keys.Select(k => k.Key)).Distinct();
-
-            foreach (var keyName in allKeys)
-            {
-                var translationKey = new TranslationKey
-                {
-                    Key = keyName,
-                    Source = new SourceFile(group.Key.Item1, group.Key.FileType)
-                };
-
-                foreach (var tf in group)
-                {
-                    var matchingKey = tf.Keys.FirstOrDefault(k => k.Key == keyName);
-                    if (matchingKey != null)
-                    {
-                        foreach (var langValue in matchingKey.LanguageValues)
-                        {
-                            translationKey.LanguageValues[langValue.Key] = langValue.Value;
-                        }
-                    }
-                }
-
-                consolidated.Add(translationKey);
-            }
+            var consolidated = group.Key.FileType == FileType.Json
+                ? _jsonReader.ConsolidateKeys(group.ToList())
+                : _resxReader.ConsolidateKeys(group.ToList());
 
             _translationStore.AddTranslations(consolidated);
 
