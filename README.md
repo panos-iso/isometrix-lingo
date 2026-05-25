@@ -32,14 +32,23 @@ Download the latest release for your platform:
 
 **macOS:**
 
-```bash
-tar -xzf TranslationTool-macOS-arm64.tar.gz
-./isometrix-lingo
-```
+1. Extract the downloaded tar.gz file:
+   ```bash
+   tar -xzf isometrix-lingo-v*-macos-arm64.tar
+   ```
+
+2. Remove quarantine attribute (required for unsigned apps):
+   ```bash
+   xattr -d com.apple.quarantine IsometrixLingo.app
+   ```
+
+3. Double-click `IsometrixLingo.app` to launch
+
+> **Note**: The quarantine removal is needed because the app is not code-signed. This is a one-time step after downloading.
 
 **Windows:**
 
-1. Extract `TranslationTool-Windows-x64.zip`
+1. Extract `isometrix-lingo-v*-windows-x64.zip`
 2. Run `isometrix-lingo.exe`
 
 No .NET runtime installation required - fully self-contained!
