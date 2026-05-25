@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using IsometrixLingo.Models;
 
 namespace IsometrixLingo.Services;
@@ -58,15 +59,15 @@ public class JsonTranslationFileWriter
 
     private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, string? template)
     {
-        Dictionary<string, object> jsonObject;
+        JsonObject jsonObject;
 
         if (!string.IsNullOrEmpty(template))
         {
             // Parse the template to preserve structure and order
             try
             {
-                jsonObject = JsonSerializer.Deserialize<Dictionary<string, object>>(template, _options)
-                    ?? new Dictionary<string, object>();
+                var parsedNode = JsonNode.Parse(template);
+                jsonObject = parsedNode as JsonObject ?? new JsonObject();
 
                 // Update existing values and track processed keys
                 var processedKeys = new HashSet<string>();
@@ -94,7 +95,7 @@ public class JsonTranslationFileWriter
             catch (JsonException)
             {
                 // If template parsing fails, fall back to creating from scratch
-                jsonObject = new Dictionary<string, object>();
+                jsonObject = new JsonObject();
                 foreach (var key in keys)
                 {
                     if (key.LanguageValues.TryGetValue(language, out var value))
@@ -107,7 +108,7 @@ public class JsonTranslationFileWriter
         else
         {
             // No template - create from scratch
-            jsonObject = new Dictionary<string, object>();
+            jsonObject = new JsonObject();
             foreach (var key in keys)
             {
                 if (key.LanguageValues.TryGetValue(language, out var value))
@@ -117,17 +118,17 @@ public class JsonTranslationFileWriter
             }
         }
 
-        var json = JsonSerializer.Serialize(jsonObject, _options);
+        var json = jsonObject.ToJsonString(_options);
         File.WriteAllText(filePath, json);
     }
 
     /// <summary>
     /// Update a value in an existing nested structure, returns true if key was found and updated
     /// </summary>
-    private bool UpdateNestedValue(Dictionary<string, object> root, string key, string value)
+    private bool UpdateNestedValue(JsonObject root, string key, string value)
     {
         var parts = key.Split('.');
-        var current = root;
+        JsonObject current = root;
 
         // Navigate to the parent of the target key
         for (int i = 0; i < parts.Length - 1; i++)
@@ -139,17 +140,9 @@ public class JsonTranslationFileWriter
                 return false; // Path doesn't exist in template
             }
 
-            if (current[part] is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Object)
+            if (current[part] is JsonObject jsonObj)
             {
-                // Convert JsonElement to Dictionary for modification
-                var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonElement.GetRawText(), _options)
-                    ?? new Dictionary<string, object>();
-                current[part] = dict;
-                current = dict;
-            }
-            else if (current[part] is Dictionary<string, object> dict)
-            {
-                current = dict;
+                current = jsonObj;
             }
             else
             {
@@ -160,17 +153,17 @@ public class JsonTranslationFileWriter
         var finalKey = parts[^1];
         if (current.ContainsKey(finalKey))
         {
-            current[finalKey] = value;
+            current[finalKey] = JsonValue.Create(value);
             return true;
         }
 
         return false;
     }
 
-    private void SetNestedValue(Dictionary<string, object> root, string key, string value)
+    private void SetNestedValue(JsonObject root, string key, string value)
     {
         var parts = key.Split('.');
-        var current = root;
+        JsonObject current = root;
 
         for (int i = 0; i < parts.Length - 1; i++)
         {
@@ -178,12 +171,12 @@ public class JsonTranslationFileWriter
 
             if (!current.ContainsKey(part))
             {
-                current[part] = new Dictionary<string, object>();
+                current[part] = new JsonObject();
             }
 
-            if (current[part] is Dictionary<string, object> dict)
+            if (current[part] is JsonObject jsonObj)
             {
-                current = dict;
+                current = jsonObj;
             }
             else
             {
@@ -192,6 +185,6 @@ public class JsonTranslationFileWriter
             }
         }
 
-        current[parts[^1]] = value;
+        current[parts[^1]] = JsonValue.Create(value);
     }
 }
