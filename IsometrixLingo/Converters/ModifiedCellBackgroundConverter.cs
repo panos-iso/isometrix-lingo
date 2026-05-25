@@ -22,11 +22,11 @@ public class ModifiedCellBackgroundConverter : IMultiValueConverter
         var modifiedLanguages = values[0] as HashSet<string>;
 
         // Highlight if this language was modified
-        // Using subtle orange/amber background with strong left border (like VS Code git changes)
+        // Using vibrant yellow background to clearly distinguish from red (missing translations)
         // Works well in both light and dark modes
         if (modifiedLanguages?.Contains(language) == true)
         {
-            return new SolidColorBrush(Color.FromArgb(60, 255, 152, 0)); // Subtle orange background
+            return new SolidColorBrush(Color.FromArgb(85, 255, 235, 59)); // Vibrant yellow background
         }
 
         return Brushes.Transparent;

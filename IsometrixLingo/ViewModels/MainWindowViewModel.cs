@@ -476,9 +476,6 @@ public partial class MainWindowViewModel : ViewModelBase
             UpdateFileFilters();
             StatusMessage = $"Added new key '{newKey.Key}' to {newKey.Source.Name}.";
             LanguagesChanged?.Invoke(this, EventArgs.Empty);
-
-            // Auto-save after adding key
-            SaveProgress();
         }
     }
 
@@ -1167,6 +1164,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
             ExportStepStatus = StepStatus.Completed;
             StatusMessage = $"Exported {allKeys.Count} translation key(s) to {zipFilePath}";
+
+            // Auto-save completion of all steps
+            SaveProgress();
 
             // Store output folder and filename for dialog
             _lastExportFolder = outputPath;

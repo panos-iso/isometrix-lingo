@@ -37,7 +37,7 @@ public class UserSettingsService
         try
         {
             var json = File.ReadAllText(_settingsFilePath);
-            var settings = JsonSerializer.Deserialize<UserSettings>(json);
+            var settings = JsonSerializer.Deserialize(json, AppJsonSerializerContext.Default.UserSettings);
             if (settings != null)
             {
                 settings.SettingsFilePath = _settingsFilePath;
@@ -52,7 +52,7 @@ public class UserSettingsService
 
     public void Save(UserSettings settings)
     {
-        var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(settings, AppJsonSerializerContext.Default.UserSettings);
         File.WriteAllText(_settingsFilePath, json);
     }
 

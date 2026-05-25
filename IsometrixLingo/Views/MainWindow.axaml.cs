@@ -147,9 +147,6 @@ public partial class MainWindow : Window
 
         if (result)
         {
-            // Refresh UI to show updated values
-            mainViewModel.TranslationStore.RefreshUI();
-
             // Update status message to show modified count
             var modifiedCount = mainViewModel.TranslationStore.GetModifiedKeys().Count;
 
@@ -158,9 +155,6 @@ public partial class MainWindow : Window
                 var currentStatus = mainViewModel.StatusMessage.Split('.')[0];
                 mainViewModel.StatusMessage = $"{currentStatus}. {modifiedCount} key(s) modified.";
             }
-
-            // Auto-save after editing
-            mainViewModel.SaveProgressCommand.Execute(null);
         }
     }
 
