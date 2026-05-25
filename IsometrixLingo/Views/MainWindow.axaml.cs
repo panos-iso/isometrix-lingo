@@ -203,6 +203,7 @@ public partial class MainWindow : Window
                         {
                             new Binding("ModifiedLanguages"), // HashSet that changes
                             new Binding("."), // The TranslationKey itself for suggestion check
+                            new Binding("SuggestedValues"), // Explicit binding to trigger refresh when suggestions change
                             new Binding(language) // Just a constant for the language parameter
                         },
                         ConverterParameter = language
@@ -217,6 +218,7 @@ public partial class MainWindow : Window
                         {
                             new Binding("ModifiedLanguages"),
                             new Binding("."), // The TranslationKey itself for suggestion check
+                            new Binding("SuggestedValues"), // Explicit binding to trigger refresh when suggestions change
                             new Binding(language)
                         },
                         ConverterParameter = language
@@ -279,7 +281,8 @@ public partial class MainWindow : Window
                             Converter = new SuggestionTextConverter(),
                             Bindings =
                             {
-                                new Binding(".") { Source = key }
+                                new Binding(".") { Source = key },
+                                new Binding("SuggestedValues") { Source = key } // Explicit binding to trigger refresh
                             },
                             ConverterParameter = language
                         };
@@ -291,7 +294,8 @@ public partial class MainWindow : Window
                             Converter = new HasSuggestionConverter(),
                             Bindings =
                             {
-                                new Binding(".") { Source = key }
+                                new Binding(".") { Source = key },
+                                new Binding("SuggestedValues") { Source = key } // Explicit binding to trigger refresh
                             },
                             ConverterParameter = language
                         };
