@@ -17,6 +17,7 @@
         <converters:SourceFileDisplayConverter x:Key="SourceFileDisplayConverter"/>
         <converters:ShowFiltersTextConverter x:Key="ShowFiltersTextConverter"/>
         <converters:ShowOriginalTooltipConverter x:Key="ShowOriginalTooltipConverter"/>
+        <converters:RowToggleEnabledConverter x:Key="RowToggleEnabledConverter"/>
     </Window.Resources>
     
     <Window.Styles>
@@ -306,14 +307,25 @@
                     <!-- Filters Row (collapsible) -->
                     <StackPanel Grid.Row="1" 
                                 Orientation="Horizontal" 
+                                HorizontalAlignment="Right"
                                 Spacing="10"
                                 Margin="0,0,0,15"
                                 IsVisible="{Binding ShowFilters}">
-                        <TextBlock Text="Filter by file:" 
-                                   VerticalAlignment="Center" 
-                                   FontWeight="SemiBold"/>
+                        <Button Content="Reset Filters"
+                                Command="{Binding ResetFiltersCommand}"
+                                Padding="10,5"/>
+                        <CheckBox Content="Show Original Values"
+                                  IsChecked="{Binding ShowOriginalValues}"
+                                  VerticalAlignment="Center"
+                                  ToolTip.Tip="Toggle between current and original values to see what changed"/>
+                        <TextBox Text="{Binding SearchText}"
+                                 PlaceholderText="Search keys and values..."
+                                 MinWidth="200"
+                                 Width="200"
+                                 VerticalAlignment="Center"/>
                         <ComboBox ItemsSource="{Binding AvailableSourceFiles}"
                                   SelectedItem="{Binding SelectedSourceFile}"
+                                  MinWidth="250"
                                   Width="250">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
@@ -321,19 +333,6 @@
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                        <TextBlock Text="Search:" VerticalAlignment="Center" Margin="20,0,5,0"/>
-                        <TextBox Text="{Binding SearchText}"
-                                 PlaceholderText="Search keys and values..."
-                                 MinWidth="200"
-                                 VerticalAlignment="Center"/>
-                        <Button Content="Reset Filters"
-                                Command="{Binding ResetFiltersCommand}"
-                                Padding="10,5"/>
-                        <CheckBox Content="Show Original Values"
-                                  IsChecked="{Binding ShowOriginalValues}"
-                                  VerticalAlignment="Center"
-                                  Margin="20,0,0,0"
-                                  ToolTip.Tip="Toggle between current and original values to see what changed"/>
                     </StackPanel>
 
                     <!-- DataGrid with constrained height -->

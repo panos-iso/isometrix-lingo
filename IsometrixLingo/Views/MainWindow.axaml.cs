@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private static readonly ModifiedCellBackgroundConverter ModifiedBackgroundConverter = new();
     private static readonly ModifiedCellBorderConverter ModifiedBorderConverter = new();
     private static readonly ShowOriginalTooltipConverter ShowOriginalTooltipConverter = new();
+    private static readonly RowToggleEnabledConverter RowToggleEnabledConverter = new();
 
     public MainWindow()
     {
@@ -275,8 +276,17 @@ public partial class MainWindow : Window
                 
                 if (data is TranslationKey key)
                 {
-                    // Bind IsEnabled to IsModified
-                    toggleButton.Bind(Button.IsEnabledProperty, new Binding("IsModified") { Source = key });
+                    // Bind IsEnabled to IsModified AND NOT ShowOriginalValues
+                    var enabledBinding = new MultiBinding
+                    {
+                        Converter = RowToggleEnabledConverter,
+                        Bindings =
+                        {
+                            new Binding("IsModified") { Source = key },
+                            new Binding("ShowOriginalValues") { Source = viewModel }
+                        }
+                    };
+                    toggleButton.Bind(Button.IsEnabledProperty, enabledBinding);
                     
                     // Bind tooltip to ShowOriginalForThisRow for context-aware text
                     var tooltipBinding = new Binding("ShowOriginalForThisRow")

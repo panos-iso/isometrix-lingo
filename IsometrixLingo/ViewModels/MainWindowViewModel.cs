@@ -488,10 +488,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnShowOriginalValuesChanged(bool value)
     {
-        // Reset all per-row toggles when global toggle changes
+        // Set all per-row toggles to match the global toggle
         foreach (var key in _translationStore.GetAllKeys())
         {
-            key.ShowOriginalForThisRow = false;
+            key.ShowOriginalForThisRow = value;
         }
     }
 
