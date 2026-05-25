@@ -231,12 +231,13 @@ public partial class MainWindow : Window
                         Converter = TranslationConverter,
                         Bindings =
                         {
-                            new Binding("LanguageValues"), // Dictionary that changes
-                            new Binding("OriginalValues"), // Original values
-                            new Binding("ShowOriginalValues") { Source = viewModel }, // Global toggle from ViewModel
-                            new Binding("ShowOriginalForThisRow") // Per-row toggle
+                            new Binding("LanguageValues") { Mode = BindingMode.OneWay }, // Dictionary that changes
+                            new Binding("OriginalValues") { Mode = BindingMode.OneWay }, // Original values
+                            new Binding("ShowOriginalValues") { Source = viewModel, Mode = BindingMode.OneWay }, // Global toggle from ViewModel
+                            new Binding("ShowOriginalForThisRow") { Mode = BindingMode.OneWay } // Per-row toggle
                         },
-                        ConverterParameter = language
+                        ConverterParameter = language,
+                        Mode = BindingMode.OneWay
                     };
                     textBlock.Bind(TextBlock.TextProperty, textBinding);
 
