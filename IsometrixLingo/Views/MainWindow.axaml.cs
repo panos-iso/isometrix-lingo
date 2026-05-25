@@ -357,7 +357,8 @@ public partial class MainWindow : Window
                             Bindings =
                             {
                                 new Binding("CurrentMode") { Source = viewModel },
-                                new Binding(".") { Source = key }
+                                new Binding(".") { Source = key },
+                                new Binding("SuggestedValues") { Source = key } // Explicit binding to trigger refresh
                             },
                             ConverterParameter = language
                         };
