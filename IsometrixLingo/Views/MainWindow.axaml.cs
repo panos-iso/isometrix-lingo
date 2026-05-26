@@ -399,7 +399,7 @@ public partial class MainWindow : Window
 
                 if (data is TranslationKey key)
                 {
-                    textBlock.Bind(TextBlock.TextProperty, new Binding("ConfirmedBy.DisplayText") { Source = key });
+                    textBlock.Bind(TextBlock.TextProperty, new Binding("ConfirmationDisplayText") { Source = key });
                     
                     // Grey out confirmation text if key is modified
                     var foregroundBinding = new Binding("IsModified")

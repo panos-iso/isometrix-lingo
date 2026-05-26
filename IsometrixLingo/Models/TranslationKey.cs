@@ -36,6 +36,20 @@ public partial class TranslationKey : ObservableObject
 
     [ObservableProperty]
     private Confirmation? _confirmedBy;
+    
+    /// <summary>
+    /// Called when ConfirmedBy changes - notify UI that display text also changed
+    /// </summary>
+    partial void OnConfirmedByChanged(Confirmation? value)
+    {
+        OnPropertyChanged(nameof(ConfirmationDisplayText));
+        OnPropertyChanged(nameof(IsConfirmed));
+    }
+
+    /// <summary>
+    /// Get display text for confirmation, or empty string if not confirmed
+    /// </summary>
+    public string ConfirmationDisplayText => ConfirmedBy?.DisplayText ?? string.Empty;
 
     /// <summary>
     /// Check if a specific language value has been modified
