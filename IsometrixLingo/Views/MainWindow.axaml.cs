@@ -9,6 +9,8 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using Avalonia.Styling;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using IsometrixLingo.Converters;
 using IsometrixLingo.Helpers;
 using IsometrixLingo.Models;
@@ -271,10 +273,13 @@ public partial class MainWindow : Window
                         {
                             FontSize = 12,
                             FontWeight = FontWeight.Bold,
-                            Foreground = new SolidColorBrush(Color.Parse("#4A148C")), // Dark purple for better contrast
                             TextWrapping = Avalonia.Media.TextWrapping.Wrap,
                             Margin = new Avalonia.Thickness(0, 2, 0, 0)
                         };
+                        
+                        // Theme-aware color via dynamic resource
+                        suggestionTextBlock.Bind(TextBlock.ForegroundProperty, 
+                            new DynamicResourceExtension("SuggestionTextBrush"));
 
                         // Bind suggestion text
                         var suggestionTextBinding = new MultiBinding

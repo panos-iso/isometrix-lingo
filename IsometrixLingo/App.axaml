@@ -31,6 +31,18 @@
         <FluentTheme />
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
         
+        <!-- Theme-aware suggestion text color -->
+        <Style Selector=":is(Control)">
+            <Style.Resources>
+                <SolidColorBrush x:Key="SuggestionTextBrush">#4A148C</SolidColorBrush>
+            </Style.Resources>
+        </Style>
+        <Style Selector=":is(Control):dark">
+            <Style.Resources>
+                <SolidColorBrush x:Key="SuggestionTextBrush">White</SolidColorBrush>
+            </Style.Resources>
+        </Style>
+        
         <!-- Custom charcoal background for dark mode only -->
         <Style Selector="Window:dark">
             <Setter Property="Background" Value="#1E1E1E"/>
