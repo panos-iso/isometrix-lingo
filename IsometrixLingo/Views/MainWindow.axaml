@@ -11,7 +11,9 @@
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/lingo-icon.png"
         Title="Isometrix Lingo"
-        Width="1000" Height="650">
+        Width="1000" Height="650"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="40">
 
     <Window.Resources>
         <converters:SourceFileConverter x:Key="SourceFileConverter"/>
@@ -86,22 +88,54 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <DockPanel>
-        <!-- User Profile (top-right corner) -->
-        <Button DockPanel.Dock="Top"
-                HorizontalAlignment="Right" 
-                Content="👤" 
-                Command="{Binding ShowProfileCommand}"
-                CommandParameter="{Binding $parent[Window]}"
-                FontSize="16"
-                Padding="8,4"
-                Margin="10,10,10,0">
-            <ToolTip.Tip>
-                <TextBlock>
-                    <Run Text="View profile"/>
-                </TextBlock>
-            </ToolTip.Tip>
-        </Button>
+    <Panel>
+        <!-- Custom Title Bar -->
+        <Grid Height="40" VerticalAlignment="Top" ColumnDefinitions="70,Auto,*,Auto,Auto" IsHitTestVisible="False">
+            <!-- Spacer for native window controls (macOS left side) -->
+            <Border Grid.Column="0"/>
+            
+            <!-- App Title and Version (Top Left) -->
+            <TextBlock Grid.Column="1"
+                       Text="Isometrix Lingo v3.3.0"
+                       FontSize="13"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"
+                       Margin="5,2,0,0"/>
+            
+            <!-- Center spacer -->
+            <Border Grid.Column="2"/>
+            
+            <!-- User Greeting -->
+            <TextBlock Grid.Column="3"
+                       FontSize="13"
+                       VerticalAlignment="Center"
+                       Margin="0,0,10,0"
+                       IsHitTestVisible="False">
+                <Run Text="Hello, "/>
+                <Run Text="{Binding Username}"/>
+                <Run Text=" 👋"/>
+            </TextBlock>
+            
+            <!-- User Profile Button -->
+            <Button Grid.Column="4"
+                    Content="👤" 
+                    Command="{Binding ShowProfileCommand}"
+                    CommandParameter="{Binding $parent[Window]}"
+                    FontSize="14"
+                    Padding="6,2"
+                    Margin="0,0,10,0"
+                    VerticalAlignment="Center"
+                    IsHitTestVisible="True">
+                <ToolTip.Tip>
+                    <TextBlock>
+                        <Run Text="View profile"/>
+                    </TextBlock>
+                </ToolTip.Tip>
+            </Button>
+        </Grid>
+        
+        <!-- Main Content -->
+        <DockPanel Margin="0,40,0,0">
 
         <!-- Workflow Steps Progress Bar -->
         <views:WorkflowStepsControl DockPanel.Dock="Top" DataContext="{Binding}"/>
@@ -816,6 +850,7 @@
                 </Border>
             </DockPanel>
         </Grid>
-    </DockPanel>
+        </DockPanel>
+    </Panel>
 
 </Window>
