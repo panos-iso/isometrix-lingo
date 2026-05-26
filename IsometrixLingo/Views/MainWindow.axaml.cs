@@ -382,39 +382,13 @@ public partial class MainWindow : Window
         }
 
         // Add Last Confirmed column before Actions
-        var confirmedColumn = new DataGridTemplateColumn
+        var confirmedColumn = new DataGridTextColumn
         {
             Header = "Last Confirmed",
             Width = new DataGridLength(1.2, DataGridLengthUnitType.Star),
             MinWidth = 180,
             MaxWidth = 250,
-            CellTemplate = new FuncDataTemplate<object>((data, _) =>
-            {
-                var textBlock = new TextBlock
-                {
-                    TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-                    Padding = new Avalonia.Thickness(5, 4),
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-                };
-
-                if (data is TranslationKey key)
-                {
-                    // DEBUG: Show if ConfirmedBy is null or has value
-                    var debugText = key.ConfirmedBy == null 
-                        ? $"[Key:{key.Key} - NO CONFIRMATION]"
-                        : $"{key.ConfirmationDisplayText}";
-                    
-                    textBlock.Text = debugText;
-                    
-                    // Grey out confirmation text if key is modified
-                    textBlock.Bind(TextBlock.ForegroundProperty, new Binding("IsModified")
-                    {
-                        Converter = new ConfirmationForegroundConverter()
-                    });
-                }
-
-                return textBlock;
-            })
+            Binding = new Binding("ConfirmationDisplayText")
         };
         TranslationsGrid.Columns.Add(confirmedColumn);
 
