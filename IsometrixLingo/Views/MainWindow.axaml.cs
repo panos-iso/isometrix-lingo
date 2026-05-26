@@ -172,10 +172,10 @@ public partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel viewModel)
             return;
 
-        // Remove existing columns after Key, Source File, and Last Confirmed (keep first 3)
-        while (TranslationsGrid.Columns.Count > 3)
+        // Remove existing columns after Key and Source File (keep first 2)
+        while (TranslationsGrid.Columns.Count > 2)
         {
-            TranslationsGrid.Columns.RemoveAt(3);
+            TranslationsGrid.Columns.RemoveAt(2);
         }
 
         // Add a column for each language
@@ -187,6 +187,7 @@ public partial class MainWindow : Window
                 Header = languageName,
                 Width = new DataGridLength(1, DataGridLengthUnitType.Star),
                 MinWidth = 120,
+                MaxWidth = 300,
                 CellTemplate = new FuncDataTemplate<object>((data, _) =>
                 {
                     // Create a border to apply background color and left border for highlighting
@@ -242,8 +243,7 @@ public partial class MainWindow : Window
                     // Actual value TextBlock
                     var actualValueTextBlock = new TextBlock
                     {
-                        TextWrapping = Avalonia.Media.TextWrapping.NoWrap,
-                        TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
+                        TextWrapping = Avalonia.Media.TextWrapping.Wrap,
                         VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
                     };
 
@@ -380,12 +380,39 @@ public partial class MainWindow : Window
             TranslationsGrid.Columns.Add(column);
         }
 
+        // Add Last Confirmed column before Actions
+        var confirmedColumn = new DataGridTemplateColumn
+        {
+            Header = "Last Confirmed",
+            Width = new DataGridLength(1.2, DataGridLengthUnitType.Star),
+            MinWidth = 180,
+            MaxWidth = 250,
+            CellTemplate = new FuncDataTemplate<object>((data, _) =>
+            {
+                var textBlock = new TextBlock
+                {
+                    TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                    Padding = new Avalonia.Thickness(5, 4),
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                };
+
+                if (data is TranslationKey key)
+                {
+                    textBlock.Bind(TextBlock.TextProperty, new Binding("ConfirmedBy.DisplayText") { Source = key });
+                }
+
+                return textBlock;
+            })
+        };
+        TranslationsGrid.Columns.Add(confirmedColumn);
+
         // Add Actions column at the end
         var actionsColumn = new DataGridTemplateColumn
         {
             Header = "Actions",
             Width = DataGridLength.Auto,
             MinWidth = 100,
+            MaxWidth = 120,
             CellTemplate = new FuncDataTemplate<object>((data, _) =>
             {
                 var panel = new StackPanel

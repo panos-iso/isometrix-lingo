@@ -713,18 +713,32 @@
                                 </Style>
                             </DataGrid.Styles>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Key" 
-                                                    Binding="{Binding Key}" 
-                                                    Width="1.5*" 
-                                                    MinWidth="150"/>
-                                <DataGridTextColumn Header="Source File" 
-                                                    Binding="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
-                                                    Width="*" 
-                                                    MinWidth="150"/>
-                                <DataGridTextColumn Header="Last Confirmed" 
-                                                    Binding="{Binding ConfirmedBy.DisplayText}" 
-                                                    Width="1.2*" 
-                                                    MinWidth="180"/>
+                                <DataGridTemplateColumn Header="Key" 
+                                                        Width="1.5*" 
+                                                        MinWidth="150"
+                                                        MaxWidth="300">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Key}" 
+                                                       TextWrapping="Wrap"
+                                                       Padding="5,4"
+                                                       VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Source File" 
+                                                        Width="*" 
+                                                        MinWidth="120"
+                                                        MaxWidth="250">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
+                                                       TextWrapping="Wrap"
+                                                       Padding="5,4"
+                                                       VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Border>
