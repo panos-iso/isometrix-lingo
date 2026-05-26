@@ -6,16 +6,29 @@ Built with **Avalonia UI** and **.NET 10** for macOS and Windows.
 
 ## Features
 
+### Core Translation Management
 - 📂 **Import JSON and RESX files** with automatic language detection
 - 🔍 **Search** across keys and all language values
 - 🎯 **Filter** by source file with dropdown selector
+- 🎯 **Filter unconfirmed translations** - show only keys needing review
 - ✏️ **Edit translations** - double-click rows or use edit icon
 - ➕ **Add new keys** with the "Add Key" button
 - 💾 **Export all translations** preserving original file structure
 - 🌍 **Multi-language support** (English and Spanish)
 - 🔄 **Save/Load progress** - resume your work anytime
 - 📋 **Template preservation** - maintains original file structure and order
+
+### AI-Powered Features
+- 🤖 **Suggest Mode** - Get AI-powered translation suggestions for missing values
+- ✅ **Confirmation Tracking** - Auto-track confirmed translations with username and timestamp during export
+- 👤 **Profile Management** - Set your username for audit trails
+
+### User Interface
 - 🎨 **Theme-aware UI** - adapts to system dark/light mode
+- 📊 **Last Confirmed By** column - see who confirmed translations and when
+- 🎯 **Edit/Suggest Mode Toggle** - switch between editing and getting AI suggestions
+- 💬 **Personalized greeting** - friendly user welcome in title bar
+- 📌 **Version display** - always know which version you're running
 
 ## Download
 
@@ -25,8 +38,8 @@ Download the latest release for your platform:
 
 👉 **[Releases Page](https://github.com/panos-iso/isometrix-lingo/releases)**
 
-- **macOS (Apple Silicon)**: `TranslationTool-macOS-arm64.tar.gz`
-- **Windows (x64)**: `TranslationTool-Windows-x64.zip`
+- **macOS (Apple Silicon)**: `isometrix-lingo-v{version}-macos-arm64.tar.gz`
+- **Windows (x64)**: `isometrix-lingo-v{version}-windows-x64.zip`
 
 ### Installation
 
@@ -61,15 +74,36 @@ Download the latest release for your platform:
 
 ## Usage
 
-1. **Import Files**: Click "Import Files" and select translation files (JSON or RESX)
-2. **View Translations**: Browse all keys with values for each language
-3. **Filter**: Use dropdown to filter by source file
+### Getting Started
+
+1. **Set Your Profile**: Click the profile icon (👤) in the top-right to set your username
+2. **Import Files**: Click "Import Files" and select translation files (JSON or RESX)
+3. **Choose Mode**: Select Edit or Suggest mode based on your workflow
+
+### Working with Translations
+
+**Edit Mode:**
+1. **View Translations**: Browse all keys with values for each language
+2. **Filter by File**: Use dropdown to filter by source file
+3. **Filter Unconfirmed**: Toggle "Only Unconfirmed" to see translations needing review
 4. **Search**: Type to search across keys and all language values
 5. **Edit**: Double-click a row or click the edit icon to modify translations
 6. **Add Key**: Click "Add Key" to create new translation entries
 7. **Export**: Click "Export All" to save changes (default: `output/` directory)
-8. **Save Progress**: Save your work in progress to continue later
-9. **Start Over**: Clear all data and import fresh files
+   - Translations with both English and Spanish values are automatically marked as confirmed with your username and timestamp
+
+**Suggest Mode:**
+1. **View Missing Translations**: See which keys are missing values
+2. **Get AI Suggestions**: Click "Suggest Translations" to get AI-powered suggestions for missing values
+3. **Review Suggestions**: Check the suggested translations in the grid
+4. **Accept**: Click "Accept All Suggestions" to apply them
+5. **Export**: Save the accepted suggestions to your files
+
+### Additional Features
+
+- **Save Progress**: Save your work in progress to continue later
+- **Start Over**: Clear all data and import fresh files
+- **Confirmation Tracking**: View who confirmed each translation and when in the "Last Confirmed By" column
 
 ### Supported File Formats
 
@@ -197,6 +231,38 @@ Executables will be in `publish/macos/` and `publish/windows/`.
    - Release title: `v1.0.0 - Initial Release`
    - Upload both archive files
    - Publish release
+
+## Release History
+
+### v3.3.1 (May 2026)
+- **Bug Fix**: Fixed profile button not clickable in custom title bar
+
+### v3.3.0 (May 2026)
+- **New**: Custom title bar with app version display
+- **New**: Personalized user greeting with wave emoji
+
+### v3.2.1 (May 2026)
+- **Bug Fix**: Fixed confirmation tracking incorrectly activating in Suggest mode
+
+### v3.2.0 (May 2026)
+- **New**: Confirmation tracking system - auto-track who confirmed translations and when
+- **New**: "Only Unconfirmed" filter to show translations needing review
+- **New**: "Last Confirmed By" column showing confirmation audit trail
+
+### v3.1.0 (May 2026)
+- **New**: Enhanced error handling with detailed error dialogs
+- **New**: Theme-aware UI improvements for dark/light mode compatibility
+
+### v3.0.0 (May 2026)
+- **Major**: Suggest Mode - AI-powered translation suggestions for missing values
+- **New**: Edit/Suggest mode toggle workflow
+- **New**: Accept/reject suggestions functionality
+
+### v2.x (May 2026)
+- Core translation management features
+- JSON and RESX file support
+- Import/Export functionality
+- Search and filter capabilities
 
 ## Technology Stack
 
