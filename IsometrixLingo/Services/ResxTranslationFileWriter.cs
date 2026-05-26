@@ -18,7 +18,8 @@ public class ResxTranslationFileWriter
     /// <param name="keys">Translation keys to write</param>
     /// <param name="outputDirectory">Output directory for files</param>
     /// <param name="templateProvider">Optional function to provide RESX template for a given source file name</param>
-    public void WriteFiles(List<TranslationKey> keys, string outputDirectory, Func<string, XDocument?>? templateProvider = null)
+    /// <param name="username">Username for confirmation auditing (optional)</param>
+    public void WriteFiles(List<TranslationKey> keys, string outputDirectory, Func<string, XDocument?>? templateProvider = null, string? username = null)
     {
         if (!Directory.Exists(outputDirectory))
         {
@@ -51,12 +52,12 @@ public class ResxTranslationFileWriter
                 // Get template for this source file if available
                 var template = templateProvider?.Invoke(sourceFile);
 
-                WriteLanguageFile(filePath, fileKeys, language, template);
+                WriteLanguageFile(filePath, fileKeys, language, template, username);
             }
         }
     }
 
-    private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, XDocument? template)
+    private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, XDocument? template, string? username)
     {
         XElement root;
 
@@ -82,7 +83,7 @@ public class ResxTranslationFileWriter
                     {
                         // Get actual value and append suggestion if exists
                         var value = translationKey.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                        var fullValue = AppendSuggestionIfExists(value, translationKey, language);
+                        var fullValue = AppendAnnotations(value, translationKey, language, username);
                         // Update the value in the existing data element
                         var valueElement = dataElement.Element("value");
                         if (valueElement != null)
@@ -104,7 +105,7 @@ public class ResxTranslationFileWriter
                 if (!processedKeys.Contains(key.Key))
                 {
                     var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                    var fullValue = AppendSuggestionIfExists(value, key, language);
+                    var fullValue = AppendAnnotations(value, key, language, username);
                     var dataElement = new XElement("data",
                         new XAttribute("name", key.Key),
                         new XAttribute(XNamespace.Xml + "space", "preserve"),
@@ -124,7 +125,7 @@ public class ResxTranslationFileWriter
             foreach (var key in keys.OrderBy(k => k.Key))
             {
                 var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                var fullValue = AppendSuggestionIfExists(value, key, language);
+                var fullValue = AppendAnnotations(value, key, language, username);
                 var dataElement = new XElement("data",
                     new XAttribute("name", key.Key),
                     new XAttribute(XNamespace.Xml + "space", "preserve"),
@@ -144,16 +145,52 @@ public class ResxTranslationFileWriter
     }
 
     /// <summary>
-    /// Append suggestion to value if it exists for the given language
-    /// Format: "actual value SUGGESTION:suggested_value,by:[username],at:[datetime]"
+    /// Append suggestion and confirmation annotations to value
+    /// Format: "actual value SUGGESTION:...,by:[username],at:[datetime] CONFIRMED:by:[username],at:[datetime]"
+    /// Auto-creates/updates confirmation for keys with both en and es values when writing base file
     /// </summary>
-    private string AppendSuggestionIfExists(string actualValue, TranslationKey key, string language)
+    private string AppendAnnotations(string actualValue, TranslationKey key, string language, string? username)
     {
+        var result = actualValue;
+        
+        // Append suggestion if exists for this language
         if (key.SuggestedValues.TryGetValue(language, out var suggestion))
         {
-            return $"{actualValue} {suggestion.ToFileFormat()}";
+            result = $"{result} {suggestion.ToFileFormat()}";
         }
-        return actualValue;
+        
+        // For base file (English), append confirmation (auto-create if key is complete)
+        if (language == "en")
+        {
+            var hasEnglish = key.LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue);
+            var hasSpanish = key.LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue);
+            
+            // If key has both languages, ensure it has confirmation
+            if (hasEnglish && hasSpanish)
+            {
+                if (key.ConfirmedBy == null && !string.IsNullOrWhiteSpace(username))
+                {
+                    // Auto-create confirmation
+                    key.ConfirmedBy = new Confirmation
+                    {
+                        Username = username,
+                        Timestamp = DateTime.UtcNow
+                    };
+                }
+                
+                if (key.ConfirmedBy != null)
+                {
+                    result = $"{result} {key.ConfirmedBy.ToFileFormat()}";
+                }
+            }
+            // If key is incomplete, remove any existing confirmation
+            else if (key.ConfirmedBy != null)
+            {
+                key.ConfirmedBy = null;
+            }
+        }
+        
+        return result;
     }
 
     private XElement CreateResxDocument()

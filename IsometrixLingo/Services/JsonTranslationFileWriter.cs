@@ -22,7 +22,8 @@ public class JsonTranslationFileWriter
     /// <param name="keys">Translation keys to write</param>
     /// <param name="outputDirectory">Output directory for files</param>
     /// <param name="templateProvider">Optional function to provide JSON template for a given source file name</param>
-    public void WriteFiles(List<TranslationKey> keys, string outputDirectory, Func<string, string?>? templateProvider = null)
+    /// <param name="username">Username for confirmation auditing (optional)</param>
+    public void WriteFiles(List<TranslationKey> keys, string outputDirectory, Func<string, string?>? templateProvider = null, string? username = null)
     {
         if (!Directory.Exists(outputDirectory))
         {
@@ -52,12 +53,12 @@ public class JsonTranslationFileWriter
                 // Get template for this source file if available
                 var template = templateProvider?.Invoke(sourceFile);
 
-                WriteLanguageFile(filePath, fileKeys, language, template);
+                WriteLanguageFile(filePath, fileKeys, language, template, username);
             }
         }
     }
 
-    private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, string? template)
+    private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, string? template, string? username)
     {
         JsonObject jsonObject;
 
@@ -76,7 +77,7 @@ public class JsonTranslationFileWriter
                 {
                     // Get actual value and suggestion
                     var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                    var fullValue = AppendSuggestionIfExists(value, key, language);
+                    var fullValue = AppendAnnotations(value, key, language, username);
                     
                     if (UpdateNestedValue(jsonObject, key.Key, fullValue))
                     {
@@ -90,7 +91,7 @@ public class JsonTranslationFileWriter
                     if (!processedKeys.Contains(key.Key))
                     {
                         var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                        var fullValue = AppendSuggestionIfExists(value, key, language);
+                        var fullValue = AppendAnnotations(value, key, language, username);
                         SetNestedValue(jsonObject, key.Key, fullValue);
                     }
                 }
@@ -102,7 +103,7 @@ public class JsonTranslationFileWriter
                 foreach (var key in keys)
                 {
                     var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                    var fullValue = AppendSuggestionIfExists(value, key, language);
+                    var fullValue = AppendAnnotations(value, key, language, username);
                     SetNestedValue(jsonObject, key.Key, fullValue);
                 }
             }
@@ -114,7 +115,7 @@ public class JsonTranslationFileWriter
             foreach (var key in keys)
             {
                 var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                var fullValue = AppendSuggestionIfExists(value, key, language);
+                var fullValue = AppendAnnotations(value, key, language, username);
                 SetNestedValue(jsonObject, key.Key, fullValue);
             }
         }
@@ -124,16 +125,52 @@ public class JsonTranslationFileWriter
     }
 
     /// <summary>
-    /// Append suggestion to value if it exists for the given language
-    /// Format: "actual value SUGGESTION:suggested_value,by:[username],at:[datetime]"
+    /// Append suggestion and confirmation annotations to value
+    /// Format: "actual value SUGGESTION:...,by:[username],at:[datetime] CONFIRMED:by:[username],at:[datetime]"
+    /// Auto-creates/updates confirmation for keys with both en and es values when writing English files
     /// </summary>
-    private string AppendSuggestionIfExists(string actualValue, TranslationKey key, string language)
+    private string AppendAnnotations(string actualValue, TranslationKey key, string language, string? username)
     {
+        var result = actualValue;
+        
+        // Append suggestion if exists for this language
         if (key.SuggestedValues.TryGetValue(language, out var suggestion))
         {
-            return $"{actualValue} {suggestion.ToFileFormat()}";
+            result = $"{result} {suggestion.ToFileFormat()}";
         }
-        return actualValue;
+        
+        // For English files, append confirmation (auto-create if key is complete)
+        if (language == "en")
+        {
+            var hasEnglish = key.LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue);
+            var hasSpanish = key.LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue);
+            
+            // If key has both languages, ensure it has confirmation
+            if (hasEnglish && hasSpanish)
+            {
+                if (key.ConfirmedBy == null && !string.IsNullOrWhiteSpace(username))
+                {
+                    // Auto-create confirmation
+                    key.ConfirmedBy = new Confirmation
+                    {
+                        Username = username,
+                        Timestamp = DateTime.UtcNow
+                    };
+                }
+                
+                if (key.ConfirmedBy != null)
+                {
+                    result = $"{result} {key.ConfirmedBy.ToFileFormat()}";
+                }
+            }
+            // If key is incomplete, remove any existing confirmation
+            else if (key.ConfirmedBy != null)
+            {
+                key.ConfirmedBy = null;
+            }
+        }
+        
+        return result;
     }
 
     /// <summary>

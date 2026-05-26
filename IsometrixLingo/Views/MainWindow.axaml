@@ -672,6 +672,11 @@
                                   IsChecked="{Binding ShowOnlyWithSuggestions}"
                                   VerticalAlignment="Center"
                                   ToolTip.Tip="Show only keys that have suggestions"/>
+                        <CheckBox Content="Only Unconfirmed"
+                                  IsChecked="{Binding ShowOnlyUnconfirmed}"
+                                  IsVisible="{Binding CurrentMode, Converter={StaticResource IsEditModeConverter}}"
+                                  VerticalAlignment="Center"
+                                  ToolTip.Tip="Show only keys that are unconfirmed (missing translations or lacking confirmation audit)"/>
                         <TextBox Text="{Binding SearchText}"
                                  PlaceholderText="Search keys and values..."
                                  MinWidth="200"
