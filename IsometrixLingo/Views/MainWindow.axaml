@@ -90,20 +90,21 @@
 
     <Panel>
         <!-- Custom Title Bar -->
-        <Grid Height="40" VerticalAlignment="Top" ColumnDefinitions="70,Auto,*,Auto,Auto" IsHitTestVisible="False">
+        <Grid Height="40" VerticalAlignment="Top" ColumnDefinitions="70,Auto,*,Auto,Auto">
             <!-- Spacer for native window controls (macOS left side) -->
-            <Border Grid.Column="0"/>
+            <Border Grid.Column="0" IsHitTestVisible="False"/>
             
             <!-- App Title and Version (Top Left) -->
             <TextBlock Grid.Column="1"
-                       Text="Isometrix Lingo v3.3.0"
+                       Text="Isometrix Lingo v3.3.1"
                        FontSize="13"
                        FontWeight="SemiBold"
                        VerticalAlignment="Center"
-                       Margin="5,2,0,0"/>
+                       Margin="5,2,0,0"
+                       IsHitTestVisible="False"/>
             
             <!-- Center spacer -->
-            <Border Grid.Column="2"/>
+            <Border Grid.Column="2" IsHitTestVisible="False"/>
             
             <!-- User Greeting -->
             <TextBlock Grid.Column="3"
@@ -124,8 +125,7 @@
                     FontSize="14"
                     Padding="6,2"
                     Margin="0,0,10,0"
-                    VerticalAlignment="Center"
-                    IsHitTestVisible="True">
+                    VerticalAlignment="Center">
                 <ToolTip.Tip>
                     <TextBlock>
                         <Run Text="View profile"/>
