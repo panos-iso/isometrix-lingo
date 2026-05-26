@@ -18,8 +18,9 @@ Built with **Avalonia UI** and **.NET 10** for macOS and Windows.
 - 🔄 **Save/Load progress** - resume your work anytime
 - 📋 **Template preservation** - maintains original file structure and order
 
-### AI-Powered Features
-- 🤖 **Suggest Mode** - Get AI-powered translation suggestions for missing values
+### Collaboration Features
+- 💡 **Suggest Mode** - Propose translations without modifying actual values (team collaboration workflow)
+- ✅ **Accept/Reject Suggestions** - Review and apply or discard suggested translations
 - ✅ **Confirmation Tracking** - Auto-track confirmed translations with username and timestamp during export
 - 👤 **Profile Management** - Set your username for audit trails
 
@@ -94,10 +95,14 @@ Download the latest release for your platform:
 
 **Suggest Mode:**
 1. **View Missing Translations**: See which keys are missing values
-2. **Get AI Suggestions**: Click "Suggest Translations" to get AI-powered suggestions for missing values
-3. **Review Suggestions**: Check the suggested translations in the grid
-4. **Accept**: Click "Accept All Suggestions" to apply them
-5. **Export**: Save the accepted suggestions to your files
+2. **Enter Suggestions**: Type suggested translations for missing values
+3. **Save Suggestions**: Suggestions are stored separately from actual values
+4. **Review in Edit Mode**: Switch to Edit mode to see Accept ✓ / Reject ✗ buttons
+5. **Accept**: Click ✓ to apply a suggestion as the actual value
+6. **Reject**: Click ✗ to discard a suggestion
+7. **Export**: Save accepted suggestions to your files
+
+> **Workflow**: Suggest Mode is designed for team collaboration where one person suggests translations and another reviews/accepts them.
 
 ### Additional Features
 
@@ -254,9 +259,9 @@ Executables will be in `publish/macos/` and `publish/windows/`.
 - **New**: Theme-aware UI improvements for dark/light mode compatibility
 
 ### v3.0.0 (May 2026)
-- **Major**: Suggest Mode - AI-powered translation suggestions for missing values
-- **New**: Edit/Suggest mode toggle workflow
-- **New**: Accept/reject suggestions functionality
+- **Major**: Suggest Mode - collaborative workflow for proposing translations
+- **New**: Edit/Suggest mode toggle with different permissions
+- **New**: Accept/reject suggestions functionality for team review
 
 ### v2.x (May 2026)
 - Core translation management features
