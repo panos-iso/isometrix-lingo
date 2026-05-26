@@ -681,6 +681,18 @@
                                     IsEnabled="{Binding HasKeys}"
                                     Padding="10,5"
                                     FontWeight="SemiBold"/>
+                            <Button Content="🤖 Generate AI Suggestions"
+                                    Command="{Binding GenerateAiSuggestionsCommand}"
+                                    CommandParameter="{Binding $parent[Window]}"
+                                    IsEnabled="{Binding HasKeys}"
+                                    Padding="10,5"
+                                    FontWeight="SemiBold"
+                                    Background="#9C27B0"
+                                    Foreground="White">
+                                <ToolTip.Tip>
+                                    <TextBlock Text="Generate AI-powered translation suggestions for missing Spanish values"/>
+                                </ToolTip.Tip>
+                            </Button>
                         </StackPanel>
                     </Grid>
 

@@ -42,6 +42,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _username = "User";
 
     [ObservableProperty]
+    private string _apiToken = string.Empty;
+
+    [ObservableProperty]
     private ObservableCollection<SourceFile?> _availableSourceFiles = new();
 
     [ObservableProperty]
@@ -1666,9 +1669,16 @@ public partial class MainWindowViewModel : ViewModelBase
     private void LoadUserSettings()
     {
         var settings = _settingsService.Load();
-        if (settings != null && !string.IsNullOrWhiteSpace(settings.Username))
+        if (settings != null)
         {
-            Username = settings.Username;
+            if (!string.IsNullOrWhiteSpace(settings.Username))
+            {
+                Username = settings.Username;
+            }
+            if (!string.IsNullOrWhiteSpace(settings.ApiToken))
+            {
+                ApiToken = settings.ApiToken;
+            }
         }
     }
 
@@ -1872,8 +1882,8 @@ public partial class MainWindowViewModel : ViewModelBase
         var dialog = new Window
         {
             Title = "User Profile",
-            Width = 400,
-            Height = 180,
+            Width = 450,
+            Height = 280,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };
@@ -1884,12 +1894,13 @@ public partial class MainWindowViewModel : ViewModelBase
             LastChildFill = true
         };
 
-        // Username section
+        // Content panel for fields
         var contentPanel = new StackPanel
         {
-            Spacing = 10
+            Spacing = 15
         };
 
+        // Username section
         contentPanel.Children.Add(new TextBlock
         {
             Text = "Username",
@@ -1901,6 +1912,30 @@ public partial class MainWindowViewModel : ViewModelBase
             Text = Username
         };
         contentPanel.Children.Add(usernameBox);
+
+        // API Token section
+        contentPanel.Children.Add(new TextBlock
+        {
+            Text = "AI API Token (Optional)",
+            FontWeight = FontWeight.SemiBold,
+            Margin = new Thickness(0, 10, 0, 0)
+        });
+
+        contentPanel.Children.Add(new TextBlock
+        {
+            Text = "GitHub Models token for AI-powered translation suggestions",
+            FontSize = 11,
+            Foreground = Brushes.Gray,
+            Margin = new Thickness(0, -10, 0, 0)
+        });
+
+        var apiTokenBox = new TextBox
+        {
+            Text = ApiToken,
+            PasswordChar = '●',
+            PlaceholderText = "github_pat_... or ghp_..."
+        };
+        contentPanel.Children.Add(apiTokenBox);
 
         DockPanel.SetDock(contentPanel, Dock.Top);
         mainPanel.Children.Add(contentPanel);
@@ -1930,22 +1965,43 @@ public partial class MainWindowViewModel : ViewModelBase
             HorizontalContentAlignment = HorizontalAlignment.Center
         };
 
-        // Enable save button only when username changes
-        usernameBox.TextChanged += (s, e) =>
+        // Enable save button when either field changes
+        void UpdateSaveButton()
         {
-            var newText = usernameBox.Text?.Trim() ?? "";
-            saveButton.IsEnabled = !string.IsNullOrWhiteSpace(newText) && newText != Username;
-        };
+            var usernameChanged = (usernameBox.Text?.Trim() ?? "") != Username;
+            var apiTokenChanged = (apiTokenBox.Text?.Trim() ?? "") != ApiToken;
+            var usernameValid = !string.IsNullOrWhiteSpace(usernameBox.Text?.Trim());
+            saveButton.IsEnabled = usernameValid && (usernameChanged || apiTokenChanged);
+        }
+
+        usernameBox.TextChanged += (s, e) => UpdateSaveButton();
+        apiTokenBox.TextChanged += (s, e) => UpdateSaveButton();
 
         saveButton.Click += (s, args) =>
         {
             var newUsername = usernameBox.Text?.Trim();
-            if (!string.IsNullOrWhiteSpace(newUsername) && newUsername != Username)
+            var newApiToken = apiTokenBox.Text?.Trim() ?? "";
+
+            if (!string.IsNullOrWhiteSpace(newUsername))
             {
                 Username = newUsername;
-                var settings = new UserSettings { Username = newUsername };
+                ApiToken = newApiToken;
+
+                var settings = new UserSettings 
+                { 
+                    Username = newUsername,
+                    ApiToken = newApiToken
+                };
                 _settingsService.Save(settings);
-                StatusMessage = $"Username updated to '{newUsername}'.";
+
+                if (string.IsNullOrWhiteSpace(newApiToken))
+                {
+                    StatusMessage = $"Profile updated. Username: '{newUsername}'.";
+                }
+                else
+                {
+                    StatusMessage = $"Profile updated. Username: '{newUsername}', AI token configured.";
+                }
             }
             dialog.Close();
         };
@@ -2009,6 +2065,174 @@ public partial class MainWindowViewModel : ViewModelBase
         HasUnsavedChanges = true;
         
         StatusMessage = $"Rejected suggestion for '{key.Key}' in {LanguageHelper.GetLanguageName(language)}.";
+    }
+
+    [RelayCommand]
+    private async Task GenerateAiSuggestions(Window window)
+    {
+        // Check if API token is configured
+        if (string.IsNullOrWhiteSpace(ApiToken))
+        {
+            StatusMessage = "AI API token not configured. Click the profile icon to add your token.";
+            return;
+        }
+
+        // Find keys with missing Spanish translations
+        var keysNeedingTranslation = _translationStore.GetAllKeys()
+            .Where(k =>
+            {
+                var hasEnglish = k.LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue);
+                var hasSpanish = k.LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue);
+                return hasEnglish && !hasSpanish;
+            })
+            .ToList();
+
+        if (keysNeedingTranslation.Count == 0)
+        {
+            StatusMessage = "No missing Spanish translations found.";
+            return;
+        }
+
+        // Check if any existing suggestions would be overridden
+        var keysWithExistingSuggestions = keysNeedingTranslation
+            .Where(k => k.SuggestedValues.ContainsKey("es"))
+            .ToList();
+
+        if (keysWithExistingSuggestions.Count > 0)
+        {
+            // Show confirmation dialog
+            var confirmDialog = new Window
+            {
+                Title = "Confirm AI Translation",
+                Width = 450,
+                Height = 200,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                CanResize = false
+            };
+
+            var panel = new StackPanel
+            {
+                Margin = new Thickness(20),
+                Spacing = 20
+            };
+
+            panel.Children.Add(new TextBlock
+            {
+                Text = $"{keysWithExistingSuggestions.Count} key(s) already have suggestions that will be overridden by AI translations.\n\nDo you want to continue?",
+                TextWrapping = TextWrapping.Wrap,
+                FontWeight = FontWeight.SemiBold
+            });
+
+            var buttonPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Spacing = 10
+            };
+
+            var continueButton = new Button
+            {
+                Content = "Continue",
+                Width = 100,
+                HorizontalContentAlignment = HorizontalAlignment.Center
+            };
+
+            var cancelButton = new Button
+            {
+                Content = "Cancel",
+                Width = 100,
+                HorizontalContentAlignment = HorizontalAlignment.Center
+            };
+
+            bool confirmed = false;
+
+            continueButton.Click += (s, args) => { confirmed = true; confirmDialog.Close(); };
+            cancelButton.Click += (s, args) => { confirmed = false; confirmDialog.Close(); };
+
+            buttonPanel.Children.Add(cancelButton);
+            buttonPanel.Children.Add(continueButton);
+
+            panel.Children.Add(buttonPanel);
+            confirmDialog.Content = panel;
+
+            await confirmDialog.ShowDialog(window);
+
+            if (!confirmed)
+            {
+                StatusMessage = "AI translation cancelled.";
+                return;
+            }
+        }
+
+        // Show progress dialog
+        var progressDialog = new Window
+        {
+            Title = "Generating AI Translations",
+            Width = 400,
+            Height = 150,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        var progressPanel = new StackPanel
+        {
+            Margin = new Thickness(20),
+            Spacing = 15
+        };
+
+        var progressText = new TextBlock
+        {
+            Text = "Translating 0 / " + keysNeedingTranslation.Count,
+            FontSize = 14,
+            FontWeight = FontWeight.SemiBold
+        };
+
+        progressPanel.Children.Add(progressText);
+        progressDialog.Content = progressPanel;
+
+        // Show dialog non-blocking
+        _ = progressDialog.ShowDialog(window);
+
+        try
+        {
+            // Prepare batch translation
+            var textsToTranslate = keysNeedingTranslation.ToDictionary(
+                k => k.Key,
+                k => k.LanguageValues["en"]
+            );
+
+            var aiService = new AiTranslationService();
+            var translations = await aiService.BatchTranslateAsync(
+                textsToTranslate,
+                ApiToken,
+                (current, total) =>
+                {
+                    progressText.Text = $"Translating {current} / {total}";
+                }
+            );
+
+            // Apply translations as suggestions
+            int successCount = 0;
+            foreach (var key in keysNeedingTranslation)
+            {
+                if (translations.TryGetValue(key.Key, out var spanishText) && !string.IsNullOrWhiteSpace(spanishText))
+                {
+                    key.SetSuggestionForLanguage("es", spanishText, "AI (GPT-4o-mini)");
+                    successCount++;
+                }
+            }
+
+            progressDialog.Close();
+
+            HasUnsavedChanges = true;
+            StatusMessage = $"Generated {successCount} AI translation suggestions.";
+            LanguagesChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            progressDialog.Close();
+            StatusMessage = $"AI translation failed: {ex.Message}";
+        }
     }
 }
 
