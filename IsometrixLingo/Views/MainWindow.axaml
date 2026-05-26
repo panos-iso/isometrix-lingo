@@ -106,11 +106,31 @@
         <views:WorkflowStepsControl DockPanel.Dock="Top" DataContext="{Binding}"/>
 
         <!-- Bottom Status Bar -->
-        <TextBlock DockPanel.Dock="Bottom"
-                   Text="{Binding StatusMessage}"
-                   Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
-                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                   Padding="10,5"/>
+        <Border DockPanel.Dock="Bottom"
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="10,5">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding StatusMessage}"
+                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Left"/>
+                <Button Grid.Column="1"
+                        Content="View Error Details"
+                        Command="{Binding ShowErrorDetailsCommand}"
+                        CommandParameter="{Binding $parent[Window]}"
+                        IsVisible="{Binding HasErrors}"
+                        Background="#D32F2F"
+                        Foreground="White"
+                        Padding="12,6"
+                        Margin="10,0,0,0"
+                        CornerRadius="4"
+                        FontSize="12"
+                        FontWeight="SemiBold"/>
+            </Grid>
+        </Border>
 
         <!-- Main Content Area - Changes based on current step -->
         <Grid Margin="20">

@@ -282,4 +282,163 @@ public class TranslationStoreTests
         // Assert
         Assert.Equal(2, store.FilteredKeys.Count);
     }
+
+    [Fact]
+    public void FilterBySearchTerm_FindsByEnglishSuggestion()
+    {
+        // Arrange
+        var store = new TranslationStore();
+        var keys = new List<TranslationKey>
+        {
+            new() 
+            { 
+                Key = "key1", 
+                Source = new SourceFile("forms", FileType.Json), 
+                LanguageValues = new() { { "en", "Original" }, { "es", "Original" } },
+                SuggestedValues = new() { { "en", new Suggestion { Value = "Suggested English", Username = "AI" } } }
+            },
+            new() 
+            { 
+                Key = "key2", 
+                Source = new SourceFile("forms", FileType.Json), 
+                LanguageValues = new() { { "en", "Other" }, { "es", "Otro" } }
+            }
+        };
+        store.AddTranslations(keys);
+
+        // Act
+        store.FilterBySearchTerm("Suggested English");
+
+        // Assert
+        Assert.Single(store.FilteredKeys);
+        Assert.Equal("key1", store.FilteredKeys[0].Key);
+    }
+
+    [Fact]
+    public void FilterBySearchTerm_FindsBySpanishSuggestion()
+    {
+        // Arrange
+        var store = new TranslationStore();
+        var keys = new List<TranslationKey>
+        {
+            new() 
+            { 
+                Key = "key1", 
+                Source = new SourceFile("forms", FileType.Json), 
+                LanguageValues = new() { { "en", "Original" }, { "es", "Original" } },
+                SuggestedValues = new() { { "es", new Suggestion { Value = "Sugerencia Española", Username = "AI" } } }
+            },
+            new() 
+            { 
+                Key = "key2", 
+                Source = new SourceFile("forms", FileType.Json), 
+                LanguageValues = new() { { "en", "Other" }, { "es", "Otro" } }
+            }
+        };
+        store.AddTranslations(keys);
+
+        // Act
+        store.FilterBySearchTerm("Española");
+
+        // Assert
+        Assert.Single(store.FilteredKeys);
+        Assert.Equal("key1", store.FilteredKeys[0].Key);
+    }
+
+    [Fact]
+    public void FilterBySearchTerm_SearchesAcrossAllFields()
+    {
+        // Arrange
+        var store = new TranslationStore();
+        var keys = new List<TranslationKey>
+        {
+            new() 
+            { 
+                Key = "SearchTerm.key", 
+                Source = new SourceFile("forms", FileType.Json), 
+                LanguageValues = new() { { "en", "Value1" }, { "es", "Valor1" } }
+            },
+            new() 
+            { 
+                Key = "key2", 
+                Source = new SourceFile("forms", FileType.Json), 
+                LanguageValues = new() { { "en", "SearchTerm" }, { "es", "Valor2" } }
+            },
+            new() 
+            { 
+                Key = "key3", 
+                Source = new SourceFile("forms", FileType.Json), 
+                LanguageValues = new() { { "en", "Value3" }, { "es", "SearchTerm" } }
+            },
+            new() 
+            { 
+                Key = "key4", 
+                Source = new SourceFile("forms", FileType.Json), 
+                LanguageValues = new() { { "en", "Value4" }, { "es", "Valor4" } },
+                SuggestedValues = new() { { "en", new Suggestion { Value = "SearchTerm", Username = "AI" } } }
+            },
+            new() 
+            { 
+                Key = "key5", 
+                Source = new SourceFile("forms", FileType.Json), 
+                LanguageValues = new() { { "en", "Value5" }, { "es", "Valor5" } },
+                SuggestedValues = new() { { "es", new Suggestion { Value = "SearchTerm", Username = "AI" } } }
+            },
+            new() 
+            { 
+                Key = "key6", 
+                Source = new SourceFile("forms", FileType.Json), 
+                LanguageValues = new() { { "en", "NoMatch" }, { "es", "NoMatch" } }
+            }
+        };
+        store.AddTranslations(keys);
+
+        // Act
+        store.FilterBySearchTerm("SearchTerm");
+
+        // Assert - Should find all 5 keys that contain "SearchTerm" in any field
+        Assert.Equal(5, store.FilteredKeys.Count);
+        Assert.Contains(store.FilteredKeys, k => k.Key == "SearchTerm.key"); // Found in key name
+        Assert.Contains(store.FilteredKeys, k => k.Key == "key2"); // Found in English value
+        Assert.Contains(store.FilteredKeys, k => k.Key == "key3"); // Found in Spanish value
+        Assert.Contains(store.FilteredKeys, k => k.Key == "key4"); // Found in English suggestion
+        Assert.Contains(store.FilteredKeys, k => k.Key == "key5"); // Found in Spanish suggestion
+        Assert.DoesNotContain(store.FilteredKeys, k => k.Key == "key6"); // No match
+    }
+
+    [Fact]
+    public void FilterBySearchTerm_CaseInsensitive()
+    {
+        // Arrange
+        var store = new TranslationStore();
+        var keys = new List<TranslationKey>
+        {
+            new() 
+            { 
+                Key = "KEY1", 
+                Source = new SourceFile("forms", FileType.Json), 
+                LanguageValues = new() { { "en", "HELLO" }, { "es", "HOLA" } },
+                SuggestedValues = new() { { "en", new Suggestion { Value = "SUGGESTION", Username = "AI" } } }
+            }
+        };
+        store.AddTranslations(keys);
+
+        // Act - search with lowercase
+        store.FilterBySearchTerm("hello");
+
+        // Assert
+        Assert.Single(store.FilteredKeys);
+        
+        // Act - search for key with lowercase
+        store.FilterBySearchTerm("key1");
+        
+        // Assert
+        Assert.Single(store.FilteredKeys);
+        
+        // Act - search for suggestion with lowercase
+        store.FilterBySearchTerm("suggestion");
+        
+        // Assert
+        Assert.Single(store.FilteredKeys);
+    }
 }

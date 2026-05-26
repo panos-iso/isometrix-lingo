@@ -129,7 +129,8 @@ public class TranslationStore
             var term = _currentSearchTerm.ToLowerInvariant();
             keysToShow = keysToShow.Where(k =>
                 k.Key.ToLowerInvariant().Contains(term) ||
-                k.LanguageValues.Any(lv => lv.Value.ToLowerInvariant().Contains(term))
+                k.LanguageValues.Any(lv => lv.Value.ToLowerInvariant().Contains(term)) ||
+                k.SuggestedValues.Any(sv => sv.Value.Value.ToLowerInvariant().Contains(term))
             );
         }
 

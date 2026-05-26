@@ -9,6 +9,7 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using IsometrixLingo.Converters;
 using IsometrixLingo.Helpers;
 using IsometrixLingo.Models;
@@ -269,10 +270,11 @@ public partial class MainWindow : Window
                     {
                         var suggestionTextBlock = new TextBlock
                         {
-                            FontSize = 11,
-                            Foreground = Brushes.White,
+                            FontSize = 12,
+                            FontWeight = FontWeight.Bold,
                             TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-                            Margin = new Avalonia.Thickness(0, 2, 0, 0)
+                            Margin = new Avalonia.Thickness(0, 2, 0, 0),
+                            [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("SuggestionTextBrush")
                         };
 
                         // Bind suggestion text

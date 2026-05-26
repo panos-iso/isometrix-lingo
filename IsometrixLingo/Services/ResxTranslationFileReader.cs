@@ -185,5 +185,20 @@ public class ResxTranslationFileReader
         // Return the entire document - we'll update data elements in place during export
         return new XDocument(xdoc);
     }
+
+    /// <summary>
+    /// Validates that the RESX file name follows the expected naming convention.
+    /// Expected patterns:
+    /// - English base: {BaseName}.resx (e.g., FormTranslations.resx)
+    /// - Localized: {BaseName}_{language}.resx (e.g., FormTranslations_es.resx)
+    /// </summary>
+    /// <param name="fileName">The file name to validate (without path)</param>
+    /// <returns>True if the file name matches the expected pattern, otherwise false</returns>
+    public bool ValidateNamingConvention(string fileName)
+    {
+        // Pattern: {BaseName}.resx or {BaseName}_{language}.resx where language is 2-letter code
+        var pattern = new Regex(@"^[A-Za-z0-9_-]+(_(?:en|es|fr|de|it|pt|ru|zh|ja|ko|ar))?\.resx$", RegexOptions.IgnoreCase);
+        return pattern.IsMatch(fileName);
+    }
 }
 

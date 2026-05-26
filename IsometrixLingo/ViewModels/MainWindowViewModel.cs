@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -106,6 +107,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private EditMode _currentMode = EditMode.Edit;
+
+    [ObservableProperty]
+    private ObservableCollection<ImportError> _importErrors = new();
+    
+    [ObservableProperty]
+    private bool _hasErrors;
+    
+    [ObservableProperty]
+    private int _errorCount;
 
     public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
     public bool ShowFileMappingStep => CurrentStep == WorkflowStep.FileMapping;
@@ -254,6 +264,9 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         try
         {
+            // Clear previous errors
+            ImportErrors.Clear();
+            
             var files = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Select Translation Files",
@@ -272,37 +285,142 @@ public partial class MainWindowViewModel : ViewModelBase
                 return;
             }
 
-            var translationFiles = new List<TranslationFile>();
-            // Don't clear existing files - we want to accumulate multiple imports
-            // ImportedFileNames.Clear(); // REMOVED to allow multiple imports
-
+            // PHASE 1: Validate ALL files first (all-or-nothing approach)
+            var validatedFiles = new List<(IStorageFile file, string filePath, string fileName, string extension, FileType fileType, string language)>();
+            
             foreach (var file in files)
+            {
+                var filePath = file.Path.LocalPath;
+                var fileName = Path.GetFileName(filePath);
+                var extension = Path.GetExtension(filePath).ToLower();
+
+                // Check for duplicate files (case-insensitive)
+                if (ImportedFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)) ||
+                    IgnoredFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.DuplicateFile,
+                        FileName = fileName,
+                        Message = $"File '{fileName}' has already been imported",
+                        Guidance = "This file is already loaded. Remove it from your selection and try again."
+                    });
+                    continue;
+                }
+
+                // Validate naming convention
+                var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
+                var isValidName = fileType == FileType.Json 
+                    ? _jsonReader.ValidateNamingConvention(fileName)
+                    : _resxReader.ValidateNamingConvention(fileName);
+                
+                if (!isValidName)
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.InvalidNamingConvention,
+                        FileName = fileName,
+                        Message = $"File name doesn't match expected pattern",
+                        Guidance = fileType == FileType.Json
+                            ? "Expected: {BaseName}.{language}.json (e.g., Forms.en.json, Forms.es.json)"
+                            : "Expected: {BaseName}.resx or {BaseName}_{language}.resx (e.g., FormTranslations.resx, FormTranslations_es.resx)"
+                    });
+                    continue;
+                }
+
+                // Check if language is supported (en or es only)
+                var language = ExtractLanguage(fileName, fileType);
+                
+                if (string.IsNullOrEmpty(language) || (language != "en" && language != "es"))
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.UnsupportedLanguage,
+                        FileName = fileName,
+                        Message = $"Language '{language}' is not supported",
+                        Guidance = "Only English (en) and Spanish (es) are currently supported."
+                    });
+                    continue;
+                }
+
+                // Validate file can be parsed (without actually importing yet)
+                try
+                {
+                    if (fileType == FileType.Json)
+                    {
+                        // Try to parse JSON to validate structure
+                        var json = File.ReadAllText(filePath);
+                        JsonDocument.Parse(json); // Will throw if invalid
+                    }
+                    else
+                    {
+                        // Try to load RESX XML to validate structure
+                        System.Xml.Linq.XDocument.Load(filePath); // Will throw if invalid
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.JsonParseError,
+                        FileName = fileName,
+                        Message = $"Failed to parse JSON: {ex.Message}",
+                        Guidance = "Ensure the file contains valid JSON syntax. Check for missing commas, brackets, or quotes."
+                    });
+                    continue;
+                }
+                catch (System.Xml.XmlException ex)
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.ResxParseError,
+                        FileName = fileName,
+                        Message = $"Failed to parse RESX XML: {ex.Message}",
+                        Guidance = "Ensure the file is a valid RESX file with proper XML structure."
+                    });
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.Other,
+                        FileName = fileName,
+                        Message = $"Unexpected error: {ex.Message}",
+                        Guidance = "Please check the file and try again. If the problem persists, contact support."
+                    });
+                    continue;
+                }
+
+                // File passed all validation - add to validated list
+                validatedFiles.Add((file, filePath, fileName, extension, fileType, language));
+            }
+
+            // Update error state
+            HasErrors = ImportErrors.Count > 0;
+            ErrorCount = ImportErrors.Count;
+
+            // If ANY errors occurred, don't import anything
+            if (HasErrors)
+            {
+                StatusMessage = $"Import failed with {ErrorCount} error(s). Click 'View Error Details' to see what went wrong. No files were imported.";
+                return;
+            }
+
+            // If no files passed validation
+            if (validatedFiles.Count == 0)
+            {
+                StatusMessage = "No valid files to import.";
+                return;
+            }
+
+            // PHASE 2: All files validated successfully - now import them
+            var translationFiles = new List<TranslationFile>();
+
+            foreach (var (file, filePath, fileName, extension, fileType, language) in validatedFiles)
             {
                 try
                 {
-                    var filePath = file.Path.LocalPath;
-                    var fileName = Path.GetFileName(filePath);
-                    var extension = Path.GetExtension(filePath).ToLower();
-
-                    // Check for duplicate files (case-insensitive)
-                    if (ImportedFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)) ||
-                        IgnoredFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        StatusMessage = $"File '{fileName}' has already been imported. Skipping duplicate.";
-                        continue;
-                    }
-
-                    // Check if language is supported (en or es only)
-                    var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
-                    var language = ExtractLanguage(fileName, fileType);
-                    
-                    if (string.IsNullOrEmpty(language) || (language != "en" && language != "es"))
-                    {
-                        IgnoredFileNames.Add(fileName);
-                        StatusMessage = $"File '{fileName}' ignored - unsupported language. Only English (en) and Spanish (es) are supported.";
-                        continue;
-                    }
-
                     TranslationFile translationFile = extension switch
                     {
                         ".json" => _jsonReader.ReadFile(filePath),
@@ -315,9 +433,22 @@ public partial class MainWindowViewModel : ViewModelBase
                 }
                 catch (Exception ex)
                 {
-                    // Log individual file errors but continue processing
-                    StatusMessage = $"Warning: Could not import file - {ex.Message}";
+                    // This shouldn't happen since we validated already, but handle it just in case
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.Other,
+                        FileName = fileName,
+                        Message = $"Unexpected error during import: {ex.Message}",
+                        Guidance = "Please try again. If the problem persists, contact support."
+                    });
                 }
+            }
+
+            // If errors occurred during import phase (shouldn't happen but check anyway)
+            if (HasErrors)
+            {
+                StatusMessage = $"Import failed with {ErrorCount} error(s). Click 'View Error Details' to see what went wrong.";
+                return;
             }
 
             // Group files by base name and file type, then consolidate
@@ -351,12 +482,15 @@ public partial class MainWindowViewModel : ViewModelBase
             }
 
             UpdateFileFilters();
-            StatusMessage = $"Imported {translationFiles.Count} file(s). Review the imported files below and click 'Confirm & Continue' to proceed.";
+            
+            // Success - all files imported
+            StatusMessage = $"Successfully imported {translationFiles.Count} file(s). Review the imported files below and click 'Confirm & Continue' to proceed.";
+            
             HasKeys = _translationStore.GetAllKeys().Count > 0;
             ImportStepStatus = StepStatus.InProgress;
             LanguagesChanged?.Invoke(this, EventArgs.Empty);
 
-            // Auto-save imported progress
+            // Only save progress if import was successful
             SaveProgress();
         }
         catch (Exception ex)
@@ -1801,6 +1935,21 @@ public partial class MainWindowViewModel : ViewModelBase
         mainPanel.Children.Add(new Border()); // Filler
 
         dialog.Content = mainPanel;
+        await dialog.ShowDialog(window);
+    }
+
+    [RelayCommand]
+    private async Task ShowErrorDetails(Window window)
+    {
+        if (!HasErrors)
+            return;
+
+        var viewModel = new ErrorDetailsViewModel(ImportErrors);
+        var dialog = new ErrorDetailsDialog
+        {
+            DataContext = viewModel
+        };
+
         await dialog.ShowDialog(window);
     }
 
