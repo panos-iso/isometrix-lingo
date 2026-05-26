@@ -399,15 +399,17 @@ public partial class MainWindow : Window
 
                 if (data is TranslationKey key)
                 {
-                    // Bind to the data context (the row item) without specifying Source
+                    // Set DataContext explicitly
+                    textBlock.DataContext = key;
+                    
+                    // Bind to ConfirmationDisplayText property
                     textBlock.Bind(TextBlock.TextProperty, new Binding("ConfirmationDisplayText"));
                     
                     // Grey out confirmation text if key is modified
-                    var foregroundBinding = new Binding("IsModified")
+                    textBlock.Bind(TextBlock.ForegroundProperty, new Binding("IsModified")
                     {
                         Converter = new ConfirmationForegroundConverter()
-                    };
-                    textBlock.Bind(TextBlock.ForegroundProperty, foregroundBinding);
+                    });
                 }
 
                 return textBlock;
