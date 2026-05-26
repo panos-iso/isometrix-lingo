@@ -82,6 +82,6 @@ public class ConfirmationTests
         var displayText = confirmation.DisplayText;
 
         // Assert
-        Assert.Equal("Confirmed by Alice on Jun 15, 2024", displayText);
+        Assert.Equal("Alice on Jun 15, 2024", displayText);
     }
 }

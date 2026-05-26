@@ -20,7 +20,7 @@ public class Confirmation
     /// <summary>
     /// Format the confirmation as a display string for UI
     /// </summary>
-    public string DisplayText => $"Confirmed by {Username} on {Timestamp:MMM dd, yyyy}";
+    public string DisplayText => $"{Username} on {Timestamp:MMM dd, yyyy}";
 
     /// <summary>
     /// Format the confirmation for file storage

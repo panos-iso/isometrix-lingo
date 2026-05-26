@@ -384,7 +384,7 @@ public partial class MainWindow : Window
         // Add Last Confirmed column before Actions
         var confirmedColumn = new DataGridTemplateColumn
         {
-            Header = "Last Confirmed",
+            Header = "Last Confirmed By",
             Width = new DataGridLength(1.2, DataGridLengthUnitType.Star),
             MinWidth = 180,
             MaxWidth = 250,
