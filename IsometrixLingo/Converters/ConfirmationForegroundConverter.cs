@@ -11,6 +11,7 @@ namespace IsometrixLingo.Converters;
 public class ConfirmationForegroundConverter : IValueConverter
 {
     private static readonly SolidColorBrush GreyBrush = new(Color.Parse("#999999"));
+    private static readonly SolidColorBrush DefaultBrush = new(Colors.Black);
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -19,7 +20,7 @@ public class ConfirmationForegroundConverter : IValueConverter
             return GreyBrush;
         }
 
-        return null; // Use default foreground
+        return DefaultBrush; // Explicit default instead of null
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
