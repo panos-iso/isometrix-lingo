@@ -9,9 +9,9 @@
     <ApplicationTitle>Isometrix Lingo</ApplicationTitle>
     <CFBundleName>Isometrix Lingo</CFBundleName>
     <CFBundleDisplayName>Isometrix Lingo</CFBundleDisplayName>
-    <Version>3.2.1</Version>
-    <FileVersion>3.2.1</FileVersion>
-    <InformationalVersion>3.2.1</InformationalVersion>
+    <Version>3.3.0</Version>
+    <FileVersion>3.3.0</FileVersion>
+    <InformationalVersion>3.3.0</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
