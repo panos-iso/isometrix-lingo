@@ -399,11 +399,12 @@ public partial class MainWindow : Window
 
                 if (data is TranslationKey key)
                 {
-                    // Set DataContext explicitly
-                    textBlock.DataContext = key;
+                    // DEBUG: Show if ConfirmedBy is null or has value
+                    var debugText = key.ConfirmedBy == null 
+                        ? $"[Key:{key.Key} - NO CONFIRMATION]"
+                        : $"{key.ConfirmationDisplayText}";
                     
-                    // Bind to ConfirmationDisplayText property
-                    textBlock.Bind(TextBlock.TextProperty, new Binding("ConfirmationDisplayText"));
+                    textBlock.Text = debugText;
                     
                     // Grey out confirmation text if key is modified
                     textBlock.Bind(TextBlock.ForegroundProperty, new Binding("IsModified")
