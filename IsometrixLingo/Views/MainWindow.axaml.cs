@@ -172,10 +172,10 @@ public partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel viewModel)
             return;
 
-        // Remove existing columns after Key and Source File (keep first 2)
-        while (TranslationsGrid.Columns.Count > 2)
+        // Remove existing columns after Key, Source File, and Last Confirmed (keep first 3)
+        while (TranslationsGrid.Columns.Count > 3)
         {
-            TranslationsGrid.Columns.RemoveAt(2);
+            TranslationsGrid.Columns.RemoveAt(3);
         }
 
         // Add a column for each language
