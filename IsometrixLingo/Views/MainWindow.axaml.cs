@@ -420,6 +420,7 @@ public partial class MainWindow : Window
                     BorderThickness = new Avalonia.Thickness(1),
                     CornerRadius = new Avalonia.CornerRadius(3),
                     Padding = new Avalonia.Thickness(6, 2),
+                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
                 };
 
