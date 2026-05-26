@@ -62,35 +62,39 @@
 
         <!-- Error List -->
         <ScrollViewer Grid.Row="1" 
-                      Padding="16"
                       VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding ImportErrors}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="models:ImportError">
-                        <Border Classes="error-item">
-                            <StackPanel>
-                                <TextBlock Classes="error-filename" 
-                                          Text="{Binding FileName}" />
-                                <TextBlock Classes="error-message" 
-                                          Text="{Binding Message}" />
-                                <TextBlock Classes="error-guidance" 
-                                          Text="{Binding Guidance}" />
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <Border Padding="16">
+                <ItemsControl ItemsSource="{Binding ImportErrors}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="models:ImportError">
+                            <Border Classes="error-item">
+                                <StackPanel>
+                                    <TextBlock Classes="error-filename" 
+                                              Text="{Binding FileName}" />
+                                    <TextBlock Classes="error-message" 
+                                              Text="{Binding Message}" />
+                                    <TextBlock Classes="error-guidance" 
+                                              Text="{Binding Guidance}" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
         </ScrollViewer>
 
         <!-- Close Button -->
         <Border Grid.Row="2" 
-                Background="#F5F5F5" 
-                BorderBrush="#E0E0E0" 
+                Background="#D32F2F" 
+                BorderBrush="#B71C1C" 
                 BorderThickness="0,1,0,0" 
-                Padding="16">
+                Padding="12">
             <Button Content="Close" 
                     HorizontalAlignment="Right" 
-                    Width="100" 
+                    Width="100"
+                    Background="White"
+                    Foreground="#D32F2F"
+                    FontWeight="SemiBold"
                     Click="OnCloseClick" />
         </Border>
     </Grid>

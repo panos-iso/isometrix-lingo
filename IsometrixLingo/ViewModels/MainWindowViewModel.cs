@@ -109,11 +109,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private EditMode _currentMode = EditMode.Edit;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasErrors), nameof(ErrorCount))]
     private ObservableCollection<ImportError> _importErrors = new();
-
-    public bool HasErrors => ImportErrors.Count > 0;
-    public int ErrorCount => ImportErrors.Count;
+    
+    [ObservableProperty]
+    private bool _hasErrors;
+    
+    [ObservableProperty]
+    private int _errorCount;
 
     public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
     public bool ShowFileMappingStep => CurrentStep == WorkflowStep.FileMapping;
@@ -393,6 +395,10 @@ public partial class MainWindowViewModel : ViewModelBase
                 // File passed all validation - add to validated list
                 validatedFiles.Add((file, filePath, fileName, extension, fileType, language));
             }
+
+            // Update error state
+            HasErrors = ImportErrors.Count > 0;
+            ErrorCount = ImportErrors.Count;
 
             // If ANY errors occurred, don't import anything
             if (HasErrors)

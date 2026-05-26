@@ -115,7 +115,8 @@
                 <TextBlock Grid.Column="0"
                            Text="{Binding StatusMessage}"
                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                           VerticalAlignment="Center"/>
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Left"/>
                 <Button Grid.Column="1"
                         Content="View Error Details"
                         Command="{Binding ShowErrorDetailsCommand}"
