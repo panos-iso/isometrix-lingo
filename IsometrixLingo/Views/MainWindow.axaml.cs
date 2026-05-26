@@ -388,19 +388,7 @@ public partial class MainWindow : Window
             Width = new DataGridLength(1.2, DataGridLengthUnitType.Star),
             MinWidth = 180,
             MaxWidth = 250,
-            Binding = new Binding("ConfirmationDisplayText"),
-            ElementStyle = new Style(x => x.OfType<TextBlock>())
-            {
-                Setters =
-                {
-                    new Setter(TextBlock.ForegroundProperty, 
-                        new Binding("IsModified") 
-                        { 
-                            Converter = ConfirmationForegroundConverter 
-                        }),
-                    new Setter(TextBlock.TextWrappingProperty, Avalonia.Media.TextWrapping.Wrap)
-                }
-            }
+            Binding = new Binding("ConfirmationDisplayText")
         };
         TranslationsGrid.Columns.Add(confirmedColumn);
 
