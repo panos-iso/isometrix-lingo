@@ -1606,6 +1606,12 @@ public partial class MainWindowViewModel : ViewModelBase
             var confirmationsLoaded = sessionState.TranslationKeys.Count(k => k.ConfirmedBy != null);
             System.Diagnostics.Debug.WriteLine($"[LoadProgress] Loaded {confirmationsLoaded} keys with confirmations out of {sessionState.TranslationKeys.Count} total keys");
             
+            // DEBUG: Show some details
+            foreach (var key in sessionState.TranslationKeys.Where(k => k.ConfirmedBy != null).Take(3))
+            {
+                System.Diagnostics.Debug.WriteLine($"  Key: {key.Key}, ConfirmationDisplayText: '{key.ConfirmationDisplayText}'");
+            }
+            
             // Restore translation keys
             _translationStore.AddTranslations(sessionState.TranslationKeys);
             
