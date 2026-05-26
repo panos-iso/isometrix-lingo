@@ -168,15 +168,25 @@ public class ResxTranslationFileWriter
             // If key has both languages, ensure it has confirmation
             if (hasEnglish && hasSpanish)
             {
-                if (key.ConfirmedBy == null && !string.IsNullOrWhiteSpace(username))
+                // If key was edited, override confirmation with new one
+                if (key.IsModified && !string.IsNullOrWhiteSpace(username))
                 {
-                    // Auto-create confirmation
                     key.ConfirmedBy = new Confirmation
                     {
                         Username = username,
                         Timestamp = DateTime.UtcNow
                     };
                 }
+                // If key was not edited and has no confirmation, create one
+                else if (!key.IsModified && key.ConfirmedBy == null && !string.IsNullOrWhiteSpace(username))
+                {
+                    key.ConfirmedBy = new Confirmation
+                    {
+                        Username = username,
+                        Timestamp = DateTime.UtcNow
+                    };
+                }
+                // Otherwise keep existing confirmation (if any)
                 
                 if (key.ConfirmedBy != null)
                 {

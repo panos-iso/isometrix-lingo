@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private static readonly ShowOriginalTooltipConverter ShowOriginalTooltipConverter = new();
     private static readonly RowToggleEnabledConverter RowToggleEnabledConverter = new();
     private static readonly EditButtonTooltipConverter EditButtonTooltipConverter = new();
+    private static readonly ConfirmationForegroundConverter ConfirmationForegroundConverter = new();
 
     public MainWindow()
     {
@@ -399,6 +400,14 @@ public partial class MainWindow : Window
                 if (data is TranslationKey key)
                 {
                     textBlock.Bind(TextBlock.TextProperty, new Binding("ConfirmedBy.DisplayText") { Source = key });
+                    
+                    // Grey out confirmation text if key is modified
+                    var foregroundBinding = new Binding("IsModified")
+                    {
+                        Source = key,
+                        Converter = new ConfirmationForegroundConverter()
+                    };
+                    textBlock.Bind(TextBlock.ForegroundProperty, foregroundBinding);
                 }
 
                 return textBlock;
