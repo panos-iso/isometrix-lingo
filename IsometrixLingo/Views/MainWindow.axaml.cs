@@ -401,16 +401,12 @@ public partial class MainWindow : Window
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
                 };
 
-                // Username text
+                // Username text - don't set Foreground at all, let theme handle it
                 var usernameText = new TextBlock
                 {
                     Text = key.ConfirmedBy.Username,
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
                 };
-                usernameText.Bind(TextBlock.ForegroundProperty, new Binding("IsModified")
-                {
-                    Converter = ConfirmationForegroundConverter
-                });
 
                 // Date badge
                 var dateBorder = new Border
