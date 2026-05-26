@@ -665,19 +665,29 @@
                                   IsVisible="{Binding CurrentMode, Converter={StaticResource IsEditModeConverter}}"
                                   VerticalAlignment="Center"
                                   ToolTip.Tip="Toggle between current and original values to see what changed"/>
-                        <CheckBox Content="Only Missing Translations"
-                                  IsChecked="{Binding ShowOnlyMissingTranslations}"
-                                  VerticalAlignment="Center"
-                                  ToolTip.Tip="Show only keys with missing translations"/>
-                        <CheckBox Content="Only With Suggestions"
-                                  IsChecked="{Binding ShowOnlyWithSuggestions}"
-                                  VerticalAlignment="Center"
-                                  ToolTip.Tip="Show only keys that have suggestions"/>
-                        <CheckBox Content="Only Unconfirmed"
-                                  IsChecked="{Binding ShowOnlyUnconfirmed}"
-                                  IsVisible="{Binding CurrentMode, Converter={StaticResource IsEditModeConverter}}"
-                                  VerticalAlignment="Center"
-                                  ToolTip.Tip="Show only keys that are unconfirmed (missing translations or lacking confirmation audit)"/>
+                        
+                        <!-- More Filters Button with Flyout -->
+                        <Button Content="More Filters"
+                                Padding="10,5"
+                                VerticalAlignment="Center">
+                            <Button.Flyout>
+                                <Flyout Placement="BottomEdgeAlignedLeft">
+                                    <StackPanel Spacing="8" Margin="10">
+                                        <CheckBox Content="Only Missing Translations"
+                                                  IsChecked="{Binding ShowOnlyMissingTranslations}"
+                                                  ToolTip.Tip="Show only keys with missing translations"/>
+                                        <CheckBox Content="Only With Suggestions"
+                                                  IsChecked="{Binding ShowOnlyWithSuggestions}"
+                                                  ToolTip.Tip="Show only keys that have suggestions"/>
+                                        <CheckBox Content="Only Unconfirmed"
+                                                  IsChecked="{Binding ShowOnlyUnconfirmed}"
+                                                  IsVisible="{Binding CurrentMode, Converter={StaticResource IsEditModeConverter}}"
+                                                  ToolTip.Tip="Show only keys that are unconfirmed (missing translations or lacking confirmation audit)"/>
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                        
                         <TextBox Text="{Binding SearchText}"
                                  PlaceholderText="Search keys and values..."
                                  MinWidth="200"
