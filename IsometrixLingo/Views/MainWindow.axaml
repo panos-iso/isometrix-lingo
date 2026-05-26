@@ -721,6 +721,10 @@
                                                     Binding="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
                                                     Width="*" 
                                                     MinWidth="150"/>
+                                <DataGridTextColumn Header="Last Confirmed" 
+                                                    Binding="{Binding ConfirmedBy.DisplayText}" 
+                                                    Width="1.2*" 
+                                                    MinWidth="180"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Border>
