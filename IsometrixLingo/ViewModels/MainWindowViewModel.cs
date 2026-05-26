@@ -828,13 +828,13 @@ public partial class MainWindowViewModel : ViewModelBase
         if (jsonKeys.Count > 0)
         {
             // Provide template provider function to preserve original JSON structure
-            _jsonWriter.WriteFiles(jsonKeys, outputPath, sourceFileName => _translationStore.GetJsonTemplate(sourceFileName), Username);
+            _jsonWriter.WriteFiles(jsonKeys, outputPath, sourceFileName => _translationStore.GetJsonTemplate(sourceFileName), Username, CurrentMode == EditMode.Edit);
         }
 
         if (resxKeys.Count > 0)
         {
             // Provide template provider function to preserve original RESX structure
-            _resxWriter.WriteFiles(resxKeys, outputPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName), Username);
+            _resxWriter.WriteFiles(resxKeys, outputPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName), Username, CurrentMode == EditMode.Edit);
         }
 
         StatusMessage = $"Exported {allKeys.Count} translation key(s) to {outputPath}.";
