@@ -722,10 +722,6 @@
                                 <Style Selector="DataGridRow" x:DataType="models:TranslationKey">
                                     <Setter Property="Background" Value="{Binding HasMissingTranslations, Converter={StaticResource MissingTranslationBorderConverter}}"/>
                                 </Style>
-                                <!-- Grey out Last Confirmed column when row is modified -->
-                                <Style Selector="DataGridCell:nth-last-child(2) TextBlock" x:DataType="models:TranslationKey">
-                                    <Setter Property="Foreground" Value="{Binding IsModified, Converter={StaticResource ConfirmationForegroundConverter}}"/>
-                                </Style>
                             </DataGrid.Styles>
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Header="Key" 

@@ -390,13 +390,25 @@ public partial class MainWindow : Window
             MaxWidth = 250,
             CellTemplate = new FuncDataTemplate<object>((data, _) =>
             {
-                return new TextBlock
+                var textBlock = new TextBlock
                 {
-                    Text = (data as TranslationKey)?.ConfirmationDisplayText ?? string.Empty,
                     TextWrapping = Avalonia.Media.TextWrapping.Wrap,
                     Padding = new Avalonia.Thickness(5, 4),
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
                 };
+
+                if (data is TranslationKey key)
+                {
+                    textBlock.Text = key.ConfirmationDisplayText;
+                    
+                    // Bind foreground for greying out modified rows
+                    textBlock.Bind(TextBlock.ForegroundProperty, new Binding("IsModified")
+                    {
+                        Converter = ConfirmationForegroundConverter
+                    });
+                }
+
+                return textBlock;
             })
         };
         TranslationsGrid.Columns.Add(confirmedColumn);
