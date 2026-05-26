@@ -269,8 +269,9 @@ public partial class MainWindow : Window
                     {
                         var suggestionTextBlock = new TextBlock
                         {
-                            FontSize = 11,
-                            Foreground = Brushes.White,
+                            FontSize = 12,
+                            FontWeight = FontWeight.Bold,
+                            Foreground = new SolidColorBrush(Color.Parse("#4A148C")), // Dark purple for better contrast
                             TextWrapping = Avalonia.Media.TextWrapping.Wrap,
                             Margin = new Avalonia.Thickness(0, 2, 0, 0)
                         };

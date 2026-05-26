@@ -64,8 +64,9 @@
                                     <Grid IsVisible="{Binding HasSuggestion}" ColumnDefinitions="*,Auto" Margin="0,5,0,0">
                                         <TextBlock Grid.Column="0"
                                                   Text="{Binding SuggestionText}"
-                                                  FontSize="11"
-                                                  Foreground="White"
+                                                  FontSize="12"
+                                                  FontWeight="Bold"
+                                                  Foreground="#4A148C"
                                                   TextWrapping="Wrap"
                                                   VerticalAlignment="Center"/>
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" Margin="10,0,0,0">

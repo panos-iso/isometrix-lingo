@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -106,6 +107,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private EditMode _currentMode = EditMode.Edit;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasErrors), nameof(ErrorCount))]
+    private ObservableCollection<ImportError> _importErrors = new();
+
+    public bool HasErrors => ImportErrors.Count > 0;
+    public int ErrorCount => ImportErrors.Count;
 
     public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
     public bool ShowFileMappingStep => CurrentStep == WorkflowStep.FileMapping;
@@ -254,6 +262,9 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         try
         {
+            // Clear previous errors
+            ImportErrors.Clear();
+            
             var files = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Select Translation Files",
@@ -288,35 +299,100 @@ public partial class MainWindowViewModel : ViewModelBase
                     if (ImportedFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)) ||
                         IgnoredFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)))
                     {
-                        StatusMessage = $"File '{fileName}' has already been imported. Skipping duplicate.";
+                        ImportErrors.Add(new ImportError
+                        {
+                            ErrorType = ImportErrorType.DuplicateFile,
+                            FileName = fileName,
+                            Message = $"File '{fileName}' has already been imported",
+                            Guidance = "This file is already loaded. Remove it from your selection and try again."
+                        });
+                        continue;
+                    }
+
+                    // Validate naming convention
+                    var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
+                    var isValidName = fileType == FileType.Json 
+                        ? _jsonReader.ValidateNamingConvention(fileName)
+                        : _resxReader.ValidateNamingConvention(fileName);
+                    
+                    if (!isValidName)
+                    {
+                        ImportErrors.Add(new ImportError
+                        {
+                            ErrorType = ImportErrorType.InvalidNamingConvention,
+                            FileName = fileName,
+                            Message = $"File name doesn't match expected pattern",
+                            Guidance = fileType == FileType.Json
+                                ? "Expected: {BaseName}.{language}.json (e.g., Forms.en.json, Forms.es.json)"
+                                : "Expected: {BaseName}.resx or {BaseName}_{language}.resx (e.g., FormTranslations.resx, FormTranslations_es.resx)"
+                        });
                         continue;
                     }
 
                     // Check if language is supported (en or es only)
-                    var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
                     var language = ExtractLanguage(fileName, fileType);
                     
                     if (string.IsNullOrEmpty(language) || (language != "en" && language != "es"))
                     {
+                        ImportErrors.Add(new ImportError
+                        {
+                            ErrorType = ImportErrorType.UnsupportedLanguage,
+                            FileName = fileName,
+                            Message = $"Language '{language}' is not supported",
+                            Guidance = "Only English (en) and Spanish (es) are currently supported."
+                        });
                         IgnoredFileNames.Add(fileName);
-                        StatusMessage = $"File '{fileName}' ignored - unsupported language. Only English (en) and Spanish (es) are supported.";
                         continue;
                     }
 
-                    TranslationFile translationFile = extension switch
+                    // Read and parse the file
+                    TranslationFile translationFile;
+                    
+                    try
                     {
-                        ".json" => _jsonReader.ReadFile(filePath),
-                        ".resx" => _resxReader.ReadFile(filePath),
-                        _ => throw new NotSupportedException($"Unsupported file type: {extension}")
-                    };
+                        translationFile = extension switch
+                        {
+                            ".json" => _jsonReader.ReadFile(filePath),
+                            ".resx" => _resxReader.ReadFile(filePath),
+                            _ => throw new NotSupportedException($"Unsupported file type: {extension}")
+                        };
+                    }
+                    catch (JsonException ex)
+                    {
+                        ImportErrors.Add(new ImportError
+                        {
+                            ErrorType = ImportErrorType.JsonParseError,
+                            FileName = fileName,
+                            Message = $"Failed to parse JSON: {ex.Message}",
+                            Guidance = "Ensure the file contains valid JSON syntax. Check for missing commas, brackets, or quotes."
+                        });
+                        continue;
+                    }
+                    catch (System.Xml.XmlException ex)
+                    {
+                        ImportErrors.Add(new ImportError
+                        {
+                            ErrorType = ImportErrorType.ResxParseError,
+                            FileName = fileName,
+                            Message = $"Failed to parse RESX XML: {ex.Message}",
+                            Guidance = "Ensure the file is a valid RESX file with proper XML structure."
+                        });
+                        continue;
+                    }
 
                     translationFiles.Add(translationFile);
                     ImportedFileNames.Add(fileName);
                 }
                 catch (Exception ex)
                 {
-                    // Log individual file errors but continue processing
-                    StatusMessage = $"Warning: Could not import file - {ex.Message}";
+                    // Catch any other unexpected errors
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.Other,
+                        FileName = Path.GetFileName(file.Path.LocalPath),
+                        Message = $"Unexpected error: {ex.Message}",
+                        Guidance = "Please check the file and try again. If the problem persists, contact support."
+                    });
                 }
             }
 
@@ -351,7 +427,21 @@ public partial class MainWindowViewModel : ViewModelBase
             }
 
             UpdateFileFilters();
-            StatusMessage = $"Imported {translationFiles.Count} file(s). Review the imported files below and click 'Confirm & Continue' to proceed.";
+            
+            // Update status message based on errors
+            if (HasErrors)
+            {
+                StatusMessage = $"Import completed with {ErrorCount} error(s). Click 'View Error Details' to see what went wrong.";
+            }
+            else if (translationFiles.Count > 0)
+            {
+                StatusMessage = $"Successfully imported {translationFiles.Count} file(s). Review the imported files below and click 'Confirm & Continue' to proceed.";
+            }
+            else
+            {
+                StatusMessage = "No files were imported.";
+            }
+            
             HasKeys = _translationStore.GetAllKeys().Count > 0;
             ImportStepStatus = StepStatus.InProgress;
             LanguagesChanged?.Invoke(this, EventArgs.Empty);
@@ -1801,6 +1891,21 @@ public partial class MainWindowViewModel : ViewModelBase
         mainPanel.Children.Add(new Border()); // Filler
 
         dialog.Content = mainPanel;
+        await dialog.ShowDialog(window);
+    }
+
+    [RelayCommand]
+    private async Task ShowErrorDetails(Window window)
+    {
+        if (!HasErrors)
+            return;
+
+        var viewModel = new ErrorDetailsViewModel(ImportErrors);
+        var dialog = new ErrorDetailsDialog
+        {
+            DataContext = viewModel
+        };
+
         await dialog.ShowDialog(window);
     }
 

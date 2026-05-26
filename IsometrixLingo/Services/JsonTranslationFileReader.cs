@@ -207,4 +207,17 @@ public class JsonTranslationFileReader
 
         return File.ReadAllText(filePath);
     }
+
+    /// <summary>
+    /// Validates that the JSON file name follows the expected naming convention.
+    /// Expected pattern: {BaseName}.{language}.json (e.g., Forms.en.json, Forms.es.json)
+    /// </summary>
+    /// <param name="fileName">The file name to validate (without path)</param>
+    /// <returns>True if the file name matches the expected pattern, otherwise false</returns>
+    public bool ValidateNamingConvention(string fileName)
+    {
+        // Pattern: {BaseName}.{language}.json where language is 2-letter code
+        var pattern = new Regex(@"^[A-Za-z0-9_-]+\.(en|es|fr|de|it|pt|ru|zh|ja|ko|ar)\.json$", RegexOptions.IgnoreCase);
+        return pattern.IsMatch(fileName);
+    }
 }
