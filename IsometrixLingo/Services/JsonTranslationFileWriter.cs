@@ -23,7 +23,8 @@ public class JsonTranslationFileWriter
     /// <param name="outputDirectory">Output directory for files</param>
     /// <param name="templateProvider">Optional function to provide JSON template for a given source file name</param>
     /// <param name="username">Username for confirmation auditing (optional)</param>
-    public void WriteFiles(List<TranslationKey> keys, string outputDirectory, Func<string, string?>? templateProvider = null, string? username = null)
+    /// <param name="isEditMode">Whether in Edit mode (confirmations only created/updated in Edit mode)</param>
+    public void WriteFiles(List<TranslationKey> keys, string outputDirectory, Func<string, string?>? templateProvider = null, string? username = null, bool isEditMode = true)
     {
         if (!Directory.Exists(outputDirectory))
         {
@@ -53,12 +54,12 @@ public class JsonTranslationFileWriter
                 // Get template for this source file if available
                 var template = templateProvider?.Invoke(sourceFile);
 
-                WriteLanguageFile(filePath, fileKeys, language, template, username);
+                WriteLanguageFile(filePath, fileKeys, language, template, username, isEditMode);
             }
         }
     }
 
-    private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, string? template, string? username)
+    private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, string? template, string? username, bool isEditMode)
     {
         JsonObject jsonObject;
 
@@ -77,7 +78,7 @@ public class JsonTranslationFileWriter
                 {
                     // Get actual value and suggestion
                     var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                    var fullValue = AppendAnnotations(value, key, language, username);
+                    var fullValue = AppendAnnotations(value, key, language, username, isEditMode);
                     
                     if (UpdateNestedValue(jsonObject, key.Key, fullValue))
                     {
@@ -91,7 +92,7 @@ public class JsonTranslationFileWriter
                     if (!processedKeys.Contains(key.Key))
                     {
                         var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                        var fullValue = AppendAnnotations(value, key, language, username);
+                        var fullValue = AppendAnnotations(value, key, language, username, isEditMode);
                         SetNestedValue(jsonObject, key.Key, fullValue);
                     }
                 }
@@ -103,7 +104,7 @@ public class JsonTranslationFileWriter
                 foreach (var key in keys)
                 {
                     var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                    var fullValue = AppendAnnotations(value, key, language, username);
+                    var fullValue = AppendAnnotations(value, key, language, username, isEditMode);
                     SetNestedValue(jsonObject, key.Key, fullValue);
                 }
             }
@@ -115,7 +116,7 @@ public class JsonTranslationFileWriter
             foreach (var key in keys)
             {
                 var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                var fullValue = AppendAnnotations(value, key, language, username);
+                var fullValue = AppendAnnotations(value, key, language, username, isEditMode);
                 SetNestedValue(jsonObject, key.Key, fullValue);
             }
         }
@@ -127,9 +128,9 @@ public class JsonTranslationFileWriter
     /// <summary>
     /// Append suggestion and confirmation annotations to value
     /// Format: "actual value SUGGESTION:...,by:[username],at:[datetime] CONFIRMED:by:[username],at:[datetime]"
-    /// Auto-creates/updates confirmation for keys with both en and es values when writing English files
+    /// Auto-creates/updates confirmation for keys with both en and es values when writing English files (Edit mode only)
     /// </summary>
-    private string AppendAnnotations(string actualValue, TranslationKey key, string language, string? username)
+    private string AppendAnnotations(string actualValue, TranslationKey key, string language, string? username, bool isEditMode)
     {
         var result = actualValue;
         
@@ -139,44 +140,48 @@ public class JsonTranslationFileWriter
             result = $"{result} {suggestion.ToFileFormat()}";
         }
         
-        // For English files, append confirmation (auto-create if key is complete)
+        // For English files, append confirmation (auto-create/update/remove only in Edit mode)
         if (language == "en")
         {
-            var hasEnglish = key.LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue);
-            var hasSpanish = key.LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue);
-            
-            // If key has both languages, ensure it has confirmation
-            if (hasEnglish && hasSpanish)
+            if (isEditMode)
             {
-                // If key was edited, override confirmation with new one
-                if (key.IsModified && !string.IsNullOrWhiteSpace(username))
-                {
-                    key.ConfirmedBy = new Confirmation
-                    {
-                        Username = username,
-                        Timestamp = DateTime.UtcNow
-                    };
-                }
-                // If key was not edited and has no confirmation, create one
-                else if (!key.IsModified && key.ConfirmedBy == null && !string.IsNullOrWhiteSpace(username))
-                {
-                    key.ConfirmedBy = new Confirmation
-                    {
-                        Username = username,
-                        Timestamp = DateTime.UtcNow
-                    };
-                }
-                // Otherwise keep existing confirmation (if any)
+                var hasEnglish = key.LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue);
+                var hasSpanish = key.LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue);
                 
-                if (key.ConfirmedBy != null)
+                // If key has both languages, ensure it has confirmation
+                if (hasEnglish && hasSpanish)
                 {
-                    result = $"{result} {key.ConfirmedBy.ToFileFormat()}";
+                    // If key was edited, override confirmation with new one
+                    if (key.IsModified && !string.IsNullOrWhiteSpace(username))
+                    {
+                        key.ConfirmedBy = new Confirmation
+                        {
+                            Username = username,
+                            Timestamp = DateTime.UtcNow
+                        };
+                    }
+                    // If key was not edited and has no confirmation, create one
+                    else if (!key.IsModified && key.ConfirmedBy == null && !string.IsNullOrWhiteSpace(username))
+                    {
+                        key.ConfirmedBy = new Confirmation
+                        {
+                            Username = username,
+                            Timestamp = DateTime.UtcNow
+                        };
+                    }
+                    // Otherwise keep existing confirmation (if any)
+                }
+                // If key is incomplete, remove any existing confirmation
+                else if (key.ConfirmedBy != null)
+                {
+                    key.ConfirmedBy = null;
                 }
             }
-            // If key is incomplete, remove any existing confirmation
-            else if (key.ConfirmedBy != null)
+            
+            // Always write existing confirmations to file (both Edit and Suggest mode)
+            if (key.ConfirmedBy != null)
             {
-                key.ConfirmedBy = null;
+                result = $"{result} {key.ConfirmedBy.ToFileFormat()}";
             }
         }
         
