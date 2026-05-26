@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia;
@@ -42,7 +43,10 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _username = "User";
 
     [ObservableProperty]
-    private string _apiToken = string.Empty;
+    private string _gitHubToken = string.Empty;
+
+    [ObservableProperty]
+    private string _gitHubUsername = string.Empty;
 
     [ObservableProperty]
     private ObservableCollection<SourceFile?> _availableSourceFiles = new();
@@ -1675,9 +1679,13 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 Username = settings.Username;
             }
-            if (!string.IsNullOrWhiteSpace(settings.ApiToken))
+            if (!string.IsNullOrWhiteSpace(settings.GitHubToken))
             {
-                ApiToken = settings.ApiToken;
+                GitHubToken = settings.GitHubToken;
+            }
+            if (!string.IsNullOrWhiteSpace(settings.GitHubUsername))
+            {
+                GitHubUsername = settings.GitHubUsername;
             }
         }
     }
@@ -1883,7 +1891,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             Title = "User Profile",
             Width = 450,
-            Height = 280,
+            Height = 320,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };
@@ -1913,29 +1921,104 @@ public partial class MainWindowViewModel : ViewModelBase
         };
         contentPanel.Children.Add(usernameBox);
 
-        // API Token section
+        // GitHub Authentication section
         contentPanel.Children.Add(new TextBlock
         {
-            Text = "AI API Token (Optional)",
+            Text = "GitHub Authentication",
             FontWeight = FontWeight.SemiBold,
-            Margin = new Thickness(0, 10, 0, 0)
+            Margin = new Thickness(0, 15, 0, 0)
         });
 
-        contentPanel.Children.Add(new TextBlock
+        var githubStatusText = new TextBlock
         {
-            Text = "GitHub Models token for AI-powered translation suggestions",
-            FontSize = 11,
-            Foreground = Brushes.Gray,
-            Margin = new Thickness(0, -10, 0, 0)
-        });
-
-        var apiTokenBox = new TextBox
-        {
-            Text = ApiToken,
-            PasswordChar = '●',
-            PlaceholderText = "github_pat_... or ghp_..."
+            FontSize = 12,
+            Foreground = Brushes.Gray
         };
-        contentPanel.Children.Add(apiTokenBox);
+
+        if (!string.IsNullOrWhiteSpace(GitHubUsername))
+        {
+            githubStatusText.Text = $"✓ Signed in as {GitHubUsername}";
+            githubStatusText.Foreground = Brushes.Green;
+        }
+        else
+        {
+            githubStatusText.Text = "Not signed in - AI features disabled";
+            githubStatusText.Foreground = Brushes.Orange;
+        }
+        contentPanel.Children.Add(githubStatusText);
+
+        var githubButtonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 10,
+            Margin = new Thickness(0, 5, 0, 0)
+        };
+
+        var signInButton = new Button
+        {
+            Content = "Sign in with GitHub",
+            Padding = new Thickness(10, 5)
+        };
+
+        signInButton.Click += async (s, args) =>
+        {
+            try
+            {
+                signInButton.IsEnabled = false;
+                signInButton.Content = "Signing in...";
+                
+                await SignInWithGitHub();
+                
+                if (!string.IsNullOrWhiteSpace(GitHubUsername))
+                {
+                    githubStatusText.Text = $"✓ Signed in as {GitHubUsername}";
+                    githubStatusText.Foreground = Brushes.Green;
+                    signInButton.Content = "Re-authenticate";
+                }
+                else
+                {
+                    signInButton.Content = "Sign in with GitHub";
+                }
+                signInButton.IsEnabled = true;
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Sign in failed: {ex.Message}";
+                signInButton.Content = "Sign in with GitHub";
+                signInButton.IsEnabled = true;
+            }
+        };
+
+        if (!string.IsNullOrWhiteSpace(GitHubUsername))
+        {
+            signInButton.Content = "Re-authenticate";
+            
+            var signOutButton = new Button
+            {
+                Content = "Sign out",
+                Padding = new Thickness(10, 5)
+            };
+            
+            signOutButton.Click += (s, args) =>
+            {
+                GitHubToken = string.Empty;
+                GitHubUsername = string.Empty;
+                var settings = _settingsService.Load() ?? new UserSettings { Username = Username };
+                settings.GitHubToken = string.Empty;
+                settings.GitHubUsername = string.Empty;
+                _settingsService.Save(settings);
+                
+                githubStatusText.Text = "Not signed in - AI features disabled";
+                githubStatusText.Foreground = Brushes.Orange;
+                signInButton.Content = "Sign in with GitHub";
+                githubButtonPanel.Children.Remove(signOutButton);
+            };
+            
+            githubButtonPanel.Children.Add(signOutButton);
+        }
+
+        githubButtonPanel.Children.Add(signInButton);
+        contentPanel.Children.Add(githubButtonPanel);
 
         DockPanel.SetDock(contentPanel, Dock.Top);
         mainPanel.Children.Add(contentPanel);
@@ -1965,43 +2048,31 @@ public partial class MainWindowViewModel : ViewModelBase
             HorizontalContentAlignment = HorizontalAlignment.Center
         };
 
-        // Enable save button when either field changes
+        // Enable save button when username changes
         void UpdateSaveButton()
         {
             var usernameChanged = (usernameBox.Text?.Trim() ?? "") != Username;
-            var apiTokenChanged = (apiTokenBox.Text?.Trim() ?? "") != ApiToken;
             var usernameValid = !string.IsNullOrWhiteSpace(usernameBox.Text?.Trim());
-            saveButton.IsEnabled = usernameValid && (usernameChanged || apiTokenChanged);
+            saveButton.IsEnabled = usernameValid && usernameChanged;
         }
 
         usernameBox.TextChanged += (s, e) => UpdateSaveButton();
-        apiTokenBox.TextChanged += (s, e) => UpdateSaveButton();
 
         saveButton.Click += (s, args) =>
         {
             var newUsername = usernameBox.Text?.Trim();
-            var newApiToken = apiTokenBox.Text?.Trim() ?? "";
 
             if (!string.IsNullOrWhiteSpace(newUsername))
             {
                 Username = newUsername;
-                ApiToken = newApiToken;
 
-                var settings = new UserSettings 
-                { 
-                    Username = newUsername,
-                    ApiToken = newApiToken
-                };
+                var settings = _settingsService.Load() ?? new UserSettings();
+                settings.Username = newUsername;
+                settings.GitHubToken = GitHubToken;
+                settings.GitHubUsername = GitHubUsername;
                 _settingsService.Save(settings);
 
-                if (string.IsNullOrWhiteSpace(newApiToken))
-                {
-                    StatusMessage = $"Profile updated. Username: '{newUsername}'.";
-                }
-                else
-                {
-                    StatusMessage = $"Profile updated. Username: '{newUsername}', AI token configured.";
-                }
+                StatusMessage = $"Profile updated. Username: '{newUsername}'.";
             }
             dialog.Close();
         };
@@ -2067,14 +2138,294 @@ public partial class MainWindowViewModel : ViewModelBase
         StatusMessage = $"Rejected suggestion for '{key.Key}' in {LanguageHelper.GetLanguageName(language)}.";
     }
 
+    private async Task SignInWithGitHub()
+    {
+        try
+        {
+            var oauthService = new GitHubOAuthService();
+            
+            Window? codeDialog = null;
+            TextBlock? codeTextBlock = null;
+            
+            var token = await oauthService.AuthenticateAsync((userCode, verificationUri) =>
+            {
+                // Show dialog with code
+                codeDialog = new Window
+                {
+                    Title = "Sign in with GitHub",
+                    Width = 500,
+                    Height = 300,
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                    CanResize = false
+                };
+
+                var panel = new StackPanel
+                {
+                    Margin = new Thickness(30),
+                    Spacing = 20
+                };
+
+                panel.Children.Add(new TextBlock
+                {
+                    Text = "Complete the following steps to sign in:",
+                    FontSize = 14,
+                    FontWeight = FontWeight.SemiBold
+                });
+
+                panel.Children.Add(new TextBlock
+                {
+                    Text = $"1. A browser window will open to:\n   {verificationUri}",
+                    TextWrapping = TextWrapping.Wrap,
+                    FontSize = 12
+                });
+
+                panel.Children.Add(new TextBlock
+                {
+                    Text = "2. Enter this code when prompted:",
+                    FontSize = 12
+                });
+
+                var codePanel = new Border
+                {
+                    Background = new SolidColorBrush(Color.Parse("#f0f0f0")),
+                    Padding = new Thickness(15, 10),
+                    CornerRadius = new CornerRadius(5),
+                    BorderBrush = new SolidColorBrush(Color.Parse("#d0d0d0")),
+                    BorderThickness = new Thickness(1)
+                };
+
+                codeTextBlock = new TextBlock
+                {
+                    Text = userCode,
+                    FontSize = 24,
+                    FontWeight = FontWeight.Bold,
+                    FontFamily = new FontFamily("Courier New"),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Foreground = new SolidColorBrush(Color.Parse("#0366d6"))
+                };
+
+                codePanel.Child = codeTextBlock;
+                panel.Children.Add(codePanel);
+
+                var buttonPanel = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Spacing = 10,
+                    Margin = new Thickness(0, 10, 0, 0)
+                };
+
+                var copyButton = new Button
+                {
+                    Content = "Copy Code",
+                    Padding = new Thickness(15, 8)
+                };
+
+                copyButton.Click += (s, e) =>
+                {
+                    // User can manually copy the code
+                    copyButton.Content = "Select and copy the code above";
+                };
+
+                var openBrowserButton = new Button
+                {
+                    Content = "Open Browser",
+                    Padding = new Thickness(15, 8)
+                };
+
+                openBrowserButton.Click += (s, e) =>
+                {
+                    try
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = verificationUri,
+                            UseShellExecute = true
+                        });
+                    }
+                    catch
+                    {
+                        // Fallback
+                        if (OperatingSystem.IsMacOS())
+                        {
+                            Process.Start("open", verificationUri);
+                        }
+                    }
+                };
+
+                buttonPanel.Children.Add(copyButton);
+                buttonPanel.Children.Add(openBrowserButton);
+                panel.Children.Add(buttonPanel);
+
+                panel.Children.Add(new TextBlock
+                {
+                    Text = "Waiting for authorization...",
+                    FontSize = 11,
+                    Foreground = Brushes.Gray,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Margin = new Thickness(0, 10, 0, 0)
+                });
+
+                codeDialog.Content = panel;
+                
+                // Open browser automatically
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(500);
+                    try
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = verificationUri,
+                            UseShellExecute = true
+                        });
+                    }
+                    catch
+                    {
+                        if (OperatingSystem.IsMacOS())
+                        {
+                            Process.Start("open", verificationUri);
+                        }
+                    }
+                });
+
+                var mainWindow = Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop 
+                    ? desktop.MainWindow 
+                    : null;
+                
+                if (mainWindow != null)
+                {
+                    _ = codeDialog.ShowDialog(mainWindow);
+                }
+            });
+            
+            // Close the code dialog
+            codeDialog?.Close();
+            
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                GitHubToken = token;
+                
+                // Fetch GitHub username
+                using var httpClient = new HttpClient();
+                httpClient.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("IsometrixLingo/1.0");
+                
+                var response = await httpClient.GetAsync("https://api.github.com/user");
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var user = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(json);
+                    if (user.TryGetProperty("login", out var login))
+                    {
+                        GitHubUsername = login.GetString() ?? "Unknown";
+                    }
+                }
+                
+                // Save to settings
+                var settings = _settingsService.Load() ?? new UserSettings { Username = Username };
+                settings.GitHubToken = GitHubToken;
+                settings.GitHubUsername = GitHubUsername;
+                _settingsService.Save(settings);
+                
+                StatusMessage = $"Successfully signed in as {GitHubUsername}";
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"GitHub authentication failed: {ex.Message}", ex);
+        }
+    }
+
     [RelayCommand]
     private async Task GenerateAiSuggestions(Window window)
     {
-        // Check if API token is configured
-        if (string.IsNullOrWhiteSpace(ApiToken))
+        // Check if user is authenticated with GitHub
+        if (string.IsNullOrWhiteSpace(GitHubToken))
         {
-            StatusMessage = "AI API token not configured. Click the profile icon to add your token.";
-            return;
+            // Show sign-in dialog
+            var signInDialog = new Window
+            {
+                Title = "Sign in Required",
+                Width = 450,
+                Height = 220,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                CanResize = false
+            };
+
+            var panel = new StackPanel
+            {
+                Margin = new Thickness(20),
+                Spacing = 20
+            };
+
+            panel.Children.Add(new TextBlock
+            {
+                Text = "Sign in with GitHub to use AI-powered translation suggestions.\n\nThis feature uses GitHub Models API to generate translations.",
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = 13
+            });
+
+            var buttonPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Spacing = 10
+            };
+
+            var signInButton = new Button
+            {
+                Content = "Sign in with GitHub",
+                Width = 150,
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                Padding = new Thickness(10, 5)
+            };
+
+            var cancelButton = new Button
+            {
+                Content = "Cancel",
+                Width = 100,
+                HorizontalContentAlignment = HorizontalAlignment.Center
+            };
+
+            bool shouldSignIn = false;
+
+            signInButton.Click += (s, args) => { shouldSignIn = true; signInDialog.Close(); };
+            cancelButton.Click += (s, args) => { shouldSignIn = false; signInDialog.Close(); };
+
+            buttonPanel.Children.Add(cancelButton);
+            buttonPanel.Children.Add(signInButton);
+
+            panel.Children.Add(buttonPanel);
+            signInDialog.Content = panel;
+
+            await signInDialog.ShowDialog(window);
+
+            if (!shouldSignIn)
+            {
+                StatusMessage = "AI translation cancelled.";
+                return;
+            }
+
+            // Attempt to sign in
+            try
+            {
+                await SignInWithGitHub();
+                
+                if (string.IsNullOrWhiteSpace(GitHubToken))
+                {
+                    StatusMessage = "Sign in was not completed. Please try again.";
+                    return;
+                }
+                
+                StatusMessage = $"Signed in as {GitHubUsername}. Starting AI translation...";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Sign in failed: {ex.Message}";
+                return;
+            }
         }
 
         // Find keys with missing Spanish translations
@@ -2204,7 +2555,7 @@ public partial class MainWindowViewModel : ViewModelBase
             var aiService = new AiTranslationService();
             var translations = await aiService.BatchTranslateAsync(
                 textsToTranslate,
-                ApiToken,
+                GitHubToken,
                 (current, total) =>
                 {
                     progressText.Text = $"Translating {current} / {total}";
