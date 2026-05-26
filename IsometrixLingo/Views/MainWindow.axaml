@@ -20,6 +20,7 @@
         <converters:ShowOriginalTooltipConverter x:Key="ShowOriginalTooltipConverter"/>
         <converters:RowToggleEnabledConverter x:Key="RowToggleEnabledConverter"/>
         <converters:MissingTranslationBorderConverter x:Key="MissingTranslationBorderConverter"/>
+        <converters:ConfirmationForegroundConverter x:Key="ConfirmationForegroundConverter"/>
     </Window.Resources>
     
     <Window.Styles>
@@ -664,14 +665,29 @@
                                   IsVisible="{Binding CurrentMode, Converter={StaticResource IsEditModeConverter}}"
                                   VerticalAlignment="Center"
                                   ToolTip.Tip="Toggle between current and original values to see what changed"/>
-                        <CheckBox Content="Only Missing Translations"
-                                  IsChecked="{Binding ShowOnlyMissingTranslations}"
-                                  VerticalAlignment="Center"
-                                  ToolTip.Tip="Show only keys with missing translations"/>
-                        <CheckBox Content="Only With Suggestions"
-                                  IsChecked="{Binding ShowOnlyWithSuggestions}"
-                                  VerticalAlignment="Center"
-                                  ToolTip.Tip="Show only keys that have suggestions"/>
+                        
+                        <!-- More Filters Button with Flyout -->
+                        <Button Content="More Filters"
+                                Padding="10,5"
+                                VerticalAlignment="Center">
+                            <Button.Flyout>
+                                <Flyout Placement="BottomEdgeAlignedLeft">
+                                    <StackPanel Spacing="8" Margin="10">
+                                        <CheckBox Content="Only Missing Translations"
+                                                  IsChecked="{Binding ShowOnlyMissingTranslations}"
+                                                  ToolTip.Tip="Show only keys with missing translations"/>
+                                        <CheckBox Content="Only With Suggestions"
+                                                  IsChecked="{Binding ShowOnlyWithSuggestions}"
+                                                  ToolTip.Tip="Show only keys that have suggestions"/>
+                                        <CheckBox Content="Only Unconfirmed"
+                                                  IsChecked="{Binding ShowOnlyUnconfirmed}"
+                                                  IsVisible="{Binding CurrentMode, Converter={StaticResource IsEditModeConverter}}"
+                                                  ToolTip.Tip="Show only keys that are unconfirmed (missing translations or lacking confirmation audit)"/>
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                        
                         <TextBox Text="{Binding SearchText}"
                                  PlaceholderText="Search keys and values..."
                                  MinWidth="200"
@@ -708,14 +724,32 @@
                                 </Style>
                             </DataGrid.Styles>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Key" 
-                                                    Binding="{Binding Key}" 
-                                                    Width="1.5*" 
-                                                    MinWidth="150"/>
-                                <DataGridTextColumn Header="Source File" 
-                                                    Binding="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
-                                                    Width="*" 
-                                                    MinWidth="150"/>
+                                <DataGridTemplateColumn Header="Key" 
+                                                        Width="1.5*" 
+                                                        MinWidth="150"
+                                                        MaxWidth="300">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Key}" 
+                                                       TextWrapping="Wrap"
+                                                       Padding="5,4"
+                                                       VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Source File" 
+                                                        Width="*" 
+                                                        MinWidth="120"
+                                                        MaxWidth="250">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
+                                                       TextWrapping="Wrap"
+                                                       Padding="5,4"
+                                                       VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Border>

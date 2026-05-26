@@ -100,6 +100,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _showOnlyWithSuggestions;
 
     [ObservableProperty]
+    private bool _showOnlyUnconfirmed;
+
+    [ObservableProperty]
     private bool _showFilters = true;
 
     [ObservableProperty]
@@ -700,6 +703,7 @@ public partial class MainWindowViewModel : ViewModelBase
         ShowOriginalValues = false;
         ShowOnlyMissingTranslations = false;
         ShowOnlyWithSuggestions = false;
+        ShowOnlyUnconfirmed = false;
         _translationStore.FilterBySourceFiles(null!);
         _translationStore.FilterBySearchTerm(string.Empty);
         UpdateStatusMessage();
@@ -726,6 +730,12 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnShowOnlyWithSuggestionsChanged(bool value)
     {
         _translationStore.FilterBySuggestions(value);
+        UpdateStatusMessage();
+    }
+
+    partial void OnShowOnlyUnconfirmedChanged(bool value)
+    {
+        _translationStore.FilterByConfirmation(value);
         UpdateStatusMessage();
     }
 
@@ -818,13 +828,13 @@ public partial class MainWindowViewModel : ViewModelBase
         if (jsonKeys.Count > 0)
         {
             // Provide template provider function to preserve original JSON structure
-            _jsonWriter.WriteFiles(jsonKeys, outputPath, sourceFileName => _translationStore.GetJsonTemplate(sourceFileName));
+            _jsonWriter.WriteFiles(jsonKeys, outputPath, sourceFileName => _translationStore.GetJsonTemplate(sourceFileName), Username);
         }
 
         if (resxKeys.Count > 0)
         {
             // Provide template provider function to preserve original RESX structure
-            _resxWriter.WriteFiles(resxKeys, outputPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName));
+            _resxWriter.WriteFiles(resxKeys, outputPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName), Username);
         }
 
         StatusMessage = $"Exported {allKeys.Count} translation key(s) to {outputPath}.";
@@ -1378,12 +1388,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
             if (jsonKeys.Count > 0)
             {
-                _jsonWriter.WriteFiles(jsonKeys, tempFolderPath, sourceFileName => _translationStore.GetJsonTemplate(sourceFileName));
+                _jsonWriter.WriteFiles(jsonKeys, tempFolderPath, sourceFileName => _translationStore.GetJsonTemplate(sourceFileName), Username);
             }
 
             if (resxKeys.Count > 0)
             {
-                _resxWriter.WriteFiles(resxKeys, tempFolderPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName));
+                _resxWriter.WriteFiles(resxKeys, tempFolderPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName), Username);
             }
 
             // Create ZIP file
@@ -1592,8 +1602,22 @@ public partial class MainWindowViewModel : ViewModelBase
         var sessionState = _progressService.LoadProgress();
         if (sessionState != null && sessionState.TranslationKeys.Count > 0)
         {
+            // DEBUG: Count confirmations before adding to store
+            var confirmationsLoaded = sessionState.TranslationKeys.Count(k => k.ConfirmedBy != null);
+            System.Diagnostics.Debug.WriteLine($"[LoadProgress] Loaded {confirmationsLoaded} keys with confirmations out of {sessionState.TranslationKeys.Count} total keys");
+            
+            // DEBUG: Show some details
+            foreach (var key in sessionState.TranslationKeys.Where(k => k.ConfirmedBy != null).Take(3))
+            {
+                System.Diagnostics.Debug.WriteLine($"  Key: {key.Key}, ConfirmationDisplayText: '{key.ConfirmationDisplayText}'");
+            }
+            
             // Restore translation keys
             _translationStore.AddTranslations(sessionState.TranslationKeys);
+            
+            // DEBUG: Count confirmations after adding to store
+            var confirmationsInStore = _translationStore.GetAllKeys().Count(k => k.ConfirmedBy != null);
+            System.Diagnostics.Debug.WriteLine($"[LoadProgress] Store now has {confirmationsInStore} keys with confirmations");
 
             // Restore templates
             _translationStore.RestoreResxTemplates(sessionState.ResxTemplates);
@@ -1625,7 +1649,7 @@ public partial class MainWindowViewModel : ViewModelBase
             HasKeys = true;
             HasUnsavedChanges = false;
 
-            StatusMessage = $"Loaded {sessionState.TranslationKeys.Count} translation keys from saved progress.";
+            StatusMessage = $"Loaded {sessionState.TranslationKeys.Count} translation keys from saved progress ({confirmationsLoaded} confirmed).";
             LanguagesChanged?.Invoke(this, EventArgs.Empty);
         }
     }

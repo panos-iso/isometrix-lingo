@@ -33,7 +33,7 @@ public class ResxTranslationFileReader
         foreach (var resource in resources)
         {
             var rawValue = resource.Value;
-            var (actualValue, suggestion) = ParseValueWithSuggestion(rawValue, language);
+            var (actualValue, suggestion, confirmation) = ParseValue(rawValue, language);
             
             var translationKey = new TranslationKey
             {
@@ -48,6 +48,12 @@ public class ResxTranslationFileReader
             if (suggestion != null)
             {
                 translationKey.SuggestedValues[language] = suggestion;
+            }
+            
+            // Confirmation is at key level, store in base file (English)
+            if (confirmation != null && language == "en")
+            {
+                translationKey.ConfirmedBy = confirmation;
             }
             
             keys.Add(translationKey);
@@ -120,6 +126,12 @@ public class ResxTranslationFileReader
                     {
                         existingKey.SuggestedValues[suggestion.Key] = suggestion.Value;
                     }
+                    
+                    // Merge confirmation (from base file)
+                    if (key.ConfirmedBy != null && existingKey.ConfirmedBy == null)
+                    {
+                        existingKey.ConfirmedBy = key.ConfirmedBy;
+                    }
                 }
                 else
                 {
@@ -128,7 +140,8 @@ public class ResxTranslationFileReader
                         Key = key.Key,
                         Source = key.Source,
                         LanguageValues = new Dictionary<string, string>(key.LanguageValues),
-                        SuggestedValues = new Dictionary<string, Suggestion>(key.SuggestedValues)
+                        SuggestedValues = new Dictionary<string, Suggestion>(key.SuggestedValues),
+                        ConfirmedBy = key.ConfirmedBy
                     };
                 }
             }
@@ -152,27 +165,57 @@ public class ResxTranslationFileReader
     }
 
     /// <summary>
-    /// Parse a value string that may contain a suggestion
-    /// Format: "actual value SUGGESTION:suggested_value,by:[username],at:[datetime]"
-    /// Returns the actual value and the parsed suggestion (if present)
+    /// Parse a value string that may contain a suggestion and/or confirmation
+    /// Format: "actual value SUGGESTION:suggested_value,by:[username],at:[datetime] CONFIRMED:by:[username],at:[datetime]"
+    /// Returns the actual value, parsed suggestion (if present), and parsed confirmation (if present)
     /// </summary>
-    private (string actualValue, Suggestion? suggestion) ParseValueWithSuggestion(string rawValue, string language)
+    private (string actualValue, Suggestion? suggestion, Confirmation? confirmation) ParseValue(string rawValue, string language)
     {
         const string suggestionPrefix = " SUGGESTION:";
+        const string confirmedPrefix = " CONFIRMED:";
+        
+        var actualValue = rawValue;
+        Suggestion? suggestion = null;
+        Confirmation? confirmation = null;
+        
+        // Check for SUGGESTION
         var suggestionIndex = rawValue.IndexOf(suggestionPrefix, StringComparison.Ordinal);
-        
-        if (suggestionIndex == -1)
+        if (suggestionIndex != -1)
         {
-            // No suggestion in this value
-            return (rawValue, null);
+            actualValue = rawValue.Substring(0, suggestionIndex);
+            var remainingAfterValue = rawValue.Substring(suggestionIndex + 1); // Skip the leading space
+            
+            // Find where suggestion ends (either at CONFIRMED or end of string)
+            var confirmedIndexInRemaining = remainingAfterValue.IndexOf(confirmedPrefix, StringComparison.Ordinal);
+            
+            string suggestionPart;
+            if (confirmedIndexInRemaining != -1)
+            {
+                suggestionPart = remainingAfterValue.Substring(0, confirmedIndexInRemaining);
+            }
+            else
+            {
+                suggestionPart = remainingAfterValue;
+            }
+            
+            suggestion = Suggestion.FromFileFormat(suggestionPart);
         }
-
-        // Split actual value and suggestion
-        var actualValue = rawValue.Substring(0, suggestionIndex);
-        var suggestionPart = rawValue.Substring(suggestionIndex + 1); // Skip the leading space
         
-        var suggestion = Suggestion.FromFileFormat(suggestionPart);
-        return (actualValue, suggestion);
+        // Check for CONFIRMED
+        var confirmedIndex = rawValue.IndexOf(confirmedPrefix, StringComparison.Ordinal);
+        if (confirmedIndex != -1)
+        {
+            // If there's no suggestion, extract actual value up to CONFIRMED
+            if (suggestionIndex == -1)
+            {
+                actualValue = rawValue.Substring(0, confirmedIndex);
+            }
+            
+            var confirmedPart = rawValue.Substring(confirmedIndex + 1); // Skip the leading space
+            confirmation = Confirmation.FromFileFormat(confirmedPart);
+        }
+        
+        return (actualValue, suggestion, confirmation);
     }
 
     /// <summary>
