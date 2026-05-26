@@ -9,7 +9,6 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
-using Avalonia.Styling;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using IsometrixLingo.Converters;
 using IsometrixLingo.Helpers;
@@ -274,12 +273,9 @@ public partial class MainWindow : Window
                             FontSize = 12,
                             FontWeight = FontWeight.Bold,
                             TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-                            Margin = new Avalonia.Thickness(0, 2, 0, 0)
+                            Margin = new Avalonia.Thickness(0, 2, 0, 0),
+                            [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("SuggestionTextBrush")
                         };
-                        
-                        // Theme-aware color via dynamic resource
-                        suggestionTextBlock.Bind(TextBlock.ForegroundProperty, 
-                            new DynamicResourceExtension("SuggestionTextBrush"));
 
                         // Bind suggestion text
                         var suggestionTextBinding = new MultiBinding

@@ -11,37 +11,40 @@
     </Application.DataTemplates>
   
     <Application.Resources>
-        <converters:EditModeColorConverter x:Key="EditModeColorConverter"/>
-        <converters:EditModeTextConverter x:Key="EditModeTextConverter"/>
-        <converters:EditModeTooltipConverter x:Key="EditModeTooltipConverter"/>
-        <converters:HasSuggestionConverter x:Key="HasSuggestionConverter"/>
-        <converters:SuggestionTextConverter x:Key="SuggestionTextConverter"/>
-        <converters:EditModeAndHasSuggestionConverter x:Key="EditModeAndHasSuggestionConverter"/>
-        <converters:AddKeyDialogTitleConverter x:Key="AddKeyDialogTitleConverter"/>
-        <converters:AddKeyGuidanceConverter x:Key="AddKeyGuidanceConverter"/>
-        <converters:EditDialogTitleConverter x:Key="EditDialogTitleConverter"/>
-        <converters:EditDialogLabelConverter x:Key="EditDialogLabelConverter"/>
-        <converters:IsEditModeConverter x:Key="IsEditModeConverter"/>
-        <converters:IsSuggestModeConverter x:Key="IsSuggestModeConverter"/>
-        <converters:ModeSelectionBorderColorConverter x:Key="ModeSelectionBorderColorConverter"/>
-        <converters:ModeSelectionBorderThicknessConverter x:Key="ModeSelectionBorderThicknessConverter"/>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary>
+                    <converters:EditModeColorConverter x:Key="EditModeColorConverter"/>
+                    <converters:EditModeTextConverter x:Key="EditModeTextConverter"/>
+                    <converters:EditModeTooltipConverter x:Key="EditModeTooltipConverter"/>
+                    <converters:HasSuggestionConverter x:Key="HasSuggestionConverter"/>
+                    <converters:SuggestionTextConverter x:Key="SuggestionTextConverter"/>
+                    <converters:EditModeAndHasSuggestionConverter x:Key="EditModeAndHasSuggestionConverter"/>
+                    <converters:AddKeyDialogTitleConverter x:Key="AddKeyDialogTitleConverter"/>
+                    <converters:AddKeyGuidanceConverter x:Key="AddKeyGuidanceConverter"/>
+                    <converters:EditDialogTitleConverter x:Key="EditDialogTitleConverter"/>
+                    <converters:EditDialogLabelConverter x:Key="EditDialogLabelConverter"/>
+                    <converters:IsEditModeConverter x:Key="IsEditModeConverter"/>
+                    <converters:IsSuggestModeConverter x:Key="IsSuggestModeConverter"/>
+                    <converters:ModeSelectionBorderColorConverter x:Key="ModeSelectionBorderColorConverter"/>
+                    <converters:ModeSelectionBorderThicknessConverter x:Key="ModeSelectionBorderThicknessConverter"/>
+                </ResourceDictionary>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="SuggestionTextBrush" Color="#4A148C"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="SuggestionTextBrush" Color="White"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
   
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
-        
-        <!-- Theme-aware suggestion text color -->
-        <Style Selector=":is(Control)">
-            <Style.Resources>
-                <SolidColorBrush x:Key="SuggestionTextBrush">#4A148C</SolidColorBrush>
-            </Style.Resources>
-        </Style>
-        <Style Selector=":is(Control):dark">
-            <Style.Resources>
-                <SolidColorBrush x:Key="SuggestionTextBrush">White</SolidColorBrush>
-            </Style.Resources>
-        </Style>
         
         <!-- Custom charcoal background for dark mode only -->
         <Style Selector="Window:dark">
