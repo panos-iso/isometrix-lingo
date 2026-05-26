@@ -395,8 +395,8 @@ public partial class MainWindow : Window
 
                 var panel = new StackPanel
                 {
-                    Orientation = Avalonia.Layout.Orientation.Horizontal,
-                    Spacing = 8,
+                    Orientation = Avalonia.Layout.Orientation.Vertical,
+                    Spacing = 4,
                     Margin = new Avalonia.Thickness(5, 4),
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
                 };
