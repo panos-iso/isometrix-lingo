@@ -20,6 +20,7 @@
         <converters:ShowOriginalTooltipConverter x:Key="ShowOriginalTooltipConverter"/>
         <converters:RowToggleEnabledConverter x:Key="RowToggleEnabledConverter"/>
         <converters:MissingTranslationBorderConverter x:Key="MissingTranslationBorderConverter"/>
+        <converters:ConfirmationForegroundConverter x:Key="ConfirmationForegroundConverter"/>
     </Window.Resources>
     
     <Window.Styles>
