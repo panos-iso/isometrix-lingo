@@ -2,14 +2,23 @@
 
 # Publish script for macOS (Apple Silicon)
 # Generates a self-contained executable for macOS arm64
+# Usage: ./publish-macos.sh <version>
+# Example: ./publish-macos.sh 3.1.0
+
+if [ -z "$1" ]; then
+    echo "❌ Error: Version parameter is required"
+    echo "Usage: ./publish-macos.sh <version>"
+    echo "Example: ./publish-macos.sh 3.1.0"
+    exit 1
+fi
 
 APP_NAME="Isometrix Lingo"
 BUNDLE_NAME="IsometrixLingo.app"
 EXECUTABLE_NAME="isometrix-lingo"
 BUNDLE_IDENTIFIER="com.isometrix.lingo"
-VERSION="3.0.0"
+VERSION="$1"
 
-echo "Publishing Translation Management Tool for macOS (Apple Silicon)..."
+echo "Publishing Translation Management Tool for macOS (Apple Silicon) - Version $VERSION..."
 
 # Clean previous builds
 rm -rf publish/macos

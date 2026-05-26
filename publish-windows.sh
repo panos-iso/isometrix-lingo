@@ -2,8 +2,19 @@
 
 # Publish script for Windows (x64)
 # Generates a self-contained executable for Windows
+# Usage: ./publish-windows.sh <version>
+# Example: ./publish-windows.sh 3.1.0
 
-echo "Publishing Translation Management Tool for Windows (x64)..."
+if [ -z "$1" ]; then
+    echo "❌ Error: Version parameter is required"
+    echo "Usage: ./publish-windows.sh <version>"
+    echo "Example: ./publish-windows.sh 3.1.0"
+    exit 1
+fi
+
+VERSION="$1"
+
+echo "Publishing Translation Management Tool for Windows (x64) - Version $VERSION..."
 
 # Clean previous builds
 rm -rf publish/windows
