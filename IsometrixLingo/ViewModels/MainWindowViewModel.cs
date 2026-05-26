@@ -2432,9 +2432,8 @@ public partial class MainWindowViewModel : ViewModelBase
         var keysNeedingTranslation = _translationStore.GetAllKeys()
             .Where(k =>
             {
-                var hasEnglish = k.LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue);
                 var hasSpanish = k.LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue);
-                return hasEnglish && !hasSpanish;
+                return !hasSpanish; // Missing Spanish
             })
             .ToList();
 
@@ -2443,6 +2442,15 @@ public partial class MainWindowViewModel : ViewModelBase
             StatusMessage = "No missing Spanish translations found.";
             return;
         }
+
+        // Split into two groups
+        var keysWithEnglish = keysNeedingTranslation
+            .Where(k => k.LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue))
+            .ToList();
+
+        var keysWithoutEnglish = keysNeedingTranslation
+            .Where(k => !k.LanguageValues.TryGetValue("en", out var enValue) || string.IsNullOrWhiteSpace(enValue))
+            .ToList();
 
         // Check if any existing suggestions would be overridden
         var keysWithExistingSuggestions = keysNeedingTranslation
@@ -2546,37 +2554,82 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            // Prepare batch translation
-            var textsToTranslate = keysNeedingTranslation.ToDictionary(
-                k => k.Key,
-                k => k.LanguageValues["en"]
-            );
-
             var aiService = new AiTranslationService();
-            var translations = await aiService.BatchTranslateAsync(
-                textsToTranslate,
-                GitHubToken,
-                (current, total) =>
-                {
-                    progressText.Text = $"Translating {current} / {total}";
-                }
-            );
-
-            // Apply translations as suggestions
             int successCount = 0;
-            foreach (var key in keysNeedingTranslation)
+            int currentProgress = 0;
+            int totalCount = keysNeedingTranslation.Count;
+
+            // Process keys with English (translate English → Spanish)
+            if (keysWithEnglish.Count > 0)
             {
-                if (translations.TryGetValue(key.Key, out var spanishText) && !string.IsNullOrWhiteSpace(spanishText))
+                var textsToTranslate = keysWithEnglish.ToDictionary(
+                    k => k.Key,
+                    k => k.LanguageValues["en"]
+                );
+
+                var translations = await aiService.BatchTranslateAsync(
+                    textsToTranslate,
+                    GitHubToken,
+                    (current, total) =>
+                    {
+                        currentProgress = current;
+                        progressText.Text = $"Translating {currentProgress} / {totalCount}";
+                    }
+                );
+
+                // Apply Spanish suggestions
+                foreach (var key in keysWithEnglish)
                 {
-                    key.SetSuggestionForLanguage("es", spanishText, "AI (GPT-4o-mini)");
-                    successCount++;
+                    if (translations.TryGetValue(key.Key, out var spanishText) && !string.IsNullOrWhiteSpace(spanishText))
+                    {
+                        key.SetSuggestionForLanguage("es", spanishText, "AI (GPT-4o-mini)");
+                        successCount++;
+                    }
+                }
+            }
+
+            // Process keys without English (generate both English and Spanish from key name)
+            if (keysWithoutEnglish.Count > 0)
+            {
+                var keyNames = keysWithoutEnglish.Select(k => k.Key).ToList();
+
+                var translations = await aiService.BatchGenerateFromKeysAsync(
+                    keyNames,
+                    GitHubToken,
+                    (current, total) =>
+                    {
+                        currentProgress = keysWithEnglish.Count + current;
+                        progressText.Text = $"Generating {currentProgress} / {totalCount}";
+                    }
+                );
+
+                // Apply both English and Spanish suggestions
+                foreach (var key in keysWithoutEnglish)
+                {
+                    if (translations.TryGetValue(key.Key, out var result))
+                    {
+                        if (!string.IsNullOrWhiteSpace(result.English))
+                        {
+                            key.SetSuggestionForLanguage("en", result.English, "AI (GPT-4o-mini)");
+                        }
+                        if (!string.IsNullOrWhiteSpace(result.Spanish))
+                        {
+                            key.SetSuggestionForLanguage("es", result.Spanish, "AI (GPT-4o-mini)");
+                            successCount++;
+                        }
+                    }
                 }
             }
 
             progressDialog.Close();
 
             HasUnsavedChanges = true;
-            StatusMessage = $"Generated {successCount} AI translation suggestions.";
+            
+            var message = keysWithoutEnglish.Count > 0
+                ? $"Generated {successCount} AI translation suggestions ({keysWithEnglish.Count} from English, {keysWithoutEnglish.Count} from key names)."
+                : $"Generated {successCount} AI translation suggestions.";
+            
+            StatusMessage = message;
             LanguagesChanged?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
