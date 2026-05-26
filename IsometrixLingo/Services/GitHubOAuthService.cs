@@ -44,7 +44,7 @@ public class GitHubOAuthService
         var deviceCodeRequest = new Dictionary<string, string>
         {
             { "client_id", ClientId },
-            { "scope", "user:email" }
+            { "scope", "read:user" }
         };
 
         var deviceCodeResponse = await httpClient.PostAsync(

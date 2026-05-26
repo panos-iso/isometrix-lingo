@@ -1891,7 +1891,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             Title = "User Profile",
             Width = 450,
-            Height = 320,
+            Height = 380,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };
@@ -1946,6 +1946,23 @@ public partial class MainWindowViewModel : ViewModelBase
             githubStatusText.Foreground = Brushes.Orange;
         }
         contentPanel.Children.Add(githubStatusText);
+
+        // Manual token entry section
+        contentPanel.Children.Add(new TextBlock
+        {
+            Text = "Personal Access Token (Alternative):",
+            FontSize = 11,
+            Foreground = Brushes.Gray,
+            Margin = new Thickness(0, 10, 0, 0)
+        });
+
+        var manualTokenBox = new TextBox
+        {
+            Text = GitHubToken,
+            PasswordChar = '●',
+            PlaceholderText = "github_pat_... or ghp_..."
+        };
+        contentPanel.Children.Add(manualTokenBox);
 
         var githubButtonPanel = new StackPanel
         {
@@ -2048,23 +2065,64 @@ public partial class MainWindowViewModel : ViewModelBase
             HorizontalContentAlignment = HorizontalAlignment.Center
         };
 
-        // Enable save button when username changes
+        // Enable save button when username or token changes
         void UpdateSaveButton()
         {
             var usernameChanged = (usernameBox.Text?.Trim() ?? "") != Username;
+            var tokenChanged = (manualTokenBox.Text?.Trim() ?? "") != GitHubToken;
             var usernameValid = !string.IsNullOrWhiteSpace(usernameBox.Text?.Trim());
-            saveButton.IsEnabled = usernameValid && usernameChanged;
+            saveButton.IsEnabled = usernameValid && (usernameChanged || tokenChanged);
         }
 
         usernameBox.TextChanged += (s, e) => UpdateSaveButton();
+        manualTokenBox.TextChanged += (s, e) => UpdateSaveButton();
 
-        saveButton.Click += (s, args) =>
+        saveButton.Click += async (s, args) =>
         {
             var newUsername = usernameBox.Text?.Trim();
+            var newToken = manualTokenBox.Text?.Trim() ?? "";
 
             if (!string.IsNullOrWhiteSpace(newUsername))
             {
                 Username = newUsername;
+                
+                // If manual token provided, fetch GitHub username
+                if (!string.IsNullOrWhiteSpace(newToken) && newToken != GitHubToken)
+                {
+                    try
+                    {
+                        using var httpClient = new HttpClient();
+                        httpClient.DefaultRequestHeaders.Authorization = 
+                            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", newToken);
+                        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("IsometrixLingo/1.0");
+                        
+                        var response = await httpClient.GetAsync("https://api.github.com/user");
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var json = await response.Content.ReadAsStringAsync();
+                            var user = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(json);
+                            if (user.TryGetProperty("login", out var login))
+                            {
+                                GitHubUsername = login.GetString() ?? "Unknown";
+                                GitHubToken = newToken;
+                                githubStatusText.Text = $"✓ Signed in as {GitHubUsername}";
+                                githubStatusText.Foreground = Brushes.Green;
+                            }
+                        }
+                        else
+                        {
+                            StatusMessage = "Invalid GitHub token. Please check and try again.";
+                            dialog.Close();
+                            return;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        StatusMessage = $"Failed to verify GitHub token: {ex.Message}";
+                        dialog.Close();
+                        return;
+                    }
+                }
 
                 var settings = _settingsService.Load() ?? new UserSettings();
                 settings.Username = newUsername;
@@ -2072,7 +2130,9 @@ public partial class MainWindowViewModel : ViewModelBase
                 settings.GitHubUsername = GitHubUsername;
                 _settingsService.Save(settings);
 
-                StatusMessage = $"Profile updated. Username: '{newUsername}'.";
+                StatusMessage = !string.IsNullOrWhiteSpace(GitHubToken)
+                    ? $"Profile updated. Username: '{newUsername}', signed in as {GitHubUsername}."
+                    : $"Profile updated. Username: '{newUsername}'.";
             }
             dialog.Close();
         };
