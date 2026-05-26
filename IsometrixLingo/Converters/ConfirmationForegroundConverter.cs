@@ -1,5 +1,7 @@
 using System;
 using System.Globalization;
+using Avalonia;
+using Avalonia.Data;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 
@@ -11,7 +13,6 @@ namespace IsometrixLingo.Converters;
 public class ConfirmationForegroundConverter : IValueConverter
 {
     private static readonly SolidColorBrush GreyBrush = new(Color.Parse("#999999"));
-    private static readonly SolidColorBrush DefaultBrush = new(Colors.Black);
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -20,7 +21,7 @@ public class ConfirmationForegroundConverter : IValueConverter
             return GreyBrush;
         }
 
-        return DefaultBrush; // Explicit default instead of null
+        return AvaloniaProperty.UnsetValue; // Use system default foreground
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
