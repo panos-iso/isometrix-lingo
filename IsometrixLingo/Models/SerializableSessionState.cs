@@ -30,6 +30,7 @@ public class SerializableTranslationKey
     public SerializableSourceFile Source { get; set; } = new();
     public Dictionary<string, string> LanguageValues { get; set; } = new();
     public Dictionary<string, SerializableSuggestion> SuggestedValues { get; set; } = new();
+    public SerializableConfirmation? ConfirmedBy { get; set; }
     public bool IsModified { get; set; }
     public Dictionary<string, string> OriginalValues { get; set; } = new();
     public List<string> ModifiedLanguages { get; set; } = new();
@@ -51,6 +52,15 @@ public class SerializableSourceFile
 public class SerializableSuggestion
 {
     public string Value { get; set; } = string.Empty;
+    public string Username { get; set; } = string.Empty;
+    public DateTime Timestamp { get; set; }
+}
+
+/// <summary>
+/// Serializable version of Confirmation
+/// </summary>
+public class SerializableConfirmation
+{
     public string Username { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
 }
