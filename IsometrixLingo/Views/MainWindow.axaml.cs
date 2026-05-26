@@ -390,25 +390,52 @@ public partial class MainWindow : Window
             MaxWidth = 250,
             CellTemplate = new FuncDataTemplate<object>((data, _) =>
             {
-                var textBlock = new TextBlock
+                if (data is not TranslationKey key || key.ConfirmedBy == null)
+                    return new TextBlock();
+
+                var panel = new StackPanel
                 {
-                    TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-                    Padding = new Avalonia.Thickness(5, 4),
+                    Orientation = Avalonia.Layout.Orientation.Horizontal,
+                    Spacing = 8,
+                    Margin = new Avalonia.Thickness(5, 4),
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
                 };
 
-                if (data is TranslationKey key)
+                // Username text
+                var usernameText = new TextBlock
                 {
-                    textBlock.Text = key.ConfirmationDisplayText;
-                    
-                    // Bind foreground for greying out modified rows
-                    textBlock.Bind(TextBlock.ForegroundProperty, new Binding("IsModified")
-                    {
-                        Converter = ConfirmationForegroundConverter
-                    });
-                }
+                    Text = key.ConfirmedBy.Username,
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                };
+                usernameText.Bind(TextBlock.ForegroundProperty, new Binding("IsModified")
+                {
+                    Converter = ConfirmationForegroundConverter
+                });
 
-                return textBlock;
+                // Date badge
+                var dateBorder = new Border
+                {
+                    Background = Brushes.DarkSlateGray,
+                    BorderBrush = Brushes.Gray,
+                    BorderThickness = new Avalonia.Thickness(1),
+                    CornerRadius = new Avalonia.CornerRadius(3),
+                    Padding = new Avalonia.Thickness(6, 2),
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                };
+
+                var dateText = new TextBlock
+                {
+                    Text = key.ConfirmedBy.Timestamp.ToString("MMM dd, yyyy"),
+                    FontSize = 11,
+                    FontStyle = Avalonia.Media.FontStyle.Italic,
+                    Foreground = Brushes.White
+                };
+
+                dateBorder.Child = dateText;
+                panel.Children.Add(usernameText);
+                panel.Children.Add(dateBorder);
+
+                return panel;
             })
         };
         TranslationsGrid.Columns.Add(confirmedColumn);
