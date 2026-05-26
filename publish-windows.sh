@@ -9,11 +9,13 @@ echo "Publishing Translation Management Tool for Windows (x64)..."
 rm -rf publish/windows
 
 # Publish self-contained app (without trimming for Windows compatibility)
+# IncludeNativeLibrariesForSelfExtract extracts SkiaSharp native libs on first run
 dotnet publish IsometrixLingo/IsometrixLingo.csproj \
   -c Release \
   -r win-x64 \
   --self-contained true \
   -p:PublishSingleFile=true \
+  -p:IncludeNativeLibrariesForSelfExtract=true \
   -o publish/windows
 
 if [ $? -eq 0 ]; then
