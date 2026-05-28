@@ -14,6 +14,9 @@ public partial class FilePair : ObservableObject
     private string? _directoryPath;
 
     [ObservableProperty]
+    private string? _minimalDisplayPath;
+
+    [ObservableProperty]
     private string? _englishFileName;
 
     [ObservableProperty]
@@ -38,9 +41,9 @@ public partial class FilePair : ObservableObject
         get
         {
             var name = $"{BaseName} ({FileType})";
-            if (!string.IsNullOrEmpty(DirectoryPath))
+            if (!string.IsNullOrEmpty(MinimalDisplayPath))
             {
-                name += $" — {DirectoryPath}";
+                name += $" — {MinimalDisplayPath}";
             }
             return name;
         }

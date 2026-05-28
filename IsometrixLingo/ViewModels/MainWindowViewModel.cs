@@ -2107,6 +2107,84 @@ public partial class MainWindowViewModel : ViewModelBase
 
             FilePairs.Add(pair);
         }
+
+        // Calculate minimal display paths for pairs with duplicate names
+        CalculateMinimalFilePairPaths();
+    }
+
+    private void CalculateMinimalFilePairPaths()
+    {
+        // Group pairs by base name to find duplicates
+        var pairsByName = FilePairs.GroupBy(p => p.BaseName).ToList();
+
+        foreach (var group in pairsByName)
+        {
+            var pairsWithPaths = group.Where(p => !string.IsNullOrEmpty(p.DirectoryPath)).ToList();
+            var pairsWithoutPaths = group.Where(p => string.IsNullOrEmpty(p.DirectoryPath)).ToList();
+
+            // If only one pair with this name, show top-level directory or nothing
+            if (group.Count() == 1)
+            {
+                var pair = group.First();
+                if (!string.IsNullOrEmpty(pair.DirectoryPath))
+                {
+                    // Show just the top-level directory
+                    var segments = pair.DirectoryPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                    pair.MinimalDisplayPath = segments.Length > 0 ? segments[0] : pair.DirectoryPath;
+                }
+                else
+                {
+                    pair.MinimalDisplayPath = null;
+                }
+                continue;
+            }
+
+            // Multiple pairs with the same name - need to differentiate
+            foreach (var pair in pairsWithPaths)
+            {
+                if (string.IsNullOrEmpty(pair.DirectoryPath))
+                {
+                    pair.MinimalDisplayPath = null;
+                    continue;
+                }
+
+                // Split the directory path into segments
+                var segments = pair.DirectoryPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                
+                // Find the minimal unique suffix by comparing with other pairs with the same name
+                var otherPairs = pairsWithPaths.Where(p => p != pair).ToList();
+                var minimalPath = pair.DirectoryPath;
+
+                // Try increasingly shorter paths (from end) until we find one that's unique
+                for (int depth = 1; depth <= segments.Length; depth++)
+                {
+                    var candidatePath = string.Join("/", segments.TakeLast(depth));
+                    
+                    // Check if this path is unique among pairs with the same name
+                    var isUnique = !otherPairs.Any(other =>
+                    {
+                        if (string.IsNullOrEmpty(other.DirectoryPath)) return false;
+                        var otherSegments = other.DirectoryPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                        var otherCandidate = string.Join("/", otherSegments.TakeLast(depth));
+                        return string.Equals(candidatePath, otherCandidate, StringComparison.OrdinalIgnoreCase);
+                    });
+
+                    if (isUnique)
+                    {
+                        minimalPath = candidatePath;
+                        break;
+                    }
+                }
+
+                pair.MinimalDisplayPath = minimalPath;
+            }
+
+            // Pairs without directory paths in a group with duplicates
+            foreach (var pair in pairsWithoutPaths)
+            {
+                pair.MinimalDisplayPath = null; // Could show "(root)" if needed
+            }
+        }
     }
 
     private string ExtractBaseName(string fileName, FileType fileType)
