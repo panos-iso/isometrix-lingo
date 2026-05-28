@@ -622,6 +622,274 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private async Task BulkImportFromDirectory(Window window)
+    {
+        try
+        {
+            // Step 1: Show branch warning dialog
+            var branchWarning = new BranchWarningDialog();
+            var confirmed = await branchWarning.ShowDialog<bool>(window);
+            
+            if (!confirmed)
+            {
+                return;
+            }
+
+            // Step 2: Open folder picker for parent directory
+            var folders = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Select Parent Directory Containing Repositories",
+                AllowMultiple = false
+            });
+
+            if (folders.Count == 0)
+            {
+                return;
+            }
+
+            var parentPath = folders[0].Path.LocalPath;
+
+            // Step 3: Scan directories using DirectoryScanner
+            var scanner = new DirectoryScanner(_jsonReader, _resxReader);
+            var scanResults = scanner.ScanDirectory(parentPath);
+
+            if (scanResults.Count == 0)
+            {
+                StatusMessage = "No repositories with translation files found in the selected directory.";
+                return;
+            }
+
+            // Step 4: Show directory selector dialog
+            var directories = new ObservableCollection<DirectoryScanResult>(scanResults);
+            var selectorViewModel = new DirectorySelectorViewModel(parentPath, directories);
+            var selectorDialog = new DirectorySelectorDialog
+            {
+                DataContext = selectorViewModel
+            };
+
+            var importConfirmed = await selectorDialog.ShowDialog<bool>(window);
+            
+            if (!importConfirmed || !selectorViewModel.HasSelection)
+            {
+                return;
+            }
+
+            // Step 5: Gather all files from selected directories
+            var selectedDirectories = selectorViewModel.Directories.Where(d => d.IsSelected).ToList();
+            var allFilesToImport = new List<string>();
+
+            foreach (var dir in selectedDirectories)
+            {
+                allFilesToImport.AddRange(dir.TranslationFiles);
+            }
+
+            // Step 6: Import all files using existing validation logic
+            // Clear previous errors
+            ImportErrors.Clear();
+
+            var validatedFiles = new List<(string filePath, string fileName, string extension, FileType fileType, string language)>();
+            
+            foreach (var filePath in allFilesToImport)
+            {
+                var fileName = Path.GetFileName(filePath);
+                var extension = Path.GetExtension(filePath).ToLower();
+
+                // Check for duplicate files (case-insensitive)
+                if (ImportedFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)) ||
+                    IgnoredFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.DuplicateFile,
+                        FileName = fileName,
+                        Message = $"File '{fileName}' has already been imported",
+                        Guidance = "This file is already loaded. Remove it from your selection and try again."
+                    });
+                    continue;
+                }
+
+                // Validate naming convention
+                var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
+                var isValidName = fileType == FileType.Json 
+                    ? _jsonReader.ValidateNamingConvention(fileName)
+                    : _resxReader.ValidateNamingConvention(fileName);
+                
+                if (!isValidName)
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.InvalidNamingConvention,
+                        FileName = fileName,
+                        Message = $"File name doesn't match expected pattern",
+                        Guidance = fileType == FileType.Json
+                            ? "Expected: {BaseName}.{language}.json (e.g., Forms.en.json, Forms.es.json)"
+                            : "Expected: {BaseName}.resx or {BaseName}_{language}.resx (e.g., FormTranslations.resx, FormTranslations_es.resx)"
+                    });
+                    continue;
+                }
+
+                // Check if language is supported (en or es only)
+                var language = ExtractLanguage(fileName, fileType);
+                
+                if (string.IsNullOrEmpty(language) || (language != "en" && language != "es"))
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.UnsupportedLanguage,
+                        FileName = fileName,
+                        Message = $"Language '{language}' is not supported",
+                        Guidance = "Only English (en) and Spanish (es) are currently supported."
+                    });
+                    continue;
+                }
+
+                // Validate file can be parsed
+                try
+                {
+                    if (fileType == FileType.Json)
+                    {
+                        var json = File.ReadAllText(filePath);
+                        JsonDocument.Parse(json);
+                    }
+                    else
+                    {
+                        System.Xml.Linq.XDocument.Load(filePath);
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.JsonParseError,
+                        FileName = fileName,
+                        Message = $"Failed to parse JSON: {ex.Message}",
+                        Guidance = "Ensure the file contains valid JSON syntax. Check for missing commas, brackets, or quotes."
+                    });
+                    continue;
+                }
+                catch (System.Xml.XmlException ex)
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.ResxParseError,
+                        FileName = fileName,
+                        Message = $"Failed to parse RESX XML: {ex.Message}",
+                        Guidance = "Ensure the file is a valid RESX file with proper XML structure."
+                    });
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.Other,
+                        FileName = fileName,
+                        Message = $"Unexpected error: {ex.Message}",
+                        Guidance = "Please check the file and try again. If the problem persists, contact support."
+                    });
+                    continue;
+                }
+
+                // File passed all validation
+                validatedFiles.Add((filePath, fileName, extension, fileType, language));
+            }
+
+            // Update error state
+            HasErrors = ImportErrors.Count > 0;
+            ErrorCount = ImportErrors.Count;
+
+            // If ALL files failed validation, don't import anything
+            if (validatedFiles.Count == 0 && allFilesToImport.Count > 0)
+            {
+                StatusMessage = $"Bulk import failed with {ErrorCount} error(s). Click 'View Error Details' to see what went wrong. No files were imported.";
+                return;
+            }
+
+            // Import validated files
+            var translationFiles = new List<TranslationFile>();
+
+            foreach (var (filePath, fileName, extension, fileType, language) in validatedFiles)
+            {
+                try
+                {
+                    TranslationFile translationFile = extension switch
+                    {
+                        ".json" => _jsonReader.ReadFile(filePath),
+                        ".resx" => _resxReader.ReadFile(filePath),
+                        _ => throw new NotSupportedException($"Unsupported file type: {extension}")
+                    };
+
+                    translationFiles.Add(translationFile);
+                    ImportedFileNames.Add(fileName);
+                }
+                catch (Exception ex)
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.Other,
+                        FileName = fileName,
+                        Message = $"Unexpected error during import: {ex.Message}",
+                        Guidance = "Please try again. If the problem persists, contact support."
+                    });
+                }
+            }
+
+            // If errors occurred during import phase
+            if (HasErrors)
+            {
+                StatusMessage = $"Bulk import completed with {ErrorCount} error(s). {translationFiles.Count} file(s) imported successfully. Click 'View Error Details' to see errors.";
+            }
+
+            // Group files by base name and file type, then consolidate
+            var groupedFiles = translationFiles
+                .GroupBy(tf => (ExtractBaseFileName(tf.FilePath, tf.FileType), tf.FileType))
+                .ToList();
+
+            foreach (var group in groupedFiles)
+            {
+                var consolidated = group.Key.FileType == FileType.Json
+                    ? _jsonReader.ConsolidateKeys(group.ToList())
+                    : _resxReader.ConsolidateKeys(group.ToList());
+
+                _translationStore.AddTranslations(consolidated);
+
+                // Extract and store templates
+                if (group.Any())
+                {
+                    var firstFile = group.First();
+                    if (group.Key.FileType == FileType.Resx)
+                    {
+                        var template = _resxReader.ExtractTemplate(firstFile.FilePath);
+                        _translationStore.SetResxTemplate(group.Key.Item1, template);
+                    }
+                    else if (group.Key.FileType == FileType.Json)
+                    {
+                        var template = _jsonReader.ExtractTemplate(firstFile.FilePath);
+                        _translationStore.SetJsonTemplate(group.Key.Item1, template);
+                    }
+                }
+            }
+
+            UpdateFileFilters();
+            
+            if (!HasErrors)
+            {
+                StatusMessage = $"Successfully bulk imported {translationFiles.Count} file(s) from {selectedDirectories.Count} repositor{(selectedDirectories.Count == 1 ? "y" : "ies")}. Review the imported files and click 'Confirm & Continue'.";
+            }
+            
+            HasKeys = _translationStore.GetAllKeys().Count > 0;
+            ImportStepStatus = StepStatus.InProgress;
+            LanguagesChanged?.Invoke(this, EventArgs.Empty);
+
+            SaveProgress();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error during bulk import: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
     private async Task AddKey(Window window)
     {
         var addKeyViewModel = new AddKeyViewModel(

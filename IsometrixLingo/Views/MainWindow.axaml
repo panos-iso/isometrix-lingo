@@ -228,22 +228,34 @@
                                                        FontWeight="Bold"
                                                        HorizontalAlignment="Center"
                                                        Foreground="#2196F3"/>
-                                            <TextBlock Text="or click the button below to browse for JSON or RESX files" 
+                                            <TextBlock Text="or click a button below to import files" 
                                                        FontSize="12" 
                                                        HorizontalAlignment="Center"
                                                        TextAlignment="Center"
                                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                                        MaxWidth="300"
                                                        TextWrapping="Wrap"
-                                                       Margin="0,0,0,5"/>
-                                            <Button Content="Browse Files..."
-                                                    Classes="ImportButton"
-                                                    Command="{Binding ImportFilesCommand}"
-                                                    CommandParameter="{Binding $parent[Window]}"
-                                                    HorizontalAlignment="Center"
-                                                    Padding="20,8"
-                                                    FontSize="14"
-                                                    FontWeight="SemiBold"/>
+                                                       Margin="0,0,0,10"/>
+                                            
+                                            <!-- Import Buttons -->
+                                            <StackPanel Orientation="Horizontal" 
+                                                        HorizontalAlignment="Center"
+                                                        Spacing="10">
+                                                <Button Content="Choose Individual Files"
+                                                        Classes="ImportButton"
+                                                        Command="{Binding ImportFilesCommand}"
+                                                        CommandParameter="{Binding $parent[Window]}"
+                                                        Padding="15,8"
+                                                        FontSize="13"
+                                                        FontWeight="SemiBold"/>
+                                                <Button Content="Bulk Import from Directory"
+                                                        Classes="ImportButton"
+                                                        Command="{Binding BulkImportFromDirectoryCommand}"
+                                                        CommandParameter="{Binding $parent[Window]}"
+                                                        Padding="15,8"
+                                                        FontSize="13"
+                                                        FontWeight="SemiBold"/>
+                                            </StackPanel>
                                         </StackPanel>
                                     </Grid>
                                 </Border>

@@ -1,0 +1,123 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:IsometrixLingo.ViewModels"
+        x:Class="IsometrixLingo.Views.DirectorySelectorDialog"
+        x:DataType="vm:DirectorySelectorViewModel"
+        Title="Select Repositories to Import"
+        Width="700"
+        Height="600"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,15">
+            <TextBlock Text="Select Repositories" 
+                       FontSize="18" 
+                       FontWeight="Bold"
+                       Margin="0,0,0,5"/>
+            <TextBlock Text="{Binding ParentDirectoryPath}" 
+                       FontStyle="Italic"
+                       Foreground="#666"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- Statistics -->
+        <Border Grid.Row="1" 
+                Background="#F0F0F0" 
+                BorderBrush="#CCC" 
+                BorderThickness="1" 
+                CornerRadius="4"
+                Padding="15"
+                Margin="0,0,0,15">
+            <StackPanel Spacing="5">
+                <TextBlock>
+                    <Run Text="Total Repositories: "/>
+                    <Run Text="{Binding TotalDirectories}" FontWeight="Bold"/>
+                </TextBlock>
+                <TextBlock>
+                    <Run Text="Selected: "/>
+                    <Run Text="{Binding SelectedDirectories}" FontWeight="Bold"/>
+                    <Run Text=" | "/>
+                    <Run Text="Translation Files: "/>
+                    <Run Text="{Binding TotalFiles}" FontWeight="Bold"/>
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="2" 
+                    Orientation="Horizontal" 
+                    Spacing="10"
+                    Margin="0,0,0,10">
+            <Button Content="Select All" 
+                    Command="{Binding SelectAllCommand}"
+                    Width="120"/>
+            <Button Content="Deselect All" 
+                    Command="{Binding DeselectAllCommand}"
+                    Width="120"/>
+        </StackPanel>
+
+        <!-- Directory List -->
+        <Border Grid.Row="3" 
+                BorderBrush="#CCC" 
+                BorderThickness="1" 
+                CornerRadius="4">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Directories}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border BorderBrush="#E0E0E0" 
+                                    BorderThickness="0,0,0,1" 
+                                    Padding="10">
+                                <CheckBox IsChecked="{Binding IsSelected}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding DirectoryName}" 
+                                                   FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding DisplayText}" 
+                                                   FontSize="12"
+                                                   Foreground="#666"
+                                                   Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </CheckBox>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Info Message -->
+        <TextBlock Grid.Row="4" 
+                   TextWrapping="Wrap"
+                   Margin="0,15,0,15"
+                   FontSize="12"
+                   Foreground="#666">
+            Uncheck any directories that represent personal projects or repositories outside your organization.
+        </TextBlock>
+
+        <!-- Dialog Buttons -->
+        <StackPanel Grid.Row="5" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right" 
+                    Spacing="10">
+            <Button Content="Cancel" 
+                    Width="100" 
+                    Click="OnCancelClick"/>
+            <Button Content="Import Selected" 
+                    Width="140" 
+                    x:Name="ImportButton"
+                    Click="OnImportClick"
+                    Classes="accent"/>
+        </StackPanel>
+    </Grid>
+</Window>
