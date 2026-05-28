@@ -33,22 +33,67 @@ public class TranslationStore
     {
         foreach (var key in keys)
         {
-            _allKeys.Add(key);
+            // Check if this key already exists (same key name and source file)
+            var existingKey = _allKeys.FirstOrDefault(k => 
+                k.Key == key.Key && 
+                k.Source.Name == key.Source.Name && 
+                k.Source.Type == key.Source.Type);
+
+            if (existingKey != null)
+            {
+                // Merge language values into existing key
+                var mergedValues = new Dictionary<string, string>(existingKey.LanguageValues);
+                foreach (var langValue in key.LanguageValues)
+                {
+                    // Only add supported languages
+                    if (_supportedLanguages.Contains(langValue.Key))
+                    {
+                        mergedValues[langValue.Key] = langValue.Value;
+                    }
+                }
+                existingKey.LanguageValues = mergedValues;
+
+                // Merge suggested values into existing key
+                var mergedSuggestions = new Dictionary<string, Suggestion>(existingKey.SuggestedValues);
+                foreach (var suggestion in key.SuggestedValues)
+                {
+                    // Only add supported languages
+                    if (_supportedLanguages.Contains(suggestion.Key))
+                    {
+                        mergedSuggestions[suggestion.Key] = suggestion.Value;
+                    }
+                }
+                existingKey.SuggestedValues = mergedSuggestions;
+
+                // Merge confirmation if present in the new key
+                if (key.ConfirmedBy != null)
+                {
+                    existingKey.ConfirmedBy = key.ConfirmedBy;
+                }
+
+                // Update missing translations status
+                existingKey.UpdateMissingTranslationsStatus();
+            }
+            else
+            {
+                // Filter out unsupported languages from the key
+                var unsupportedLanguages = key.LanguageValues.Keys
+                    .Where(lang => !_supportedLanguages.Contains(lang))
+                    .ToList();
+
+                foreach (var lang in unsupportedLanguages)
+                {
+                    key.LanguageValues.Remove(lang);
+                }
+
+                // Add as new key
+                _allKeys.Add(key);
+            }
 
             // Add source file if not already tracked
             if (!_sourceFiles.Any(sf => sf.Name == key.Source.Name && sf.Type == key.Source.Type))
             {
                 _sourceFiles.Add(key.Source);
-            }
-
-            // Filter out unsupported languages from the key
-            var unsupportedLanguages = key.LanguageValues.Keys
-                .Where(lang => !_supportedLanguages.Contains(lang))
-                .ToList();
-
-            foreach (var lang in unsupportedLanguages)
-            {
-                key.LanguageValues.Remove(lang);
             }
         }
         RefreshFilteredKeys();

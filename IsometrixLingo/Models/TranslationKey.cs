@@ -113,6 +113,21 @@ public partial class TranslationKey : ObservableObject
         if (!SuggestedValues.TryGetValue(language, out var suggestion))
             return null;
 
+        // Store original value if this is the first edit for this language
+        if (!OriginalValues.ContainsKey(language))
+        {
+            var original = LanguageValues.TryGetValue(language, out var originalValue)
+                ? originalValue
+                : string.Empty;
+
+            // Create new dictionary to trigger property change
+            var newOriginals = new Dictionary<string, string>(OriginalValues)
+            {
+                [language] = original
+            };
+            OriginalValues = newOriginals;
+        }
+
         // Apply the suggestion to the actual value
         LanguageValues[language] = suggestion.Value;
         
@@ -131,6 +146,7 @@ public partial class TranslationKey : ObservableObject
         OnPropertyChanged(nameof(HasAnySuggestions));
         OnPropertyChanged(nameof(LanguageValues));
         OnPropertyChanged(nameof(ModifiedLanguages));
+        OnPropertyChanged(nameof(OriginalValues));
         
         return suggestion.Value;
     }
