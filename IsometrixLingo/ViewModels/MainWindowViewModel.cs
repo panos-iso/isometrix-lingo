@@ -877,9 +877,9 @@ public partial class MainWindowViewModel : ViewModelBase
                 StatusMessage = $"Bulk import completed with {ErrorCount} error(s). {translationFiles.Count} file(s) imported successfully. Click 'View Error Details' to see errors.";
             }
 
-            // Group files by base name and file type, then consolidate
+            // Group files by base name, file type, AND directory path to keep files from different directories separate
             var groupedFiles = translationFiles
-                .GroupBy(tf => (ExtractBaseFileName(tf.FilePath, tf.FileType), tf.FileType))
+                .GroupBy(tf => (ExtractBaseFileName(tf.FilePath, tf.FileType), tf.FileType, tf.RelativeDirectoryPath ?? string.Empty))
                 .ToList();
 
             foreach (var group in groupedFiles)
