@@ -2337,19 +2337,65 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        // Create output directory in user's Documents folder
-        var documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        var outputPath = Path.Combine(documentsPath, "IsometrixLingo", "output");
-        if (!Directory.Exists(outputPath))
+        // Get the main window for the folder picker
+        var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+
+        if (window == null)
         {
-            Directory.CreateDirectory(outputPath);
+            StatusMessage = "Unable to show folder picker.";
+            return;
         }
 
-        // Create timestamped folder name
+        // Load last export directory from settings, or use default
+        var settings = _settingsService.Load();
+        var defaultExportPath = !string.IsNullOrEmpty(settings?.LastExportDirectory) && Directory.Exists(settings.LastExportDirectory)
+            ? settings.LastExportDirectory
+            : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+        // Show folder picker for export destination
+        var folders = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select Export Destination",
+            AllowMultiple = false,
+            SuggestedStartLocation = await window.StorageProvider.TryGetFolderFromPathAsync(defaultExportPath)
+        });
+
+        if (folders.Count == 0)
+        {
+            StatusMessage = "Export cancelled.";
+            return;
+        }
+
+        var outputPath = folders[0].Path.LocalPath;
+
+        // Save the selected directory to settings for next time
+        if (settings == null)
+        {
+            settings = new UserSettings { Username = Username };
+        }
+        settings.LastExportDirectory = outputPath;
+        _settingsService.Save(settings);
+
+        // Determine zip file name based on root directory
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        var tempFolderName = $"exported_translations_{timestamp}";
-        var tempFolderPath = Path.Combine(Path.GetTempPath(), tempFolderName);
-        var zipFilePath = Path.Combine(outputPath, $"{tempFolderName}.zip");
+        string zipFileName;
+        
+        if (!string.IsNullOrEmpty(_rootDirectoryPath))
+        {
+            // Use the root directory name in the zip filename
+            var rootDirName = Path.GetFileName(_rootDirectoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            zipFileName = $"{rootDirName}_exported_{timestamp}.zip";
+        }
+        else
+        {
+            // Fallback to generic name if no root directory
+            zipFileName = $"exported_translations_{timestamp}.zip";
+        }
+
+        var tempFolderPath = Path.Combine(Path.GetTempPath(), $"isometrix_lingo_export_{timestamp}");
+        var zipFilePath = Path.Combine(outputPath, zipFileName);
 
         try
         {
@@ -2362,12 +2408,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
             if (jsonKeys.Count > 0)
             {
-                _jsonWriter.WriteFiles(jsonKeys, tempFolderPath, sourceFileName => _translationStore.GetJsonTemplate(sourceFileName), Username);
+                _jsonWriter.WriteFiles(jsonKeys, tempFolderPath, sourceFileName => _translationStore.GetJsonTemplate(sourceFileName), Username, CurrentMode == EditMode.Edit);
             }
 
             if (resxKeys.Count > 0)
             {
-                _resxWriter.WriteFiles(resxKeys, tempFolderPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName), Username);
+                _resxWriter.WriteFiles(resxKeys, tempFolderPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName), Username, CurrentMode == EditMode.Edit);
             }
 
             // Create ZIP file
@@ -2388,7 +2434,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
             // Store output folder and filename for dialog
             _lastExportFolder = outputPath;
-            _lastExportFileName = Path.GetFileName(zipFilePath);
+            _lastExportFileName = zipFileName;
 
             // Prompt to start over
             await PromptToStartOverAfterExport();
