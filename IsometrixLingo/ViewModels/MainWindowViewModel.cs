@@ -655,7 +655,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
             if (scanResults.Count == 0)
             {
-                StatusMessage = "No repositories with translation files found in the selected directory.";
+                StatusMessage = "No subdirectories found in the selected directory.";
                 return;
             }
 
@@ -669,18 +669,30 @@ public partial class MainWindowViewModel : ViewModelBase
 
             var importConfirmed = await selectorDialog.ShowDialog<bool>(window);
             
-            if (!importConfirmed || !selectorViewModel.HasSelection)
+            if (!importConfirmed)
             {
                 return;
             }
 
-            // Step 5: Gather all files from selected directories
-            var selectedDirectories = selectorViewModel.Directories.Where(d => d.IsSelected).ToList();
+            // Step 5: Gather all files from parent directory AND selected subdirectories
             var allFilesToImport = new List<string>();
-
+            
+            // First, check parent directory itself for translation files
+            var parentFiles = scanner.FindTranslationFiles(parentPath);
+            allFilesToImport.AddRange(parentFiles);
+            
+            // Then, gather files from selected subdirectories
+            var selectedDirectories = selectorViewModel.Directories.Where(d => d.IsSelected).ToList();
             foreach (var dir in selectedDirectories)
             {
                 allFilesToImport.AddRange(dir.TranslationFiles);
+            }
+            
+            // Check if any files were found
+            if (allFilesToImport.Count == 0)
+            {
+                StatusMessage = "No translation files found in the selected directory or its subdirectories.";
+                return;
             }
 
             // Step 6: Import all files using existing validation logic

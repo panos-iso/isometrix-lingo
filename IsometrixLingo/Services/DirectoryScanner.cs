@@ -21,11 +21,11 @@ public class DirectoryScanner
     }
 
     /// <summary>
-    /// Scans immediate subdirectories of the parent path for translation files
-    /// Also checks if the parent directory itself contains translation files
+    /// Scans immediate subdirectories of the parent path
+    /// Shows all subdirectories so user can exclude personal projects
     /// </summary>
     /// <param name="parentPath">Parent directory containing repository folders</param>
-    /// <returns>List of scan results, one per subdirectory (or parent if it has files)</returns>
+    /// <returns>List of scan results, one per subdirectory</returns>
     public List<DirectoryScanResult> ScanDirectory(string parentPath)
     {
         var results = new List<DirectoryScanResult>();
@@ -37,29 +37,6 @@ public class DirectoryScanner
 
         try
         {
-            // First, check if the selected directory itself contains translation files
-            var parentFiles = FindTranslationFiles(parentPath);
-            if (parentFiles.Count > 0)
-            {
-                var parentName = Path.GetFileName(parentPath);
-                if (string.IsNullOrEmpty(parentName))
-                {
-                    parentName = parentPath; // In case it's a root directory
-                }
-                
-                results.Add(new DirectoryScanResult
-                {
-                    DirectoryPath = parentPath,
-                    DirectoryName = parentName,
-                    FileCount = parentFiles.Count,
-                    TranslationFiles = parentFiles,
-                    IsSelected = true
-                });
-                
-                // If we found files in the parent, return just that
-                return results;
-            }
-
             // Get immediate subdirectories (each represents a potential repository)
             var subdirectories = Directory.GetDirectories(parentPath);
 
@@ -76,17 +53,16 @@ public class DirectoryScanner
                 // Recursively find all translation files in this subdirectory
                 var translationFiles = FindTranslationFiles(subdirectory);
 
-                if (translationFiles.Count > 0)
+                // Show ALL subdirectories, even if no files (so user can see everything)
+                results.Add(new DirectoryScanResult
                 {
-                    results.Add(new DirectoryScanResult
-                    {
-                        DirectoryPath = subdirectory,
-                        DirectoryName = directoryName,
-                        FileCount = translationFiles.Count,
-                        TranslationFiles = translationFiles,
-                        IsSelected = true // Default to selected
-                    });
-                }
+                    DirectoryPath = subdirectory,
+                    DirectoryName = directoryName,
+                    FileCount = translationFiles.Count,
+                    TranslationFiles = translationFiles,
+                    IsSelected = true // Default to selected
+                });
+            }
             }
         }
         catch (UnauthorizedAccessException)

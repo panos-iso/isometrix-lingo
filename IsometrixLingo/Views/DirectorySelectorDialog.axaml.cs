@@ -13,15 +13,8 @@ public partial class DirectorySelectorDialog : Window
 
     private void OnImportClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is DirectorySelectorViewModel viewModel && viewModel.HasSelection)
-        {
-            Close(true);
-        }
-        else
-        {
-            // Could show a message that at least one directory must be selected
-            Close(false);
-        }
+        // Always allow import - files may exist in parent directory even if no subdirectories selected
+        Close(true);
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs e)

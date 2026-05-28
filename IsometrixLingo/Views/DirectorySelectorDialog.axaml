@@ -97,13 +97,21 @@
         </Border>
 
         <!-- Info Message -->
-        <TextBlock Grid.Row="4" 
-                   TextWrapping="Wrap"
-                   Margin="0,15,0,15"
-                   FontSize="12"
-                   Foreground="#666">
-            Uncheck any directories that represent personal projects or repositories outside your organization.
-        </TextBlock>
+        <StackPanel Grid.Row="4" 
+                    Margin="0,15,0,15"
+                    Spacing="5">
+            <TextBlock TextWrapping="Wrap"
+                       FontSize="12"
+                       Foreground="#666">
+                Uncheck any directories that represent personal projects or repositories outside your organization.
+            </TextBlock>
+            <TextBlock TextWrapping="Wrap"
+                       FontSize="12"
+                       FontStyle="Italic"
+                       Foreground="#888">
+                Note: Translation files will be imported from both the parent directory and all selected subdirectories.
+            </TextBlock>
+        </StackPanel>
 
         <!-- Dialog Buttons -->
         <StackPanel Grid.Row="5" 
