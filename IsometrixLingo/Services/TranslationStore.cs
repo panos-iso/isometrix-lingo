@@ -90,8 +90,8 @@ public class TranslationStore
                 _allKeys.Add(key);
             }
 
-            // Add source file if not already tracked
-            if (!_sourceFiles.Any(sf => sf.Name == key.Source.Name && sf.Type == key.Source.Type))
+            // Add source file if not already tracked (checks Name, Type, and DirectoryPath)
+            if (!_sourceFiles.Any(sf => sf.Name == key.Source.Name && sf.Type == key.Source.Type && sf.DirectoryPath == key.Source.DirectoryPath))
             {
                 _sourceFiles.Add(key.Source);
             }
@@ -295,8 +295,8 @@ public class TranslationStore
         _allKeys.Add(key);
         key.UpdateMissingTranslationsStatus();
 
-        // Add source file if not already tracked
-        if (!_sourceFiles.Any(sf => sf.Name == key.Source.Name && sf.Type == key.Source.Type))
+        // Add source file if not already tracked (checks Name, Type, and DirectoryPath)
+        if (!_sourceFiles.Any(sf => sf.Name == key.Source.Name && sf.Type == key.Source.Type && sf.DirectoryPath == key.Source.DirectoryPath))
         {
             _sourceFiles.Add(key.Source);
         }

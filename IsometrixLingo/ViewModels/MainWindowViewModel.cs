@@ -705,23 +705,36 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 var fileName = Path.GetFileName(filePath);
                 var extension = Path.GetExtension(filePath).ToLower();
+                var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
 
-                // Check for duplicate files (case-insensitive)
-                if (ImportedFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)) ||
-                    IgnoredFileNames.Any(f => string.Equals(f, fileName, StringComparison.OrdinalIgnoreCase)))
+                // Calculate relative directory path for duplicate checking
+                var fileDirectory = Path.GetDirectoryName(filePath) ?? string.Empty;
+                var relativePath = Path.GetRelativePath(parentPath, fileDirectory);
+                var directoryPath = relativePath != "." ? relativePath : null;
+                
+                // Extract base name for duplicate checking
+                var baseName = ExtractBaseFileName(filePath, fileType);
+
+                // Check for duplicate files (same name, type, AND directory path)
+                var isDuplicate = _translationStore.SourceFiles.Any(sf => 
+                    string.Equals(sf.Name, baseName, StringComparison.OrdinalIgnoreCase) &&
+                    sf.Type == fileType &&
+                    sf.DirectoryPath == directoryPath);
+
+                if (isDuplicate)
                 {
+                    var displayPath = directoryPath != null ? $"{directoryPath}/{fileName}" : fileName;
                     ImportErrors.Add(new ImportError
                     {
                         ErrorType = ImportErrorType.DuplicateFile,
                         FileName = fileName,
-                        Message = $"File '{fileName}' has already been imported",
+                        Message = $"File '{displayPath}' has already been imported",
                         Guidance = "This file is already loaded. Remove it from your selection and try again."
                     });
                     continue;
                 }
 
                 // Validate naming convention
-                var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
                 var isValidName = fileType == FileType.Json 
                     ? _jsonReader.ValidateNamingConvention(fileName)
                     : _resxReader.ValidateNamingConvention(fileName);
@@ -830,6 +843,13 @@ public partial class MainWindowViewModel : ViewModelBase
                         ".resx" => _resxReader.ReadFile(filePath),
                         _ => throw new NotSupportedException($"Unsupported file type: {extension}")
                     };
+
+                    // Calculate relative directory path from parent directory
+                    var fileDirectory = Path.GetDirectoryName(filePath) ?? string.Empty;
+                    var relativePath = Path.GetRelativePath(parentPath, fileDirectory);
+                    
+                    // Only set if not "." (meaning the file is in a subdirectory, not the parent itself)
+                    translationFile.RelativeDirectoryPath = relativePath != "." ? relativePath : null;
 
                     translationFiles.Add(translationFile);
                     ImportedFileNames.Add(fileName);
@@ -1350,6 +1370,83 @@ public partial class MainWindowViewModel : ViewModelBase
         return fileType == FileType.Json
             ? _jsonReader.ExtractBaseFileName(filePath)
             : _resxReader.ExtractBaseFileName(filePath);
+    }
+
+    /// <summary>
+    /// Calculates minimal unique directory paths for display in UI
+    /// Returns null for files with no duplicates, otherwise returns the shortest path segment that makes them unique
+    /// </summary>
+    private Dictionary<SourceFile, string?> CalculateMinimalDisplayPaths(IEnumerable<SourceFile> sourceFiles)
+    {
+        var result = new Dictionary<SourceFile, string?>();
+        var filesByName = sourceFiles.GroupBy(sf => sf.Name).ToList();
+
+        foreach (var group in filesByName)
+        {
+            var filesWithPaths = group.Where(sf => sf.DirectoryPath != null).ToList();
+            var filesWithoutPaths = group.Where(sf => sf.DirectoryPath == null).ToList();
+
+            // If there's only one file with this name (or all have no directory path), no need to show path
+            if (group.Count() == 1 || filesWithPaths.Count == 0)
+            {
+                foreach (var file in group)
+                {
+                    result[file] = null;
+                }
+                continue;
+            }
+
+            // If we have duplicates, calculate minimal unique paths
+            foreach (var file in filesWithPaths)
+            {
+                if (file.DirectoryPath == null)
+                {
+                    result[file] = null;
+                    continue;
+                }
+
+                // Split the directory path into segments
+                var segments = file.DirectoryPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                
+                // Find the minimal unique suffix by comparing with other files with the same name
+                var otherFiles = filesWithPaths.Where(f => f != file).ToList();
+                var minimalPath = file.DirectoryPath;
+
+                // Try increasingly shorter paths (from end) until we find one that's unique
+                for (int i = segments.Length - 1; i >= 0; i--)
+                {
+                    var candidatePath = string.Join("/", segments.Skip(i));
+                    
+                    // Check if this path is unique among files with the same name
+                    var isUnique = !otherFiles.Any(other =>
+                    {
+                        if (other.DirectoryPath == null) return false;
+                        var otherSegments = other.DirectoryPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                        var otherCandidate = string.Join("/", otherSegments.Skip(Math.Max(0, otherSegments.Length - segments.Length + i)));
+                        return string.Equals(candidatePath, otherCandidate, StringComparison.OrdinalIgnoreCase);
+                    });
+
+                    if (isUnique)
+                    {
+                        minimalPath = candidatePath;
+                    }
+                    else
+                    {
+                        break; // Need more segments to be unique
+                    }
+                }
+
+                result[file] = minimalPath;
+            }
+
+            // Files without directory paths in a group with duplicates
+            foreach (var file in filesWithoutPaths)
+            {
+                result[file] = null; // Or could show "(root)" or similar
+            }
+        }
+
+        return result;
     }
 
     [RelayCommand]
@@ -1956,14 +2053,13 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         FilePairs.Clear();
 
-        // Group imported files by base name and file type
-        var fileGroups = ImportedFileNames
-            .GroupBy(fileName =>
-            {
-                var extension = Path.GetExtension(fileName).ToLower();
-                var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
-                var baseName = ExtractBaseName(fileName, fileType);
-                return new { BaseName = baseName, FileType = fileType };
+        // Group source files by base name, file type, AND directory path
+        var fileGroups = _translationStore.SourceFiles
+            .GroupBy(sourceFile => new 
+            { 
+                BaseName = sourceFile.Name, 
+                FileType = sourceFile.Type,
+                DirectoryPath = sourceFile.DirectoryPath ?? string.Empty
             })
             .ToList();
 
@@ -1972,22 +2068,40 @@ public partial class MainWindowViewModel : ViewModelBase
             var pair = new FilePair
             {
                 BaseName = group.Key.BaseName,
-                FileType = group.Key.FileType
+                FileType = group.Key.FileType,
+                DirectoryPath = string.IsNullOrEmpty(group.Key.DirectoryPath) ? null : group.Key.DirectoryPath
             };
 
-            // Find English and Spanish files in the group
-            foreach (var fileName in group)
+            // Check which language files exist in this group
+            // Note: Each SourceFile represents a base file, not individual language files
+            // We need to check if the translation keys have both languages
+            var keysForThisSource = _translationStore.GetAllKeys()
+                .Where(k => k.Source.Name == group.Key.BaseName && 
+                           k.Source.Type == group.Key.FileType &&
+                           k.Source.DirectoryPath == (string.IsNullOrEmpty(group.Key.DirectoryPath) ? null : group.Key.DirectoryPath))
+                .ToList();
+
+            if (keysForThisSource.Any())
             {
-                var language = ExtractLanguage(fileName, group.Key.FileType);
-                if (language == "en")
+                var hasEnglish = keysForThisSource.Any(k => k.LanguageValues.ContainsKey("en"));
+                var hasSpanish = keysForThisSource.Any(k => k.LanguageValues.ContainsKey("es"));
+
+                pair.HasEnglishFile = hasEnglish;
+                pair.HasSpanishFile = hasSpanish;
+                
+                // Set file names for display
+                if (hasEnglish)
                 {
-                    pair.EnglishFileName = fileName;
-                    pair.HasEnglishFile = true;
+                    pair.EnglishFileName = group.Key.FileType == FileType.Json 
+                        ? $"{group.Key.BaseName}.en.json"
+                        : $"{group.Key.BaseName}.resx";
                 }
-                else if (language == "es")
+                
+                if (hasSpanish)
                 {
-                    pair.SpanishFileName = fileName;
-                    pair.HasSpanishFile = true;
+                    pair.SpanishFileName = group.Key.FileType == FileType.Json
+                        ? $"{group.Key.BaseName}.es.json"
+                        : $"{group.Key.BaseName}_es.resx";
                 }
             }
 
@@ -2104,9 +2218,11 @@ public partial class MainWindowViewModel : ViewModelBase
             newFileName = language == "es" ? $"{pair.BaseName}_es.resx" : $"{pair.BaseName}.resx";
         }
 
-        // Get all keys from the existing file
+        // Get all keys from the existing file (must match base name, type, AND directory path)
         var existingKeys = _translationStore.GetAllKeys()
-            .Where(k => k.Source.Name == pair.BaseName && k.Source.Type == pair.FileType)
+            .Where(k => k.Source.Name == pair.BaseName && 
+                       k.Source.Type == pair.FileType &&
+                       k.Source.DirectoryPath == pair.DirectoryPath)
             .ToList();
 
         // Create new translation file entries with empty values

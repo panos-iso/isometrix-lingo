@@ -11,6 +11,9 @@ public partial class FilePair : ObservableObject
     private FileType _fileType;
 
     [ObservableProperty]
+    private string? _directoryPath;
+
+    [ObservableProperty]
     private string? _englishFileName;
 
     [ObservableProperty]
@@ -30,7 +33,18 @@ public partial class FilePair : ObservableObject
 
     public bool IsMissingFile => !HasEnglishFile || !HasSpanishFile;
 
-    public string DisplayName => $"{BaseName} ({FileType})";
+    public string DisplayName
+    {
+        get
+        {
+            var name = $"{BaseName} ({FileType})";
+            if (!string.IsNullOrEmpty(DirectoryPath))
+            {
+                name += $" — {DirectoryPath}";
+            }
+            return name;
+        }
+    }
 
     public string StatusText
     {

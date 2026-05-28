@@ -66,6 +66,7 @@ public class JsonTranslationFileReader
         var consolidatedKeys = new Dictionary<string, TranslationKey>();
         var baseFileName = files.FirstOrDefault()?.FilePath;
         var baseName = baseFileName != null ? ExtractBaseFileName(baseFileName) : "unknown";
+        var directoryPath = files.FirstOrDefault()?.RelativeDirectoryPath;
 
         // Collect all unique keys across all files
         foreach (var file in files)
@@ -77,7 +78,7 @@ public class JsonTranslationFileReader
                     consolidatedKeys[key.Key] = new TranslationKey
                     {
                         Key = key.Key,
-                        Source = new SourceFile(baseName, FileType.Json),
+                        Source = new SourceFile(baseName, FileType.Json, directoryPath),
                         LanguageValues = new Dictionary<string, string>(),
                         SuggestedValues = new Dictionary<string, Suggestion>()
                     };

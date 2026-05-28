@@ -12,6 +12,13 @@ public class SourceFileConverter : IValueConverter
         if (value is SourceFile source)
         {
             var type = source.Type == FileType.Json ? "JSON" : "RESX";
+            
+            // If directory path exists, show it in the display
+            if (!string.IsNullOrEmpty(source.DirectoryPath))
+            {
+                return $"{source.Name} ({type}) — {source.DirectoryPath}";
+            }
+            
             return $"{source.Name} ({type})";
         }
 

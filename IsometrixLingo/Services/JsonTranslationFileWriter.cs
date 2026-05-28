@@ -31,13 +31,24 @@ public class JsonTranslationFileWriter
             Directory.CreateDirectory(outputDirectory);
         }
 
-        // Group keys by source file
-        var groupedByFile = keys.GroupBy(k => k.Source.Name);
+        // Group keys by source file (including directory path)
+        var groupedByFile = keys.GroupBy(k => k.Source);
 
         foreach (var fileGroup in groupedByFile)
         {
-            var sourceFile = fileGroup.Key;
+            var source = fileGroup.Key;
             var fileKeys = fileGroup.ToList();
+
+            // Determine output directory based on DirectoryPath
+            var targetDirectory = outputDirectory;
+            if (!string.IsNullOrEmpty(source.DirectoryPath))
+            {
+                targetDirectory = Path.Combine(outputDirectory, source.DirectoryPath);
+                if (!Directory.Exists(targetDirectory))
+                {
+                    Directory.CreateDirectory(targetDirectory);
+                }
+            }
 
             // Get all languages for this file
             var languages = fileKeys
@@ -48,11 +59,11 @@ public class JsonTranslationFileWriter
             // Write a file for each language
             foreach (var language in languages)
             {
-                var fileName = $"{sourceFile}.{language}.json";
-                var filePath = Path.Combine(outputDirectory, fileName);
+                var fileName = $"{source.Name}.{language}.json";
+                var filePath = Path.Combine(targetDirectory, fileName);
 
                 // Get template for this source file if available
-                var template = templateProvider?.Invoke(sourceFile);
+                var template = templateProvider?.Invoke(source.Name);
 
                 WriteLanguageFile(filePath, fileKeys, language, template, username, isEditMode);
             }
