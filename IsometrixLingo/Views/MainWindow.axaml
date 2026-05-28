@@ -198,7 +198,7 @@
                                    FontSize="20"
                                    FontWeight="Bold"
                                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
-                        <TextBlock Text="Import your translation files (JSON or RESX format). You can select multiple files."
+                        <TextBlock Text="Import translation files by selecting a directory containing your translations (JSON or RESX format)."
                                    TextWrapping="Wrap"
                                    FontSize="14"
                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
@@ -226,12 +226,12 @@
                                         <!-- Content -->
                                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
                                             <TextBlock Text="📁" FontSize="42" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="Drag &amp; drop files here" 
+                                            <TextBlock Text="Drag &amp; drop a directory here" 
                                                        FontSize="16" 
                                                        FontWeight="Bold"
                                                        HorizontalAlignment="Center"
                                                        Foreground="#2196F3"/>
-                                            <TextBlock Text="or click a button below to import files" 
+                                            <TextBlock Text="or click the button below to choose a directory" 
                                                        FontSize="12" 
                                                        HorizontalAlignment="Center"
                                                        TextAlignment="Center"
@@ -240,25 +240,14 @@
                                                        TextWrapping="Wrap"
                                                        Margin="0,0,0,10"/>
                                             
-                                            <!-- Import Buttons -->
-                                            <StackPanel Orientation="Horizontal" 
-                                                        HorizontalAlignment="Center"
-                                                        Spacing="10">
-                                                <Button Content="Choose Individual Files"
-                                                        Classes="ImportButton"
-                                                        Command="{Binding ImportFilesCommand}"
-                                                        CommandParameter="{Binding $parent[Window]}"
-                                                        Padding="15,8"
-                                                        FontSize="13"
-                                                        FontWeight="SemiBold"/>
-                                                <Button Content="Bulk Import from Directory"
-                                                        Classes="ImportButton"
-                                                        Command="{Binding BulkImportFromDirectoryCommand}"
-                                                        CommandParameter="{Binding $parent[Window]}"
-                                                        Padding="15,8"
-                                                        FontSize="13"
-                                                        FontWeight="SemiBold"/>
-                                            </StackPanel>
+                                            <!-- Import Button -->
+                                            <Button Content="Import Directory"
+                                                    Classes="ImportButton"
+                                                    Command="{Binding BulkImportFromDirectoryCommand}"
+                                                    CommandParameter="{Binding $parent[Window]}"
+                                                    Padding="20,10"
+                                                    FontSize="14"
+                                                    FontWeight="SemiBold"/>
                                         </StackPanel>
                                     </Grid>
                                 </Border>

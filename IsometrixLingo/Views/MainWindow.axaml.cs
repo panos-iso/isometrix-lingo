@@ -569,27 +569,36 @@ public partial class MainWindow : Window
         {
             if (DataContext is MainWindowViewModel viewModel)
             {
-                viewModel.StatusMessage = "Processing dropped files...";
+                viewModel.StatusMessage = "Processing dropped directory...";
 
                 if (e.DataTransfer.Formats.Contains(DataFormat.File))
                 {
-                    var files = e.DataTransfer.TryGetFiles();
-                    if (files != null)
+                    var items = e.DataTransfer.TryGetFiles();
+                    if (items != null)
                     {
-                        var fileList = files.ToList();
-                        viewModel.StatusMessage = $"Found {fileList.Count} file(s) in drop";
-                        if (fileList.Count > 0)
+                        var itemList = items.ToList();
+                        
+                        // Filter to only directories (IStorageFolder)
+                        var directories = itemList.OfType<IStorageFolder>().ToList();
+                        
+                        if (directories.Count == 0)
                         {
-                            await viewModel.ImportDroppedFiles(fileList);
+                            viewModel.StatusMessage = "Please drop a directory, not individual files.";
+                            return;
                         }
-                        else
+                        
+                        if (directories.Count > 1)
                         {
-                            viewModel.StatusMessage = "No files in drop";
+                            viewModel.StatusMessage = "Please drop only one directory at a time.";
+                            return;
                         }
+
+                        viewModel.StatusMessage = $"Processing directory: {directories[0].Name}";
+                        await viewModel.ImportDroppedDirectory(directories[0]);
                     }
                     else
                     {
-                        viewModel.StatusMessage = "TryGetFiles returned null";
+                        viewModel.StatusMessage = "Drop operation failed";
                     }
                 }
                 else

@@ -643,6 +643,198 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    public async Task ImportDroppedDirectory(IStorageFolder folder)
+    {
+        try
+        {
+            var parentPath = folder.Path.LocalPath;
+            StatusMessage = $"Scanning directory: {folder.Name}...";
+
+            // Scan directory using DirectoryScanner
+            var scanner = new DirectoryScanner(_jsonReader, _resxReader);
+            var scanResults = scanner.ScanDirectory(parentPath);
+
+            // Gather all files from parent directory (non-recursive) AND all subdirectories (recursive)
+            var allFilesToImport = new List<string>();
+            
+            // First, check parent directory itself for translation files (non-recursive)
+            var parentFiles = scanner.FindTranslationFilesInDirectory(parentPath);
+            allFilesToImport.AddRange(parentFiles);
+            
+            // Then, gather files from all subdirectories (recursive)
+            foreach (var dir in scanResults)
+            {
+                allFilesToImport.AddRange(dir.TranslationFiles);
+            }
+            
+            // Check if any files were found
+            if (allFilesToImport.Count == 0)
+            {
+                StatusMessage = "No translation files found in the dropped directory.";
+                return;
+            }
+
+            StatusMessage = $"Found {allFilesToImport.Count} translation file(s). Importing...";
+
+            // Import all files using existing validation logic
+            ImportErrors.Clear();
+
+            var validatedFiles = new List<(string filePath, string fileName, string extension, FileType fileType, string language)>();
+            
+            foreach (var filePath in allFilesToImport)
+            {
+                var fileName = Path.GetFileName(filePath);
+                var extension = Path.GetExtension(filePath).ToLower();
+                var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
+
+                // Calculate relative directory path
+                var fileDirectory = Path.GetDirectoryName(filePath) ?? string.Empty;
+                var relativePath = Path.GetRelativePath(parentPath, fileDirectory);
+                var directoryPath = relativePath != "." ? relativePath : null;
+                
+                // Extract base name
+                var baseName = ExtractBaseFileName(filePath, fileType);
+
+                // Check for duplicate files (same name, type, AND directory path)
+                var isDuplicate = _translationStore.SourceFiles.Any(sf => 
+                    string.Equals(sf.Name, baseName, StringComparison.OrdinalIgnoreCase) &&
+                    sf.Type == fileType &&
+                    sf.DirectoryPath == directoryPath);
+
+                if (isDuplicate)
+                {
+                    var displayPath = directoryPath != null ? $"{directoryPath}/{fileName}" : fileName;
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.DuplicateFile,
+                        FileName = displayPath,
+                        Message = $"File already imported from this directory"
+                    });
+                    continue;
+                }
+
+                // Check if language is supported
+                var language = ExtractLanguage(fileName, fileType);
+                
+                if (string.IsNullOrEmpty(language) || (language != "en" && language != "es"))
+                {
+                    var displayPath = directoryPath != null ? $"{directoryPath}/{fileName}" : fileName;
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.UnsupportedLanguage,
+                        FileName = displayPath,
+                        Message = $"Unsupported language '{language}'. Only English (en) and Spanish (es) are supported."
+                    });
+                    continue;
+                }
+
+                // Validate the file can be read
+                try
+                {
+                    if (fileType == FileType.Json)
+                    {
+                        var _ = _jsonReader.ReadFile(filePath);
+                    }
+                    else
+                    {
+                        var _ = _resxReader.ReadFile(filePath);
+                    }
+
+                    validatedFiles.Add((filePath, fileName, extension, fileType, language));
+                }
+                catch (Exception ex)
+                {
+                    var displayPath = directoryPath != null ? $"{directoryPath}/{fileName}" : fileName;
+                    var errorType = extension == ".json" ? ImportErrorType.JsonParseError : ImportErrorType.ResxParseError;
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = errorType,
+                        FileName = displayPath,
+                        Message = $"Failed to parse: {ex.Message}"
+                    });
+                }
+            }
+
+            // Group and import validated files
+            var groupedByDirectory = validatedFiles
+                .GroupBy(f =>
+                {
+                    var fileDirectory = Path.GetDirectoryName(f.filePath) ?? string.Empty;
+                    var relativePath = Path.GetRelativePath(parentPath, fileDirectory);
+                    return relativePath != "." ? relativePath : null;
+                })
+                .ToList();
+
+            int successCount = 0;
+            foreach (var dirGroup in groupedByDirectory)
+            {
+                var directoryPath = dirGroup.Key;
+                
+                foreach (var group in dirGroup.GroupBy(f => (ExtractBaseFileName(f.filePath, f.fileType), f.fileType)))
+                {
+                    var baseName = group.Key.Item1;
+                    var fileType = group.Key.Item2;
+                    
+                    var filesToConsolidate = group.Select(f =>
+                    {
+                        return fileType == FileType.Json
+                            ? _jsonReader.ReadFile(f.filePath)
+                            : _resxReader.ReadFile(f.filePath);
+                    }).ToList();
+
+                    var consolidated = fileType == FileType.Json
+                        ? _jsonReader.ConsolidateKeys(filesToConsolidate)
+                        : _resxReader.ConsolidateKeys(filesToConsolidate);
+
+                    // Update source file to include directory path
+                    foreach (var key in consolidated)
+                    {
+                        key.Source = new SourceFile(baseName, fileType, directoryPath);
+                    }
+
+                    _translationStore.AddTranslations(consolidated);
+
+                    // Extract and store template from first file
+                    var firstFile = filesToConsolidate.First();
+                    if (fileType == FileType.Resx)
+                    {
+                        var template = _resxReader.ExtractTemplate(firstFile.FilePath);
+                        _translationStore.SetResxTemplate(baseName, template);
+                    }
+                    else
+                    {
+                        var template = _jsonReader.ExtractTemplate(firstFile.FilePath);
+                        _translationStore.SetJsonTemplate(baseName, template);
+                    }
+
+                    successCount += filesToConsolidate.Count;
+                }
+            }
+
+            UpdateFileFilters();
+            
+            if (ImportErrors.Count > 0)
+            {
+                StatusMessage = $"Imported {successCount} file(s) with {ImportErrors.Count} error(s). Check the errors list.";
+            }
+            else
+            {
+                StatusMessage = $"Successfully imported {successCount} file(s) from directory '{folder.Name}'.";
+            }
+            
+            HasKeys = _translationStore.GetAllKeys().Count > 0;
+            ImportStepStatus = StepStatus.InProgress;
+            LanguagesChanged?.Invoke(this, EventArgs.Empty);
+
+            // Auto-save imported progress
+            SaveProgress();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error importing directory: {ex.Message}";
+        }
+    }
+
     [RelayCommand]
     private async Task BulkImportFromDirectory(Window window)
     {
