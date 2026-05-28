@@ -63,7 +63,6 @@ public class DirectoryScanner
                     IsSelected = true // Default to selected
                 });
             }
-            }
         }
         catch (UnauthorizedAccessException)
         {
