@@ -20,6 +20,7 @@
         <converters:SourceFileDisplayConverter x:Key="SourceFileDisplayConverter"/>
         <converters:SourceFileMinimalPathConverter x:Key="SourceFileMinimalPathConverter"/>
         <converters:SourceFileMinimalPathMultiConverter x:Key="SourceFileMinimalPathMultiConverter"/>
+        <converters:TruncatedDirectoryPathConverter x:Key="TruncatedDirectoryPathConverter"/>
         <converters:ShowFiltersTextConverter x:Key="ShowFiltersTextConverter"/>
         <converters:ShowOriginalTooltipConverter x:Key="ShowOriginalTooltipConverter"/>
         <converters:RowToggleEnabledConverter x:Key="RowToggleEnabledConverter"/>
@@ -802,18 +803,12 @@
                                                         VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
                                                            TextWrapping="Wrap"/>
-                                                <TextBlock FontSize="10"
+                                                <TextBlock Text="{Binding Source.DirectoryPath, Converter={StaticResource TruncatedDirectoryPathConverter}}"
+                                                           FontSize="10"
                                                            FontStyle="Italic"
                                                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                                            TextWrapping="Wrap"
-                                                           IsVisible="{Binding Source.DirectoryPath, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                    <TextBlock.Text>
-                                                        <MultiBinding Converter="{StaticResource SourceFileMinimalPathMultiConverter}">
-                                                            <Binding Path="Source"/>
-                                                            <Binding Path="$parent[Window].DataContext"/>
-                                                        </MultiBinding>
-                                                    </TextBlock.Text>
-                                                </TextBlock>
+                                                           IsVisible="{Binding Source.DirectoryPath, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                                             </StackPanel>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
