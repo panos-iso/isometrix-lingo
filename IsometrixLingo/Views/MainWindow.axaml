@@ -419,10 +419,16 @@
                                         <Grid RowDefinitions="Auto,Auto,Auto,Auto">
                                             <!-- Header -->
                                             <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
-                                                <TextBlock Grid.Column="0"
-                                                           Text="{Binding DisplayName}"
-                                                           FontSize="16"
-                                                           FontWeight="SemiBold"/>
+                                                <StackPanel Grid.Column="0" Spacing="2">
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               FontSize="16"
+                                                               FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding TruncatedDirectoryPath}"
+                                                               FontSize="10"
+                                                               FontStyle="Italic"
+                                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                               IsVisible="{Binding DirectoryPath, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1"
                                                            Text="{Binding StatusText}"
                                                            FontSize="14"
