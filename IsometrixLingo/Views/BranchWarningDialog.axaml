@@ -5,7 +5,8 @@
         Width="600"
         Height="380"
         WindowStartupLocation="CenterOwner"
-        CanResize="False">
+        CanResize="False"
+        Topmost="True">
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
