@@ -33,11 +33,12 @@ public class TranslationStore
     {
         foreach (var key in keys)
         {
-            // Check if this key already exists (same key name and source file)
+            // Check if this key already exists (same key name and source file including directory)
             var existingKey = _allKeys.FirstOrDefault(k => 
                 k.Key == key.Key && 
                 k.Source.Name == key.Source.Name && 
-                k.Source.Type == key.Source.Type);
+                k.Source.Type == key.Source.Type &&
+                k.Source.DirectoryPath == key.Source.DirectoryPath);
 
             if (existingKey != null)
             {
