@@ -247,7 +247,8 @@
                                                     CommandParameter="{Binding $parent[Window]}"
                                                     Padding="20,10"
                                                     FontSize="14"
-                                                    FontWeight="SemiBold"/>
+                                                    FontWeight="SemiBold"
+                                                    HorizontalAlignment="Center"/>
                                         </StackPanel>
                                     </Grid>
                                 </Border>
