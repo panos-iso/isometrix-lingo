@@ -84,6 +84,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<string> _ignoredFileNames = new();
 
+    // Track the root directory to prevent importing a second one
+    private string? _rootDirectoryPath = null;
+
     // Workflow state properties
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowFileMappingStep), nameof(ShowModeSelectionStep), nameof(ShowEditStep), nameof(ShowExportStep),
@@ -647,22 +650,72 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         try
         {
+            // Check if a root directory has already been selected
+            if (_rootDirectoryPath != null)
+            {
+                StatusMessage = "A root directory is already loaded. Please use 'Start Over' to import from a different directory.";
+                return;
+            }
+
             var parentPath = folder.Path.LocalPath;
             StatusMessage = $"Scanning directory: {folder.Name}...";
+
+            // Show branch warning dialog first
+            var window = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+            if (window == null)
+            {
+                StatusMessage = "Unable to show dialog - no main window found.";
+                return;
+            }
+
+            var branchWarning = new BranchWarningDialog();
+            var confirmed = await branchWarning.ShowDialog<bool>(window);
+            
+            if (!confirmed)
+            {
+                StatusMessage = "Import cancelled.";
+                return;
+            }
 
             // Scan directory using DirectoryScanner
             var scanner = new DirectoryScanner(_jsonReader, _resxReader);
             var scanResults = scanner.ScanDirectory(parentPath);
 
-            // Gather all files from parent directory (non-recursive) AND all subdirectories (recursive)
+            if (scanResults.Count == 0)
+            {
+                StatusMessage = "No subdirectories found in the dropped directory.";
+                return;
+            }
+
+            // Show directory selector dialog
+            var directories = new ObservableCollection<DirectoryScanResult>(scanResults);
+            var selectorViewModel = new DirectorySelectorViewModel(parentPath, directories);
+            var selectorDialog = new DirectorySelectorDialog
+            {
+                DataContext = selectorViewModel
+            };
+
+            var importConfirmed = await selectorDialog.ShowDialog<bool>(window);
+            
+            if (!importConfirmed)
+            {
+                StatusMessage = "Import cancelled.";
+                return;
+            }
+
+            // Store the root directory path
+            _rootDirectoryPath = parentPath;
+
+            // Gather all files from parent directory AND selected subdirectories
             var allFilesToImport = new List<string>();
             
             // First, check parent directory itself for translation files (non-recursive)
             var parentFiles = scanner.FindTranslationFilesInDirectory(parentPath);
             allFilesToImport.AddRange(parentFiles);
             
-            // Then, gather files from all subdirectories (recursive)
-            foreach (var dir in scanResults)
+            // Then, gather files from selected subdirectories (recursive)
+            var selectedDirectories = selectorViewModel.Directories.Where(d => d.IsSelected).ToList();
+            foreach (var dir in selectedDirectories)
             {
                 allFilesToImport.AddRange(dir.TranslationFiles);
             }
@@ -670,7 +723,8 @@ public partial class MainWindowViewModel : ViewModelBase
             // Check if any files were found
             if (allFilesToImport.Count == 0)
             {
-                StatusMessage = "No translation files found in the dropped directory.";
+                StatusMessage = "No translation files found in the selected directories.";
+                _rootDirectoryPath = null; // Reset since nothing was imported
                 return;
             }
 
@@ -846,6 +900,13 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         try
         {
+            // Check if a root directory has already been selected
+            if (_rootDirectoryPath != null)
+            {
+                StatusMessage = "A root directory is already loaded. Please use 'Start Over' to import from a different directory.";
+                return;
+            }
+
             // Step 1: Show branch warning dialog
             var branchWarning = new BranchWarningDialog();
             var confirmed = await branchWarning.ShowDialog<bool>(window);
@@ -893,6 +954,9 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 return;
             }
+
+            // Store the root directory path
+            _rootDirectoryPath = parentPath;
 
             // Step 5: Gather all files from parent directory AND selected subdirectories
             var allFilesToImport = new List<string>();
@@ -2076,6 +2140,7 @@ public partial class MainWindowViewModel : ViewModelBase
         FilePairs.Clear();
         HasKeys = false;
         HasUnsavedChanges = false;
+        _rootDirectoryPath = null; // Reset root directory
 
         // Reset workflow state
         CurrentStep = WorkflowStep.Import;
