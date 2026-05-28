@@ -18,6 +18,8 @@
     <Window.Resources>
         <converters:SourceFileConverter x:Key="SourceFileConverter"/>
         <converters:SourceFileDisplayConverter x:Key="SourceFileDisplayConverter"/>
+        <converters:SourceFileMinimalPathConverter x:Key="SourceFileMinimalPathConverter"/>
+        <converters:SourceFileMinimalPathMultiConverter x:Key="SourceFileMinimalPathMultiConverter"/>
         <converters:ShowFiltersTextConverter x:Key="ShowFiltersTextConverter"/>
         <converters:ShowOriginalTooltipConverter x:Key="ShowOriginalTooltipConverter"/>
         <converters:RowToggleEnabledConverter x:Key="RowToggleEnabledConverter"/>
@@ -788,18 +790,24 @@
                                                         MinWidth="120"
                                                         MaxWidth="250">
                                     <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
+                                        <DataTemplate DataType="models:TranslationKey">
                                             <StackPanel Orientation="Vertical" 
                                                         Margin="5,4"
                                                         VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
                                                            TextWrapping="Wrap"/>
-                                                <TextBlock Text="{Binding Source.DirectoryPath}"
-                                                           FontSize="10"
+                                                <TextBlock FontSize="10"
                                                            FontStyle="Italic"
                                                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                                            TextWrapping="Wrap"
-                                                           IsVisible="{Binding Source.DirectoryPath, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                                                           IsVisible="{Binding Source.DirectoryPath, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                    <TextBlock.Text>
+                                                        <MultiBinding Converter="{StaticResource SourceFileMinimalPathMultiConverter}">
+                                                            <Binding Path="Source"/>
+                                                            <Binding Path="$parent[Window].DataContext"/>
+                                                        </MultiBinding>
+                                                    </TextBlock.Text>
+                                                </TextBlock>
                                             </StackPanel>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>

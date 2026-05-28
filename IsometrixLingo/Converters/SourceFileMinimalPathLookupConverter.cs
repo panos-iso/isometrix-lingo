@@ -1,22 +1,25 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Avalonia.Data.Converters;
 using IsometrixLingo.Models;
-using IsometrixLingo.ViewModels;
 
 namespace IsometrixLingo.Converters;
 
 /// <summary>
-/// Converter to get the minimal display path for a SourceFile from the ViewModel
-/// Parameter should be the MainWindowViewModel instance
+/// Converter that looks up minimal display path from a dictionary
+/// Parameter should be the dictionary of minimal paths
 /// </summary>
-public class SourceFileMinimalPathConverter : IValueConverter
+public class SourceFileMinimalPathLookupConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is SourceFile source && parameter is MainWindowViewModel viewModel)
+        if (value is SourceFile source && parameter is Dictionary<SourceFile, string?> minimalPaths)
         {
-            return viewModel.GetMinimalDisplayPath(source);
+            if (minimalPaths.TryGetValue(source, out var path))
+            {
+                return path;
+            }
         }
 
         return null;

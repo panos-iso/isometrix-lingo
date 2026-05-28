@@ -38,6 +38,11 @@ public partial class MainWindowViewModel : ViewModelBase
     
     // Store minimal display paths for SourceFiles (for grid display)
     private Dictionary<SourceFile, string?> _sourceFileMinimalPaths = new();
+    
+    /// <summary>
+    /// Public accessor for minimal display paths (for grid binding)
+    /// </summary>
+    public Dictionary<SourceFile, string?> SourceFileMinimalPaths => _sourceFileMinimalPaths;
 
     [ObservableProperty]
     private string _statusMessage = "Ready. Click Import to load translation files.";
