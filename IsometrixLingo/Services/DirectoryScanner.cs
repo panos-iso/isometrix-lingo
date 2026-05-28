@@ -50,7 +50,7 @@ public class DirectoryScanner
                 results.Add(new DirectoryScanResult
                 {
                     DirectoryPath = parentPath,
-                    DirectoryName = $"{parentName} (current directory)",
+                    DirectoryName = parentName,
                     FileCount = parentFiles.Count,
                     TranslationFiles = parentFiles,
                     IsSelected = true
