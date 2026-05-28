@@ -173,7 +173,9 @@ public class TranslationStore
         else
         {
             keysToShow = _allKeys.Where(k => _currentFileFilter.Any(sf =>
-                sf.Name == k.Source.Name && sf.Type == k.Source.Type));
+                sf.Name == k.Source.Name && 
+                sf.Type == k.Source.Type &&
+                sf.DirectoryPath == k.Source.DirectoryPath));
         }
 
         // Apply search filter if present
