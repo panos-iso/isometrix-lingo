@@ -1256,22 +1256,38 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void ApplyFileFilters()
     {
+        // Get selected namespaces
+        var allNamespacesSelected = NamespaceFilterItems.FirstOrDefault()?.IsSelected == true;
+        var selectedNamespaces = NamespaceFilterItems
+            .Where(n => n.IsSelected && n.Namespace != string.Empty)
+            .Select(n => n.Namespace)
+            .ToList();
+
         // Get selected files
         var selectedFiles = FileFilterItems
             .Where(f => f.IsSelected && f.Source.Name != "All Files")
             .Select(f => f.Source)
             .ToList();
 
-        // If no specific files selected or "All Files" is selected, show all
         var allFilesSelected = FileFilterItems.FirstOrDefault()?.IsSelected == true;
         
-        if (allFilesSelected || selectedFiles.Count == 0)
-        {
-            _translationStore.FilterBySourceFiles(null!);
-        }
-        else
+        // Priority 1: If specific files are selected, use those
+        if (selectedFiles.Count > 0)
         {
             _translationStore.FilterBySourceFiles(selectedFiles);
+        }
+        // Priority 2: If specific namespaces are selected (but all files within those namespaces), filter by namespace
+        else if (!allNamespacesSelected && selectedNamespaces.Count > 0)
+        {
+            var filesInNamespaces = _translationStore.SourceFiles
+                .Where(sf => selectedNamespaces.Contains(GetTopLevelDirectory(sf.DirectoryPath)))
+                .ToList();
+            _translationStore.FilterBySourceFiles(filesInNamespaces);
+        }
+        // Priority 3: Show all files
+        else
+        {
+            _translationStore.FilterBySourceFiles(null!);
         }
 
         UpdateStatusMessage();
