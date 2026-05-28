@@ -57,6 +57,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private SourceFile? _selectedSourceFile;
 
     [ObservableProperty]
+    private ObservableCollection<NamespaceFilterItem> _namespaceFilterItems = new();
+
+    [ObservableProperty]
+    private ObservableCollection<FileFilterItem> _fileFilterItems = new();
+
+    [ObservableProperty]
     private string _searchText = string.Empty;
 
     [ObservableProperty]
@@ -994,6 +1000,215 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             SelectedSourceFile = null;
         }
+
+        // Update namespace filter items
+        UpdateNamespaceFilterItems();
+        
+        // Update file filter items
+        UpdateFileFilterItems();
+    }
+
+    private void UpdateNamespaceFilterItems()
+    {
+        // Unsubscribe from old items
+        foreach (var item in NamespaceFilterItems)
+        {
+            item.SelectionChanged -= OnNamespaceFilterItemSelectionChanged;
+        }
+
+        NamespaceFilterItems.Clear();
+
+        // Get unique namespaces (top-level directory)
+        var namespaces = _translationStore.SourceFiles
+            .Select(sf => GetTopLevelDirectory(sf.DirectoryPath))
+            .Distinct()
+            .OrderBy(ns => ns)
+            .ToList();
+
+        // Add "All Namespaces" option
+        var allItem = new NamespaceFilterItem
+        {
+            Namespace = string.Empty,
+            IsSelected = true,
+            FileCount = _translationStore.SourceFiles.Count
+        };
+        allItem.SelectionChanged += OnNamespaceFilterItemSelectionChanged;
+        NamespaceFilterItems.Add(allItem);
+
+        // Add individual namespaces
+        foreach (var ns in namespaces)
+        {
+            var fileCount = _translationStore.SourceFiles.Count(sf => GetTopLevelDirectory(sf.DirectoryPath) == ns);
+            var item = new NamespaceFilterItem
+            {
+                Namespace = ns,
+                IsSelected = false,
+                FileCount = fileCount
+            };
+            item.SelectionChanged += OnNamespaceFilterItemSelectionChanged;
+            NamespaceFilterItems.Add(item);
+        }
+    }
+
+    private void UpdateFileFilterItems()
+    {
+        // Unsubscribe from old items
+        foreach (var item in FileFilterItems)
+        {
+            item.SelectionChanged -= OnFileFilterItemSelectionChanged;
+        }
+
+        FileFilterItems.Clear();
+
+        // Get selected namespaces
+        var selectedNamespaces = NamespaceFilterItems
+            .Where(n => n.IsSelected && n.Namespace != string.Empty)
+            .Select(n => n.Namespace)
+            .ToList();
+
+        // If "All Namespaces" is selected or no specific namespaces, show all files
+        var allNamespacesSelected = NamespaceFilterItems.FirstOrDefault()?.IsSelected == true;
+        
+        IEnumerable<SourceFile> filesToShow;
+        if (allNamespacesSelected || selectedNamespaces.Count == 0)
+        {
+            filesToShow = _translationStore.SourceFiles;
+        }
+        else
+        {
+            filesToShow = _translationStore.SourceFiles
+                .Where(sf => selectedNamespaces.Contains(GetTopLevelDirectory(sf.DirectoryPath)));
+        }
+
+        // Add "All Files" option
+        var allFilesItem = new FileFilterItem
+        {
+            Source = new SourceFile("All Files", FileType.Json, null),
+            IsSelected = true
+        };
+        allFilesItem.SelectionChanged += OnFileFilterItemSelectionChanged;
+        FileFilterItems.Add(allFilesItem);
+
+        // Add individual files
+        foreach (var sourceFile in filesToShow.OrderBy(f => f.Name).ThenBy(f => f.Type).ThenBy(f => f.DirectoryPath))
+        {
+            var item = new FileFilterItem
+            {
+                Source = sourceFile,
+                IsSelected = false
+            };
+            item.SelectionChanged += OnFileFilterItemSelectionChanged;
+            FileFilterItems.Add(item);
+        }
+    }
+
+    private string GetTopLevelDirectory(string? directoryPath)
+    {
+        if (string.IsNullOrEmpty(directoryPath))
+            return string.Empty;
+
+        var parts = directoryPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 0 ? parts[0] : string.Empty;
+    }
+
+    private void OnNamespaceFilterItemSelectionChanged(object? sender, bool isSelected)
+    {
+        if (sender is not NamespaceFilterItem item)
+            return;
+
+        // If this is "All Namespaces", deselect all others
+        if (item.Namespace == string.Empty && isSelected)
+        {
+            foreach (var other in NamespaceFilterItems.Where(n => n != item))
+            {
+                other.IsSelected = false;
+            }
+        }
+        // If a specific namespace is selected, deselect "All Namespaces"
+        else if (item.Namespace != string.Empty && isSelected)
+        {
+            var allItem = NamespaceFilterItems.FirstOrDefault();
+            if (allItem != null)
+            {
+                allItem.IsSelected = false;
+            }
+        }
+
+        // If no namespaces are selected, select "All Namespaces"
+        if (!NamespaceFilterItems.Any(n => n.IsSelected))
+        {
+            var allItem = NamespaceFilterItems.FirstOrDefault();
+            if (allItem != null)
+            {
+                allItem.IsSelected = true;
+            }
+        }
+
+        // Update file filter items based on selected namespaces
+        UpdateFileFilterItems();
+
+        // Apply filters
+        ApplyFileFilters();
+    }
+
+    private void OnFileFilterItemSelectionChanged(object? sender, bool isSelected)
+    {
+        if (sender is not FileFilterItem item)
+            return;
+
+        // If this is "All Files", deselect all others
+        if (item.Source.Name == "All Files" && isSelected)
+        {
+            foreach (var other in FileFilterItems.Where(f => f != item))
+            {
+                other.IsSelected = false;
+            }
+        }
+        // If a specific file is selected, deselect "All Files"
+        else if (item.Source.Name != "All Files" && isSelected)
+        {
+            var allItem = FileFilterItems.FirstOrDefault();
+            if (allItem != null)
+            {
+                allItem.IsSelected = false;
+            }
+        }
+
+        // If no files are selected, select "All Files"
+        if (!FileFilterItems.Any(f => f.IsSelected))
+        {
+            var allItem = FileFilterItems.FirstOrDefault();
+            if (allItem != null)
+            {
+                allItem.IsSelected = true;
+            }
+        }
+
+        // Apply filters
+        ApplyFileFilters();
+    }
+
+    private void ApplyFileFilters()
+    {
+        // Get selected files
+        var selectedFiles = FileFilterItems
+            .Where(f => f.IsSelected && f.Source.Name != "All Files")
+            .Select(f => f.Source)
+            .ToList();
+
+        // If no specific files selected or "All Files" is selected, show all
+        var allFilesSelected = FileFilterItems.FirstOrDefault()?.IsSelected == true;
+        
+        if (allFilesSelected || selectedFiles.Count == 0)
+        {
+            _translationStore.FilterBySourceFiles(null!);
+        }
+        else
+        {
+            _translationStore.FilterBySourceFiles(selectedFiles);
+        }
+
+        UpdateStatusMessage();
     }
 
     partial void OnSelectedSourceFileChanged(SourceFile? value)
