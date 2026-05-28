@@ -32,8 +32,17 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly ResxTranslationFileWriter _resxWriter;
     private readonly ProgressService _progressService;
     private readonly UserSettingsService _settingsService;
+    private readonly PathDisplayService _pathDisplayService;
     private string _lastExportFolder = string.Empty;
     private string _lastExportFileName = string.Empty;
+    
+    // Store minimal display paths for SourceFiles (for grid display)
+    private Dictionary<SourceFile, string?> _sourceFileMinimalPaths = new();
+    
+    /// <summary>
+    /// Public accessor for minimal display paths (for grid binding)
+    /// </summary>
+    public Dictionary<SourceFile, string?> SourceFileMinimalPaths => _sourceFileMinimalPaths;
 
     [ObservableProperty]
     private string _statusMessage = "Ready. Click Import to load translation files.";
@@ -46,6 +55,18 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private SourceFile? _selectedSourceFile;
+
+    [ObservableProperty]
+    private ObservableCollection<NamespaceFilterItem> _namespaceFilterItems = new();
+
+    [ObservableProperty]
+    private ObservableCollection<FileFilterItem> _fileFilterItems = new();
+
+    [ObservableProperty]
+    private string _selectedNamespacesText = "All";
+
+    [ObservableProperty]
+    private string _selectedFilesText = "All";
 
     [ObservableProperty]
     private string _searchText = string.Empty;
@@ -62,6 +83,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private ObservableCollection<string> _ignoredFileNames = new();
+
+    // Track the root directory to prevent importing a second one
+    private string? _rootDirectoryPath = null;
 
     // Workflow state properties
     [ObservableProperty]
@@ -241,6 +265,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _resxWriter = new ResxTranslationFileWriter();
         _progressService = new ProgressService();
         _settingsService = new UserSettingsService();
+        _pathDisplayService = new PathDisplayService();
 
         // Load username from settings
         LoadUserSettings();
@@ -621,6 +646,573 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    public async Task ImportDroppedDirectory(IStorageFolder folder)
+    {
+        try
+        {
+            // Check if a root directory has already been selected
+            if (_rootDirectoryPath != null)
+            {
+                StatusMessage = "A root directory is already loaded. Please use 'Start Over' to import from a different directory.";
+                return;
+            }
+
+            var parentPath = folder.Path.LocalPath;
+            StatusMessage = $"Scanning directory: {folder.Name}...";
+
+            // Show branch warning dialog first
+            var window = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+            if (window == null)
+            {
+                StatusMessage = "Unable to show dialog - no main window found.";
+                return;
+            }
+
+            var branchWarning = new BranchWarningDialog();
+            var confirmed = await branchWarning.ShowDialog<bool>(window);
+            
+            if (!confirmed)
+            {
+                StatusMessage = "Import cancelled.";
+                return;
+            }
+
+            // Scan directory using DirectoryScanner
+            var scanner = new DirectoryScanner(_jsonReader, _resxReader);
+            var scanResults = scanner.ScanDirectory(parentPath);
+
+            if (scanResults.Count == 0)
+            {
+                StatusMessage = "No subdirectories found in the dropped directory.";
+                return;
+            }
+
+            // Show directory selector dialog
+            var directories = new ObservableCollection<DirectoryScanResult>(scanResults);
+            var selectorViewModel = new DirectorySelectorViewModel(parentPath, directories);
+            var selectorDialog = new DirectorySelectorDialog
+            {
+                DataContext = selectorViewModel
+            };
+
+            var importConfirmed = await selectorDialog.ShowDialog<bool>(window);
+            
+            if (!importConfirmed)
+            {
+                StatusMessage = "Import cancelled.";
+                return;
+            }
+
+            // Store the root directory path
+            _rootDirectoryPath = parentPath;
+
+            // Gather all files from parent directory AND selected subdirectories
+            var allFilesToImport = new List<string>();
+            
+            // First, check parent directory itself for translation files (non-recursive)
+            var parentFiles = scanner.FindTranslationFilesInDirectory(parentPath);
+            allFilesToImport.AddRange(parentFiles);
+            
+            // Then, gather files from selected subdirectories (recursive)
+            var selectedDirectories = selectorViewModel.Directories.Where(d => d.IsSelected).ToList();
+            foreach (var dir in selectedDirectories)
+            {
+                allFilesToImport.AddRange(dir.TranslationFiles);
+            }
+            
+            // Check if any files were found
+            if (allFilesToImport.Count == 0)
+            {
+                StatusMessage = "No translation files found in the selected directories.";
+                _rootDirectoryPath = null; // Reset since nothing was imported
+                return;
+            }
+
+            StatusMessage = $"Found {allFilesToImport.Count} translation file(s). Importing...";
+
+            // Import all files using existing validation logic
+            ImportErrors.Clear();
+
+            var validatedFiles = new List<(string filePath, string fileName, string extension, FileType fileType, string language)>();
+            
+            foreach (var filePath in allFilesToImport)
+            {
+                var fileName = Path.GetFileName(filePath);
+                var extension = Path.GetExtension(filePath).ToLower();
+                var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
+
+                // Calculate relative directory path
+                var fileDirectory = Path.GetDirectoryName(filePath) ?? string.Empty;
+                var relativePath = Path.GetRelativePath(parentPath, fileDirectory);
+                var directoryPath = relativePath != "." ? relativePath : null;
+                
+                // Extract base name
+                var baseName = ExtractBaseFileName(filePath, fileType);
+
+                // Check for duplicate files (same name, type, AND directory path)
+                var isDuplicate = _translationStore.SourceFiles.Any(sf => 
+                    string.Equals(sf.Name, baseName, StringComparison.OrdinalIgnoreCase) &&
+                    sf.Type == fileType &&
+                    sf.DirectoryPath == directoryPath);
+
+                if (isDuplicate)
+                {
+                    var displayPath = directoryPath != null ? $"{directoryPath}/{fileName}" : fileName;
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.DuplicateFile,
+                        FileName = displayPath,
+                        Message = $"File already imported from this directory"
+                    });
+                    continue;
+                }
+
+                // Check if language is supported
+                var language = ExtractLanguage(fileName, fileType);
+                
+                if (string.IsNullOrEmpty(language) || (language != "en" && language != "es"))
+                {
+                    var displayPath = directoryPath != null ? $"{directoryPath}/{fileName}" : fileName;
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.UnsupportedLanguage,
+                        FileName = displayPath,
+                        Message = $"Unsupported language '{language}'. Only English (en) and Spanish (es) are supported."
+                    });
+                    continue;
+                }
+
+                // Validate the file can be read
+                try
+                {
+                    if (fileType == FileType.Json)
+                    {
+                        var _ = _jsonReader.ReadFile(filePath);
+                    }
+                    else
+                    {
+                        var _ = _resxReader.ReadFile(filePath);
+                    }
+
+                    validatedFiles.Add((filePath, fileName, extension, fileType, language));
+                }
+                catch (Exception ex)
+                {
+                    var displayPath = directoryPath != null ? $"{directoryPath}/{fileName}" : fileName;
+                    var errorType = extension == ".json" ? ImportErrorType.JsonParseError : ImportErrorType.ResxParseError;
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = errorType,
+                        FileName = displayPath,
+                        Message = $"Failed to parse: {ex.Message}"
+                    });
+                }
+            }
+
+            // Group and import validated files
+            var groupedByDirectory = validatedFiles
+                .GroupBy(f =>
+                {
+                    var fileDirectory = Path.GetDirectoryName(f.filePath) ?? string.Empty;
+                    var relativePath = Path.GetRelativePath(parentPath, fileDirectory);
+                    return relativePath != "." ? relativePath : null;
+                })
+                .ToList();
+
+            int successCount = 0;
+            foreach (var dirGroup in groupedByDirectory)
+            {
+                var directoryPath = dirGroup.Key;
+                
+                foreach (var group in dirGroup.GroupBy(f => (ExtractBaseFileName(f.filePath, f.fileType), f.fileType)))
+                {
+                    var baseName = group.Key.Item1;
+                    var fileType = group.Key.Item2;
+                    
+                    var filesToConsolidate = group.Select(f =>
+                    {
+                        return fileType == FileType.Json
+                            ? _jsonReader.ReadFile(f.filePath)
+                            : _resxReader.ReadFile(f.filePath);
+                    }).ToList();
+
+                    var consolidated = fileType == FileType.Json
+                        ? _jsonReader.ConsolidateKeys(filesToConsolidate)
+                        : _resxReader.ConsolidateKeys(filesToConsolidate);
+
+                    // Update source file to include directory path
+                    foreach (var key in consolidated)
+                    {
+                        key.Source = new SourceFile(baseName, fileType, directoryPath);
+                    }
+
+                    _translationStore.AddTranslations(consolidated);
+
+                    // Extract and store template from first file
+                    var firstFile = filesToConsolidate.First();
+                    if (fileType == FileType.Resx)
+                    {
+                        var template = _resxReader.ExtractTemplate(firstFile.FilePath);
+                        _translationStore.SetResxTemplate(baseName, template);
+                    }
+                    else
+                    {
+                        var template = _jsonReader.ExtractTemplate(firstFile.FilePath);
+                        _translationStore.SetJsonTemplate(baseName, template);
+                    }
+
+                    // Add imported file names to the list for display (include directory path)
+                    foreach (var file in group)
+                    {
+                        var displayPath = !string.IsNullOrEmpty(directoryPath)
+                            ? $"{directoryPath}/{file.fileName}"
+                            : file.fileName;
+                        ImportedFileNames.Add(displayPath);
+                    }
+
+                    successCount += filesToConsolidate.Count;
+                }
+            }
+
+            UpdateFileFilters();
+            
+            if (ImportErrors.Count > 0)
+            {
+                StatusMessage = $"Imported {successCount} file(s) with {ImportErrors.Count} error(s). Check the errors list.";
+            }
+            else
+            {
+                StatusMessage = $"Successfully imported {successCount} file(s) from directory '{folder.Name}'.";
+            }
+            
+            HasKeys = _translationStore.GetAllKeys().Count > 0;
+            ImportStepStatus = StepStatus.InProgress;
+            LanguagesChanged?.Invoke(this, EventArgs.Empty);
+
+            // Auto-save imported progress
+            SaveProgress();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error importing directory: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task BulkImportFromDirectory(Window window)
+    {
+        try
+        {
+            // Check if a root directory has already been selected
+            if (_rootDirectoryPath != null)
+            {
+                StatusMessage = "A root directory is already loaded. Please use 'Start Over' to import from a different directory.";
+                return;
+            }
+
+            // Step 1: Show branch warning dialog
+            var branchWarning = new BranchWarningDialog();
+            var confirmed = await branchWarning.ShowDialog<bool>(window);
+            
+            if (!confirmed)
+            {
+                return;
+            }
+
+            // Step 2: Open folder picker for parent directory
+            var folders = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Select Parent Directory Containing Repositories",
+                AllowMultiple = false
+            });
+
+            if (folders.Count == 0)
+            {
+                return;
+            }
+
+            var parentPath = folders[0].Path.LocalPath;
+
+            // Step 3: Scan directories using DirectoryScanner
+            var scanner = new DirectoryScanner(_jsonReader, _resxReader);
+            var scanResults = scanner.ScanDirectory(parentPath);
+
+            if (scanResults.Count == 0)
+            {
+                StatusMessage = "No subdirectories found in the selected directory.";
+                return;
+            }
+
+            // Step 4: Show directory selector dialog
+            var directories = new ObservableCollection<DirectoryScanResult>(scanResults);
+            var selectorViewModel = new DirectorySelectorViewModel(parentPath, directories);
+            var selectorDialog = new DirectorySelectorDialog
+            {
+                DataContext = selectorViewModel
+            };
+
+            var importConfirmed = await selectorDialog.ShowDialog<bool>(window);
+            
+            if (!importConfirmed)
+            {
+                return;
+            }
+
+            // Store the root directory path
+            _rootDirectoryPath = parentPath;
+
+            // Step 5: Gather all files from parent directory AND selected subdirectories
+            var allFilesToImport = new List<string>();
+            
+            // First, check parent directory itself for translation files (non-recursive)
+            var parentFiles = scanner.FindTranslationFilesInDirectory(parentPath);
+            allFilesToImport.AddRange(parentFiles);
+            
+            // Then, gather files from selected subdirectories (recursive)
+            var selectedDirectories = selectorViewModel.Directories.Where(d => d.IsSelected).ToList();
+            foreach (var dir in selectedDirectories)
+            {
+                allFilesToImport.AddRange(dir.TranslationFiles);
+            }
+            
+            // Check if any files were found
+            if (allFilesToImport.Count == 0)
+            {
+                StatusMessage = "No translation files found in the selected directory or its subdirectories.";
+                return;
+            }
+
+            // Step 6: Import all files using existing validation logic
+            // Clear previous errors
+            ImportErrors.Clear();
+
+            var validatedFiles = new List<(string filePath, string fileName, string extension, FileType fileType, string language)>();
+            
+            foreach (var filePath in allFilesToImport)
+            {
+                var fileName = Path.GetFileName(filePath);
+                var extension = Path.GetExtension(filePath).ToLower();
+                var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
+
+                // Calculate relative directory path for duplicate checking
+                var fileDirectory = Path.GetDirectoryName(filePath) ?? string.Empty;
+                var relativePath = Path.GetRelativePath(parentPath, fileDirectory);
+                var directoryPath = relativePath != "." ? relativePath : null;
+                
+                // Extract base name for duplicate checking
+                var baseName = ExtractBaseFileName(filePath, fileType);
+
+                // Check for duplicate files (same name, type, AND directory path)
+                var isDuplicate = _translationStore.SourceFiles.Any(sf => 
+                    string.Equals(sf.Name, baseName, StringComparison.OrdinalIgnoreCase) &&
+                    sf.Type == fileType &&
+                    sf.DirectoryPath == directoryPath);
+
+                if (isDuplicate)
+                {
+                    var displayPath = directoryPath != null ? $"{directoryPath}/{fileName}" : fileName;
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.DuplicateFile,
+                        FileName = fileName,
+                        Message = $"File '{displayPath}' has already been imported",
+                        Guidance = "This file is already loaded. Remove it from your selection and try again."
+                    });
+                    continue;
+                }
+
+                // Validate naming convention
+                var isValidName = fileType == FileType.Json 
+                    ? _jsonReader.ValidateNamingConvention(fileName)
+                    : _resxReader.ValidateNamingConvention(fileName);
+                
+                if (!isValidName)
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.InvalidNamingConvention,
+                        FileName = fileName,
+                        Message = $"File name doesn't match expected pattern",
+                        Guidance = fileType == FileType.Json
+                            ? "Expected: {BaseName}.{language}.json (e.g., Forms.en.json, Forms.es.json)"
+                            : "Expected: {BaseName}.resx or {BaseName}_{language}.resx (e.g., FormTranslations.resx, FormTranslations_es.resx)"
+                    });
+                    continue;
+                }
+
+                // Check if language is supported (en or es only)
+                var language = ExtractLanguage(fileName, fileType);
+                
+                if (string.IsNullOrEmpty(language) || (language != "en" && language != "es"))
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.UnsupportedLanguage,
+                        FileName = fileName,
+                        Message = $"Language '{language}' is not supported",
+                        Guidance = "Only English (en) and Spanish (es) are currently supported."
+                    });
+                    continue;
+                }
+
+                // Validate file can be parsed
+                try
+                {
+                    if (fileType == FileType.Json)
+                    {
+                        var json = File.ReadAllText(filePath);
+                        JsonDocument.Parse(json);
+                    }
+                    else
+                    {
+                        System.Xml.Linq.XDocument.Load(filePath);
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.JsonParseError,
+                        FileName = fileName,
+                        Message = $"Failed to parse JSON: {ex.Message}",
+                        Guidance = "Ensure the file contains valid JSON syntax. Check for missing commas, brackets, or quotes."
+                    });
+                    continue;
+                }
+                catch (System.Xml.XmlException ex)
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.ResxParseError,
+                        FileName = fileName,
+                        Message = $"Failed to parse RESX XML: {ex.Message}",
+                        Guidance = "Ensure the file is a valid RESX file with proper XML structure."
+                    });
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.Other,
+                        FileName = fileName,
+                        Message = $"Unexpected error: {ex.Message}",
+                        Guidance = "Please check the file and try again. If the problem persists, contact support."
+                    });
+                    continue;
+                }
+
+                // File passed all validation
+                validatedFiles.Add((filePath, fileName, extension, fileType, language));
+            }
+
+            // Update error state
+            HasErrors = ImportErrors.Count > 0;
+            ErrorCount = ImportErrors.Count;
+
+            // If ALL files failed validation, don't import anything
+            if (validatedFiles.Count == 0 && allFilesToImport.Count > 0)
+            {
+                StatusMessage = $"Bulk import failed with {ErrorCount} error(s). Click 'View Error Details' to see what went wrong. No files were imported.";
+                return;
+            }
+
+            // Import validated files
+            var translationFiles = new List<TranslationFile>();
+
+            foreach (var (filePath, fileName, extension, fileType, language) in validatedFiles)
+            {
+                try
+                {
+                    TranslationFile translationFile = extension switch
+                    {
+                        ".json" => _jsonReader.ReadFile(filePath),
+                        ".resx" => _resxReader.ReadFile(filePath),
+                        _ => throw new NotSupportedException($"Unsupported file type: {extension}")
+                    };
+
+                    // Calculate relative directory path from parent directory
+                    var fileDirectory = Path.GetDirectoryName(filePath) ?? string.Empty;
+                    var relativePath = Path.GetRelativePath(parentPath, fileDirectory);
+                    
+                    // Only set if not "." (meaning the file is in a subdirectory, not the parent itself)
+                    translationFile.RelativeDirectoryPath = relativePath != "." ? relativePath : null;
+
+                    translationFiles.Add(translationFile);
+                    
+                    // Add to imported file names with directory path if applicable
+                    var displayPath = translationFile.RelativeDirectoryPath != null
+                        ? $"{translationFile.RelativeDirectoryPath}/{fileName}"
+                        : fileName;
+                    ImportedFileNames.Add(displayPath);
+                }
+                catch (Exception ex)
+                {
+                    ImportErrors.Add(new ImportError
+                    {
+                        ErrorType = ImportErrorType.Other,
+                        FileName = fileName,
+                        Message = $"Unexpected error during import: {ex.Message}",
+                        Guidance = "Please try again. If the problem persists, contact support."
+                    });
+                }
+            }
+
+            // If errors occurred during import phase
+            if (HasErrors)
+            {
+                StatusMessage = $"Bulk import completed with {ErrorCount} error(s). {translationFiles.Count} file(s) imported successfully. Click 'View Error Details' to see errors.";
+            }
+
+            // Group files by base name, file type, AND directory path to keep files from different directories separate
+            var groupedFiles = translationFiles
+                .GroupBy(tf => (ExtractBaseFileName(tf.FilePath, tf.FileType), tf.FileType, tf.RelativeDirectoryPath ?? string.Empty))
+                .ToList();
+
+            foreach (var group in groupedFiles)
+            {
+                var consolidated = group.Key.FileType == FileType.Json
+                    ? _jsonReader.ConsolidateKeys(group.ToList())
+                    : _resxReader.ConsolidateKeys(group.ToList());
+
+                _translationStore.AddTranslations(consolidated);
+
+                // Extract and store templates
+                if (group.Any())
+                {
+                    var firstFile = group.First();
+                    if (group.Key.FileType == FileType.Resx)
+                    {
+                        var template = _resxReader.ExtractTemplate(firstFile.FilePath);
+                        _translationStore.SetResxTemplate(group.Key.Item1, template);
+                    }
+                    else if (group.Key.FileType == FileType.Json)
+                    {
+                        var template = _jsonReader.ExtractTemplate(firstFile.FilePath);
+                        _translationStore.SetJsonTemplate(group.Key.Item1, template);
+                    }
+                }
+            }
+
+            UpdateFileFilters();
+            
+            if (!HasErrors)
+            {
+                StatusMessage = $"Successfully bulk imported {translationFiles.Count} file(s) from {selectedDirectories.Count} repositor{(selectedDirectories.Count == 1 ? "y" : "ies")}. Review the imported files and click 'Confirm & Continue'.";
+            }
+            
+            HasKeys = _translationStore.GetAllKeys().Count > 0;
+            ImportStepStatus = StepStatus.InProgress;
+            LanguagesChanged?.Invoke(this, EventArgs.Empty);
+
+            SaveProgress();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error during bulk import: {ex.Message}";
+        }
+    }
+
     [RelayCommand]
     private async Task AddKey(Window window)
     {
@@ -662,6 +1254,13 @@ public partial class MainWindowViewModel : ViewModelBase
         // Add "All Files" option (null)
         AvailableSourceFiles.Add(null);
 
+        // Calculate minimal display paths for all source files
+        _sourceFileMinimalPaths = _pathDisplayService.CalculateMinimalPaths(
+            _translationStore.SourceFiles,
+            sf => sf.Name,
+            sf => sf.DirectoryPath
+        );
+
         // Add all source files
         foreach (var sourceFile in _translationStore.SourceFiles.OrderBy(f => f.Name).ThenBy(f => f.Type))
         {
@@ -677,6 +1276,291 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             SelectedSourceFile = null;
         }
+
+        // Update namespace filter items
+        UpdateNamespaceFilterItems();
+        
+        // Update file filter items
+        UpdateFileFilterItems();
+    }
+
+    private void UpdateNamespaceFilterItems()
+    {
+        // Unsubscribe from old items
+        foreach (var item in NamespaceFilterItems)
+        {
+            item.SelectionChanged -= OnNamespaceFilterItemSelectionChanged;
+        }
+
+        NamespaceFilterItems.Clear();
+
+        // Get unique namespaces (top-level directory)
+        var namespaces = _translationStore.SourceFiles
+            .Select(sf => GetTopLevelDirectory(sf.DirectoryPath))
+            .Distinct()
+            .OrderBy(ns => ns)
+            .ToList();
+
+        // Add "All Namespaces" option
+        var allItem = new NamespaceFilterItem
+        {
+            Namespace = string.Empty,
+            IsSelected = true,
+            FileCount = _translationStore.SourceFiles.Count
+        };
+        allItem.SelectionChanged += OnNamespaceFilterItemSelectionChanged;
+        NamespaceFilterItems.Add(allItem);
+
+        // Add individual namespaces
+        foreach (var ns in namespaces)
+        {
+            var fileCount = _translationStore.SourceFiles.Count(sf => GetTopLevelDirectory(sf.DirectoryPath) == ns);
+            var item = new NamespaceFilterItem
+            {
+                Namespace = ns,
+                IsSelected = false,
+                FileCount = fileCount
+            };
+            item.SelectionChanged += OnNamespaceFilterItemSelectionChanged;
+            NamespaceFilterItems.Add(item);
+        }
+
+        // Update display text
+        UpdateNamespacesDisplayText();
+    }
+
+    private void UpdateFileFilterItems()
+    {
+        // Unsubscribe from old items
+        foreach (var item in FileFilterItems)
+        {
+            item.SelectionChanged -= OnFileFilterItemSelectionChanged;
+        }
+
+        FileFilterItems.Clear();
+
+        // Get selected namespaces
+        var selectedNamespaces = NamespaceFilterItems
+            .Where(n => n.IsSelected && n.Namespace != string.Empty)
+            .Select(n => n.Namespace)
+            .ToList();
+
+        // If "All Namespaces" is selected or no specific namespaces, show all files
+        var allNamespacesSelected = NamespaceFilterItems.FirstOrDefault()?.IsSelected == true;
+        
+        IEnumerable<SourceFile> filesToShow;
+        if (allNamespacesSelected || selectedNamespaces.Count == 0)
+        {
+            filesToShow = _translationStore.SourceFiles;
+        }
+        else
+        {
+            filesToShow = _translationStore.SourceFiles
+                .Where(sf => selectedNamespaces.Contains(GetTopLevelDirectory(sf.DirectoryPath)));
+        }
+
+        // Add "All Files" option
+        var allFilesItem = new FileFilterItem
+        {
+            Source = new SourceFile("All Files", FileType.Json, null),
+            IsSelected = true
+        };
+        allFilesItem.SelectionChanged += OnFileFilterItemSelectionChanged;
+        FileFilterItems.Add(allFilesItem);
+
+        // Add individual files
+        foreach (var sourceFile in filesToShow.OrderBy(f => f.Name).ThenBy(f => f.Type).ThenBy(f => f.DirectoryPath))
+        {
+            var item = new FileFilterItem
+            {
+                Source = sourceFile,
+                IsSelected = false
+            };
+            item.SelectionChanged += OnFileFilterItemSelectionChanged;
+            FileFilterItems.Add(item);
+        }
+
+        // Update display text
+        UpdateFilesDisplayText();
+    }
+
+    private string GetTopLevelDirectory(string? directoryPath)
+    {
+        if (string.IsNullOrEmpty(directoryPath))
+            return string.Empty;
+
+        var parts = directoryPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 0 ? parts[0] : string.Empty;
+    }
+
+    private void OnNamespaceFilterItemSelectionChanged(object? sender, bool isSelected)
+    {
+        if (sender is not NamespaceFilterItem item)
+            return;
+
+        // If this is "All Namespaces", deselect all others
+        if (item.Namespace == string.Empty && isSelected)
+        {
+            foreach (var other in NamespaceFilterItems.Where(n => n != item))
+            {
+                other.IsSelected = false;
+            }
+        }
+        // If a specific namespace is selected, deselect "All Namespaces"
+        else if (item.Namespace != string.Empty && isSelected)
+        {
+            var allItem = NamespaceFilterItems.FirstOrDefault();
+            if (allItem != null)
+            {
+                allItem.IsSelected = false;
+            }
+        }
+
+        // If no namespaces are selected, select "All Namespaces"
+        if (!NamespaceFilterItems.Any(n => n.IsSelected))
+        {
+            var allItem = NamespaceFilterItems.FirstOrDefault();
+            if (allItem != null)
+            {
+                allItem.IsSelected = true;
+            }
+        }
+
+        // Update file filter items based on selected namespaces
+        UpdateFileFilterItems();
+
+        // Update display text
+        UpdateNamespacesDisplayText();
+
+        // Apply filters
+        ApplyFileFilters();
+    }
+
+    private void OnFileFilterItemSelectionChanged(object? sender, bool isSelected)
+    {
+        if (sender is not FileFilterItem item)
+            return;
+
+        // If this is "All Files", deselect all others
+        if (item.Source.Name == "All Files" && isSelected)
+        {
+            foreach (var other in FileFilterItems.Where(f => f != item))
+            {
+                other.IsSelected = false;
+            }
+        }
+        // If a specific file is selected, deselect "All Files"
+        else if (item.Source.Name != "All Files" && isSelected)
+        {
+            var allItem = FileFilterItems.FirstOrDefault();
+            if (allItem != null)
+            {
+                allItem.IsSelected = false;
+            }
+        }
+
+        // If no files are selected, select "All Files"
+        if (!FileFilterItems.Any(f => f.IsSelected))
+        {
+            var allItem = FileFilterItems.FirstOrDefault();
+            if (allItem != null)
+            {
+                allItem.IsSelected = true;
+            }
+        }
+
+        // Update display text
+        UpdateFilesDisplayText();
+
+        // Apply filters
+        ApplyFileFilters();
+    }
+
+    private void UpdateNamespacesDisplayText()
+    {
+        var allItem = NamespaceFilterItems.FirstOrDefault();
+        if (allItem?.IsSelected == true)
+        {
+            SelectedNamespacesText = "All Namespaces";
+            return;
+        }
+
+        var selected = NamespaceFilterItems.Where(n => n.IsSelected && n.Namespace != string.Empty).ToList();
+        if (selected.Count == 0)
+        {
+            SelectedNamespacesText = "All Namespaces";
+        }
+        else if (selected.Count == 1)
+        {
+            SelectedNamespacesText = selected[0].Namespace;
+        }
+        else
+        {
+            SelectedNamespacesText = $"{selected.Count} namespaces";
+        }
+    }
+
+    private void UpdateFilesDisplayText()
+    {
+        var allItem = FileFilterItems.FirstOrDefault();
+        if (allItem?.IsSelected == true)
+        {
+            SelectedFilesText = "All Files";
+            return;
+        }
+
+        var selected = FileFilterItems.Where(f => f.IsSelected && f.Source.Name != "All Files").ToList();
+        if (selected.Count == 0)
+        {
+            SelectedFilesText = "All Files";
+        }
+        else if (selected.Count == 1)
+        {
+            SelectedFilesText = selected[0].DisplayName;
+        }
+        else
+        {
+            SelectedFilesText = $"{selected.Count} files";
+        }
+    }
+
+    private void ApplyFileFilters()
+    {
+        // Get selected namespaces
+        var allNamespacesSelected = NamespaceFilterItems.FirstOrDefault()?.IsSelected == true;
+        var selectedNamespaces = NamespaceFilterItems
+            .Where(n => n.IsSelected && n.Namespace != string.Empty)
+            .Select(n => n.Namespace)
+            .ToList();
+
+        // Get selected files
+        var selectedFiles = FileFilterItems
+            .Where(f => f.IsSelected && f.Source.Name != "All Files")
+            .Select(f => f.Source)
+            .ToList();
+
+        var allFilesSelected = FileFilterItems.FirstOrDefault()?.IsSelected == true;
+        
+        // Priority 1: If specific files are selected, use those
+        if (selectedFiles.Count > 0)
+        {
+            _translationStore.FilterBySourceFiles(selectedFiles);
+        }
+        // Priority 2: If specific namespaces are selected (but all files within those namespaces), filter by namespace
+        else if (!allNamespacesSelected && selectedNamespaces.Count > 0)
+        {
+            var filesInNamespaces = _translationStore.SourceFiles
+                .Where(sf => selectedNamespaces.Contains(GetTopLevelDirectory(sf.DirectoryPath)))
+                .ToList();
+            _translationStore.FilterBySourceFiles(filesInNamespaces);
+        }
+        // Priority 3: Show all files
+        else
+        {
+            _translationStore.FilterBySourceFiles(null!);
+        }
+
+        UpdateStatusMessage();
     }
 
     partial void OnSelectedSourceFileChanged(SourceFile? value)
@@ -693,6 +1577,14 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         UpdateStatusMessage();
+    }
+
+    /// <summary>
+    /// Gets the minimal display path for a source file (for use in converters)
+    /// </summary>
+    public string? GetMinimalDisplayPath(SourceFile sourceFile)
+    {
+        return _sourceFileMinimalPaths.TryGetValue(sourceFile, out var path) ? path : null;
     }
 
     [RelayCommand]
@@ -851,14 +1743,13 @@ public partial class MainWindowViewModel : ViewModelBase
             StringComparer.OrdinalIgnoreCase
         );
 
-        // Group keys by source file
-        var groupedByFile = allKeys.GroupBy(k => k.Source.Name);
+        // Group keys by source file (including directory path)
+        var groupedByFile = allKeys.GroupBy(k => k.Source);
 
         foreach (var fileGroup in groupedByFile)
         {
-            var sourceFile = fileGroup.Key;
+            var source = fileGroup.Key;
             var fileKeys = fileGroup.ToList();
-            var fileType = fileKeys.First().Source.Type;
 
             // Get all languages for this file
             var languages = fileKeys
@@ -870,20 +1761,25 @@ public partial class MainWindowViewModel : ViewModelBase
             foreach (var language in languages)
             {
                 string fileName;
-                if (fileType == FileType.Json)
+                if (source.Type == FileType.Json)
                 {
-                    fileName = $"{sourceFile}.{language}.json";
+                    fileName = $"{source.Name}.{language}.json";
                 }
                 else // RESX
                 {
                     fileName = language == "en" 
-                        ? $"{sourceFile}.resx" 
-                        : $"{sourceFile}_{language}.resx";
+                        ? $"{source.Name}.resx" 
+                        : $"{source.Name}_{language}.resx";
                 }
 
-                if (!importedFileNamesLower.Contains(fileName.ToLower()))
+                // Include directory path in the comparison
+                var fullPath = !string.IsNullOrEmpty(source.DirectoryPath)
+                    ? $"{source.DirectoryPath}/{fileName}"
+                    : fileName;
+
+                if (!importedFileNamesLower.Contains(fullPath.ToLower()))
                 {
-                    newFiles.Add(fileName);
+                    newFiles.Add(fullPath);
                 }
             }
         }
@@ -1072,6 +1968,83 @@ public partial class MainWindowViewModel : ViewModelBase
             : _resxReader.ExtractBaseFileName(filePath);
     }
 
+    /// <summary>
+    /// Calculates minimal unique directory paths for display in UI
+    /// Returns null for files with no duplicates, otherwise returns the shortest path segment that makes them unique
+    /// </summary>
+    private Dictionary<SourceFile, string?> CalculateMinimalDisplayPaths(IEnumerable<SourceFile> sourceFiles)
+    {
+        var result = new Dictionary<SourceFile, string?>();
+        var filesByName = sourceFiles.GroupBy(sf => sf.Name).ToList();
+
+        foreach (var group in filesByName)
+        {
+            var filesWithPaths = group.Where(sf => sf.DirectoryPath != null).ToList();
+            var filesWithoutPaths = group.Where(sf => sf.DirectoryPath == null).ToList();
+
+            // If there's only one file with this name (or all have no directory path), no need to show path
+            if (group.Count() == 1 || filesWithPaths.Count == 0)
+            {
+                foreach (var file in group)
+                {
+                    result[file] = null;
+                }
+                continue;
+            }
+
+            // If we have duplicates, calculate minimal unique paths
+            foreach (var file in filesWithPaths)
+            {
+                if (file.DirectoryPath == null)
+                {
+                    result[file] = null;
+                    continue;
+                }
+
+                // Split the directory path into segments
+                var segments = file.DirectoryPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                
+                // Find the minimal unique suffix by comparing with other files with the same name
+                var otherFiles = filesWithPaths.Where(f => f != file).ToList();
+                var minimalPath = file.DirectoryPath;
+
+                // Try increasingly shorter paths (from end) until we find one that's unique
+                for (int i = segments.Length - 1; i >= 0; i--)
+                {
+                    var candidatePath = string.Join("/", segments.Skip(i));
+                    
+                    // Check if this path is unique among files with the same name
+                    var isUnique = !otherFiles.Any(other =>
+                    {
+                        if (other.DirectoryPath == null) return false;
+                        var otherSegments = other.DirectoryPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                        var otherCandidate = string.Join("/", otherSegments.Skip(Math.Max(0, otherSegments.Length - segments.Length + i)));
+                        return string.Equals(candidatePath, otherCandidate, StringComparison.OrdinalIgnoreCase);
+                    });
+
+                    if (isUnique)
+                    {
+                        minimalPath = candidatePath;
+                    }
+                    else
+                    {
+                        break; // Need more segments to be unique
+                    }
+                }
+
+                result[file] = minimalPath;
+            }
+
+            // Files without directory paths in a group with duplicates
+            foreach (var file in filesWithoutPaths)
+            {
+                result[file] = null; // Or could show "(root)" or similar
+            }
+        }
+
+        return result;
+    }
+
     [RelayCommand]
     private void SaveProgress()
     {
@@ -1179,6 +2152,7 @@ public partial class MainWindowViewModel : ViewModelBase
         FilePairs.Clear();
         HasKeys = false;
         HasUnsavedChanges = false;
+        _rootDirectoryPath = null; // Reset root directory
 
         // Reset workflow state
         CurrentStep = WorkflowStep.Import;
@@ -1676,14 +2650,13 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         FilePairs.Clear();
 
-        // Group imported files by base name and file type
-        var fileGroups = ImportedFileNames
-            .GroupBy(fileName =>
-            {
-                var extension = Path.GetExtension(fileName).ToLower();
-                var fileType = extension == ".json" ? FileType.Json : FileType.Resx;
-                var baseName = ExtractBaseName(fileName, fileType);
-                return new { BaseName = baseName, FileType = fileType };
+        // Group source files by base name, file type, AND directory path
+        var fileGroups = _translationStore.SourceFiles
+            .GroupBy(sourceFile => new 
+            { 
+                BaseName = sourceFile.Name, 
+                FileType = sourceFile.Type,
+                DirectoryPath = sourceFile.DirectoryPath ?? string.Empty
             })
             .ToList();
 
@@ -1692,26 +2665,63 @@ public partial class MainWindowViewModel : ViewModelBase
             var pair = new FilePair
             {
                 BaseName = group.Key.BaseName,
-                FileType = group.Key.FileType
+                FileType = group.Key.FileType,
+                DirectoryPath = string.IsNullOrEmpty(group.Key.DirectoryPath) ? null : group.Key.DirectoryPath
             };
 
-            // Find English and Spanish files in the group
-            foreach (var fileName in group)
+            // Check which language files exist in this group
+            // Note: Each SourceFile represents a base file, not individual language files
+            // We need to check if the translation keys have both languages
+            var keysForThisSource = _translationStore.GetAllKeys()
+                .Where(k => k.Source.Name == group.Key.BaseName && 
+                           k.Source.Type == group.Key.FileType &&
+                           k.Source.DirectoryPath == (string.IsNullOrEmpty(group.Key.DirectoryPath) ? null : group.Key.DirectoryPath))
+                .ToList();
+
+            if (keysForThisSource.Any())
             {
-                var language = ExtractLanguage(fileName, group.Key.FileType);
-                if (language == "en")
+                var hasEnglish = keysForThisSource.Any(k => k.LanguageValues.ContainsKey("en"));
+                var hasSpanish = keysForThisSource.Any(k => k.LanguageValues.ContainsKey("es"));
+
+                pair.HasEnglishFile = hasEnglish;
+                pair.HasSpanishFile = hasSpanish;
+                
+                // Set file names for display
+                if (hasEnglish)
                 {
-                    pair.EnglishFileName = fileName;
-                    pair.HasEnglishFile = true;
+                    pair.EnglishFileName = group.Key.FileType == FileType.Json 
+                        ? $"{group.Key.BaseName}.en.json"
+                        : $"{group.Key.BaseName}.resx";
                 }
-                else if (language == "es")
+                
+                if (hasSpanish)
                 {
-                    pair.SpanishFileName = fileName;
-                    pair.HasSpanishFile = true;
+                    pair.SpanishFileName = group.Key.FileType == FileType.Json
+                        ? $"{group.Key.BaseName}.es.json"
+                        : $"{group.Key.BaseName}_es.resx";
                 }
             }
 
             FilePairs.Add(pair);
+        }
+
+        // Calculate minimal display paths for pairs with duplicate names
+        CalculateMinimalFilePairPaths();
+    }
+
+    private void CalculateMinimalFilePairPaths()
+    {
+        // Use PathDisplayService to calculate minimal paths for all file pairs
+        var minimalPaths = _pathDisplayService.CalculateMinimalPaths(
+            FilePairs,
+            pair => pair.BaseName,
+            pair => pair.DirectoryPath
+        );
+
+        // Assign the calculated minimal paths
+        foreach (var pair in FilePairs)
+        {
+            pair.MinimalDisplayPath = minimalPaths.TryGetValue(pair, out var path) ? path : null;
         }
     }
 
@@ -1824,9 +2834,11 @@ public partial class MainWindowViewModel : ViewModelBase
             newFileName = language == "es" ? $"{pair.BaseName}_es.resx" : $"{pair.BaseName}.resx";
         }
 
-        // Get all keys from the existing file
+        // Get all keys from the existing file (must match base name, type, AND directory path)
         var existingKeys = _translationStore.GetAllKeys()
-            .Where(k => k.Source.Name == pair.BaseName && k.Source.Type == pair.FileType)
+            .Where(k => k.Source.Name == pair.BaseName && 
+                       k.Source.Type == pair.FileType &&
+                       k.Source.DirectoryPath == pair.DirectoryPath)
             .ToList();
 
         // Create new translation file entries with empty values
@@ -1844,10 +2856,13 @@ public partial class MainWindowViewModel : ViewModelBase
             }
         }
 
-        // Add to imported file names
-        if (!ImportedFileNames.Any(f => string.Equals(f, newFileName, StringComparison.OrdinalIgnoreCase)))
+        // Add to imported file names (include directory path)
+        var displayPath = !string.IsNullOrEmpty(pair.DirectoryPath)
+            ? $"{pair.DirectoryPath}/{newFileName}"
+            : newFileName;
+        if (!ImportedFileNames.Any(f => string.Equals(f, displayPath, StringComparison.OrdinalIgnoreCase)))
         {
-            ImportedFileNames.Add(newFileName);
+            ImportedFileNames.Add(displayPath);
         }
 
         // Update the pair

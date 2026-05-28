@@ -18,6 +18,9 @@
     <Window.Resources>
         <converters:SourceFileConverter x:Key="SourceFileConverter"/>
         <converters:SourceFileDisplayConverter x:Key="SourceFileDisplayConverter"/>
+        <converters:SourceFileMinimalPathConverter x:Key="SourceFileMinimalPathConverter"/>
+        <converters:SourceFileMinimalPathMultiConverter x:Key="SourceFileMinimalPathMultiConverter"/>
+        <converters:TruncatedDirectoryPathConverter x:Key="TruncatedDirectoryPathConverter"/>
         <converters:ShowFiltersTextConverter x:Key="ShowFiltersTextConverter"/>
         <converters:ShowOriginalTooltipConverter x:Key="ShowOriginalTooltipConverter"/>
         <converters:RowToggleEnabledConverter x:Key="RowToggleEnabledConverter"/>
@@ -195,7 +198,7 @@
                                    FontSize="20"
                                    FontWeight="Bold"
                                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
-                        <TextBlock Text="Import your translation files (JSON or RESX format). You can select multiple files."
+                        <TextBlock Text="Import translation files by selecting a directory containing your translations (JSON or RESX format)."
                                    TextWrapping="Wrap"
                                    FontSize="14"
                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
@@ -223,27 +226,29 @@
                                         <!-- Content -->
                                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
                                             <TextBlock Text="📁" FontSize="42" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="Drag &amp; drop files here" 
+                                            <TextBlock Text="Drag &amp; drop a directory here" 
                                                        FontSize="16" 
                                                        FontWeight="Bold"
                                                        HorizontalAlignment="Center"
                                                        Foreground="#2196F3"/>
-                                            <TextBlock Text="or click the button below to browse for JSON or RESX files" 
+                                            <TextBlock Text="or click the button below to choose a directory" 
                                                        FontSize="12" 
                                                        HorizontalAlignment="Center"
                                                        TextAlignment="Center"
                                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                                        MaxWidth="300"
                                                        TextWrapping="Wrap"
-                                                       Margin="0,0,0,5"/>
-                                            <Button Content="Browse Files..."
+                                                       Margin="0,0,0,10"/>
+                                            
+                                            <!-- Import Button -->
+                                            <Button Content="Import Directory"
                                                     Classes="ImportButton"
-                                                    Command="{Binding ImportFilesCommand}"
+                                                    Command="{Binding BulkImportFromDirectoryCommand}"
                                                     CommandParameter="{Binding $parent[Window]}"
-                                                    HorizontalAlignment="Center"
-                                                    Padding="20,8"
+                                                    Padding="20,10"
                                                     FontSize="14"
-                                                    FontWeight="SemiBold"/>
+                                                    FontWeight="SemiBold"
+                                                    HorizontalAlignment="Center"/>
                                         </StackPanel>
                                     </Grid>
                                 </Border>
@@ -405,10 +410,16 @@
                                         <Grid RowDefinitions="Auto,Auto,Auto,Auto">
                                             <!-- Header -->
                                             <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
-                                                <TextBlock Grid.Column="0"
-                                                           Text="{Binding DisplayName}"
-                                                           FontSize="16"
-                                                           FontWeight="SemiBold"/>
+                                                <StackPanel Grid.Column="0" Spacing="2">
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               FontSize="16"
+                                                               FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding TruncatedDirectoryPath}"
+                                                               FontSize="10"
+                                                               FontStyle="Italic"
+                                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                               IsVisible="{Binding DirectoryPath, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1"
                                                            Text="{Binding StatusText}"
                                                            FontSize="14"
@@ -727,16 +738,100 @@
                                  MinWidth="200"
                                  Width="200"
                                  VerticalAlignment="Center"/>
-                        <ComboBox ItemsSource="{Binding AvailableSourceFiles}"
-                                  SelectedItem="{Binding SelectedSourceFile}"
-                                  MinWidth="250"
-                                  Width="250">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Converter={StaticResource SourceFileDisplayConverter}}"/>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
+                        
+                        <!-- Namespace Filter Dropdown-style Button -->
+                        <Button MinWidth="200" 
+                                Height="32"
+                                Padding="10,5"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalAlignment="Center"
+                                Background="{DynamicResource ComboBoxBackground}"
+                                BorderBrush="{DynamicResource ComboBoxBorderBrush}"
+                                BorderThickness="1">
+                            <Button.Content>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0" 
+                                               Text="{Binding SelectedNamespacesText}"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <Path Grid.Column="1"
+                                          Data="M 0,0 L 4,4 L 8,0"
+                                          Stroke="{DynamicResource ComboBoxDropDownGlyphForeground}"
+                                          StrokeThickness="1"
+                                          VerticalAlignment="Center"
+                                          Margin="8,0,0,0"/>
+                                </Grid>
+                            </Button.Content>
+                            <Button.Flyout>
+                                <Flyout Placement="BottomEdgeAlignedLeft">
+                                    <ScrollViewer MaxHeight="200" MinWidth="200" VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding NamespaceFilterItems}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="models:NamespaceFilterItem">
+                                                    <CheckBox IsChecked="{Binding IsSelected}" 
+                                                              Margin="5,3">
+                                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                                            <TextBlock Text="{Binding DisplayName}"/>
+                                                            <TextBlock Text="{Binding FileCount, StringFormat='({0})'}"
+                                                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                                       FontSize="11"/>
+                                                        </StackPanel>
+                                                    </CheckBox>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                        
+                        <!-- File Filter Dropdown-style Button -->
+                        <Button MinWidth="300" 
+                                Height="32"
+                                Padding="10,5"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalAlignment="Center"
+                                Background="{DynamicResource ComboBoxBackground}"
+                                BorderBrush="{DynamicResource ComboBoxBorderBrush}"
+                                BorderThickness="1">
+                            <Button.Content>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0" 
+                                               Text="{Binding SelectedFilesText}"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <Path Grid.Column="1"
+                                          Data="M 0,0 L 4,4 L 8,0"
+                                          Stroke="{DynamicResource ComboBoxDropDownGlyphForeground}"
+                                          StrokeThickness="1"
+                                          VerticalAlignment="Center"
+                                          Margin="8,0,0,0"/>
+                                </Grid>
+                            </Button.Content>
+                            <Button.Flyout>
+                                <Flyout Placement="BottomEdgeAlignedLeft">
+                                    <ScrollViewer MaxHeight="250" MinWidth="300" VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding FileFilterItems}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="models:FileFilterItem">
+                                                    <CheckBox IsChecked="{Binding IsSelected}" 
+                                                              Margin="5,3">
+                                                        <StackPanel Spacing="2">
+                                                            <TextBlock Text="{Binding DisplayName}"/>
+                                                            <TextBlock Text="{Binding TruncatedDirectoryPath}"
+                                                                       FontSize="10"
+                                                                       FontStyle="Italic"
+                                                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                                       IsVisible="{Binding TruncatedDirectoryPath, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                                                        </StackPanel>
+                                                    </CheckBox>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
                     </StackPanel>
 
                     <!-- DataGrid with constrained height -->
@@ -758,6 +853,27 @@
                                 </Style>
                             </DataGrid.Styles>
                             <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="Source File" 
+                                                        Width="*" 
+                                                        MinWidth="120"
+                                                        MaxWidth="250">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="models:TranslationKey">
+                                            <StackPanel Orientation="Vertical" 
+                                                        Margin="5,4"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
+                                                           TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding Source.DirectoryPath, Converter={StaticResource TruncatedDirectoryPathConverter}}"
+                                                           FontSize="10"
+                                                           FontStyle="Italic"
+                                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                           TextWrapping="Wrap"
+                                                           IsVisible="{Binding Source.DirectoryPath, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                                 <DataGridTemplateColumn Header="Key" 
                                                         Width="1.5*" 
                                                         MinWidth="150"
@@ -765,19 +881,6 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBlock Text="{Binding Key}" 
-                                                       TextWrapping="Wrap"
-                                                       Padding="5,4"
-                                                       VerticalAlignment="Center"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="Source File" 
-                                                        Width="*" 
-                                                        MinWidth="120"
-                                                        MaxWidth="250">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
                                                        TextWrapping="Wrap"
                                                        Padding="5,4"
                                                        VerticalAlignment="Center"/>

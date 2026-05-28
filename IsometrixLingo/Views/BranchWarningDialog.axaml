@@ -1,0 +1,91 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="IsometrixLingo.Views.BranchWarningDialog"
+        Title="Important: Branch Status Check"
+        Width="600"
+        Height="380"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Topmost="True">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Warning Icon and Title -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+            <TextBlock Text="⚠️" FontSize="24" Margin="0,0,10,0"/>
+            <TextBlock Text="Repository Status Verification" 
+                       FontSize="16" 
+                       FontWeight="Bold"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Warning Message -->
+        <Border Grid.Row="1" 
+                Background="#40FFC107" 
+                BorderBrush="#FFC107" 
+                BorderThickness="2" 
+                CornerRadius="4"
+                Padding="20"
+                Margin="0,0,0,20">
+            <StackPanel Spacing="12">
+                <TextBlock TextWrapping="Wrap" 
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}">
+                    Before importing translation files, please ensure:
+                </TextBlock>
+                <StackPanel Spacing="8" Margin="20,0,0,0">
+                    <TextBlock TextWrapping="Wrap"
+                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}">
+                        • All repositories are on the correct branch for translation work
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap"
+                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}">
+                        • All repositories have been pulled to get the latest changes
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap"
+                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}">
+                        • No uncommitted changes exist in translation files
+                    </TextBlock>
+                </StackPanel>
+                <TextBlock TextWrapping="Wrap" 
+                           FontStyle="Italic" 
+                           Margin="0,8,0,0"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}">
+                    This ensures you're working with the correct and most up-to-date translations.
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <!-- Confirmation Checkbox -->
+        <CheckBox Grid.Row="2" 
+                  x:Name="ConfirmationCheckBox"
+                  Margin="0,0,0,20">
+            <TextBlock TextWrapping="Wrap"
+                       MaxWidth="520">
+                I confirm all repositories are on the correct branch and up to date
+            </TextBlock>
+        </CheckBox>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="3" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right" 
+                    Spacing="10">
+            <Button Content="Cancel" 
+                    Width="100" 
+                    Click="OnCancelClick"/>
+            <Button Content="Proceed" 
+                    Width="100" 
+                    x:Name="ProceedButton"
+                    IsEnabled="{Binding #ConfirmationCheckBox.IsChecked}"
+                    Click="OnProceedClick"
+                    Classes="accent"/>
+        </StackPanel>
+    </Grid>
+</Window>

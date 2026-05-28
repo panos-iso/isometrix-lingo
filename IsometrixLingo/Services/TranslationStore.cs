@@ -33,11 +33,12 @@ public class TranslationStore
     {
         foreach (var key in keys)
         {
-            // Check if this key already exists (same key name and source file)
+            // Check if this key already exists (same key name and source file including directory)
             var existingKey = _allKeys.FirstOrDefault(k => 
                 k.Key == key.Key && 
                 k.Source.Name == key.Source.Name && 
-                k.Source.Type == key.Source.Type);
+                k.Source.Type == key.Source.Type &&
+                k.Source.DirectoryPath == key.Source.DirectoryPath);
 
             if (existingKey != null)
             {
@@ -90,8 +91,8 @@ public class TranslationStore
                 _allKeys.Add(key);
             }
 
-            // Add source file if not already tracked
-            if (!_sourceFiles.Any(sf => sf.Name == key.Source.Name && sf.Type == key.Source.Type))
+            // Add source file if not already tracked (checks Name, Type, and DirectoryPath)
+            if (!_sourceFiles.Any(sf => sf.Name == key.Source.Name && sf.Type == key.Source.Type && sf.DirectoryPath == key.Source.DirectoryPath))
             {
                 _sourceFiles.Add(key.Source);
             }
@@ -172,7 +173,9 @@ public class TranslationStore
         else
         {
             keysToShow = _allKeys.Where(k => _currentFileFilter.Any(sf =>
-                sf.Name == k.Source.Name && sf.Type == k.Source.Type));
+                sf.Name == k.Source.Name && 
+                sf.Type == k.Source.Type &&
+                sf.DirectoryPath == k.Source.DirectoryPath));
         }
 
         // Apply search filter if present
@@ -295,8 +298,8 @@ public class TranslationStore
         _allKeys.Add(key);
         key.UpdateMissingTranslationsStatus();
 
-        // Add source file if not already tracked
-        if (!_sourceFiles.Any(sf => sf.Name == key.Source.Name && sf.Type == key.Source.Type))
+        // Add source file if not already tracked (checks Name, Type, and DirectoryPath)
+        if (!_sourceFiles.Any(sf => sf.Name == key.Source.Name && sf.Type == key.Source.Type && sf.DirectoryPath == key.Source.DirectoryPath))
         {
             _sourceFiles.Add(key.Source);
         }

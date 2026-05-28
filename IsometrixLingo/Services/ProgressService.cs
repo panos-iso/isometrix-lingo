@@ -31,7 +31,8 @@ public class ProgressService
                 Source = new SerializableSourceFile
                 {
                     Name = tk.Source.Name,
-                    Type = tk.Source.Type
+                    Type = tk.Source.Type,
+                    DirectoryPath = tk.Source.DirectoryPath
                 },
                 LanguageValues = new Dictionary<string, string>(tk.LanguageValues),
                 SuggestedValues = tk.SuggestedValues.ToDictionary(
@@ -94,7 +95,7 @@ public class ProgressService
                     var key = new TranslationKey
                     {
                         Key = stk.Key,
-                        Source = new SourceFile(stk.Source.Name, stk.Source.Type),
+                        Source = new SourceFile(stk.Source.Name, stk.Source.Type, stk.Source.DirectoryPath),
                         LanguageValues = new Dictionary<string, string>(stk.LanguageValues),
                         SuggestedValues = stk.SuggestedValues.ToDictionary(
                             kvp => kvp.Key,

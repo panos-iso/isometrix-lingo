@@ -108,6 +108,7 @@ public class ResxTranslationFileReader
     public List<TranslationKey> ConsolidateKeys(List<TranslationFile> files)
     {
         var consolidatedKeys = new Dictionary<string, TranslationKey>();
+        var directoryPath = files.FirstOrDefault()?.RelativeDirectoryPath;
 
         foreach (var file in files)
         {
@@ -135,10 +136,11 @@ public class ResxTranslationFileReader
                 }
                 else
                 {
+                    // Create new key with updated Source including directory path
                     consolidatedKeys[key.Key] = new TranslationKey
                     {
                         Key = key.Key,
-                        Source = key.Source,
+                        Source = new SourceFile(key.Source.Name, key.Source.Type, directoryPath),
                         LanguageValues = new Dictionary<string, string>(key.LanguageValues),
                         SuggestedValues = new Dictionary<string, Suggestion>(key.SuggestedValues),
                         ConfirmedBy = key.ConfirmedBy

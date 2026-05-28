@@ -27,13 +27,24 @@ public class ResxTranslationFileWriter
             Directory.CreateDirectory(outputDirectory);
         }
 
-        // Group keys by source file
-        var groupedByFile = keys.GroupBy(k => k.Source.Name);
+        // Group keys by source file (including directory path)
+        var groupedByFile = keys.GroupBy(k => k.Source);
 
         foreach (var fileGroup in groupedByFile)
         {
-            var sourceFile = fileGroup.Key;
+            var source = fileGroup.Key;
             var fileKeys = fileGroup.ToList();
+
+            // Determine output directory based on DirectoryPath
+            var targetDirectory = outputDirectory;
+            if (!string.IsNullOrEmpty(source.DirectoryPath))
+            {
+                targetDirectory = Path.Combine(outputDirectory, source.DirectoryPath);
+                if (!Directory.Exists(targetDirectory))
+                {
+                    Directory.CreateDirectory(targetDirectory);
+                }
+            }
 
             // Get all languages for this file
             var languages = fileKeys
@@ -46,12 +57,12 @@ public class ResxTranslationFileWriter
             {
                 // For English, use base filename without language code; for others, add underscore + language
                 var fileName = language == "en"
-                    ? $"{sourceFile}.resx"
-                    : $"{sourceFile}_{language}.resx";
-                var filePath = Path.Combine(outputDirectory, fileName);
+                    ? $"{source.Name}.resx"
+                    : $"{source.Name}_{language}.resx";
+                var filePath = Path.Combine(targetDirectory, fileName);
 
                 // Get template for this source file if available
-                var template = templateProvider?.Invoke(sourceFile);
+                var template = templateProvider?.Invoke(source.Name);
 
                 WriteLanguageFile(filePath, fileKeys, language, template, username, isEditMode);
             }
