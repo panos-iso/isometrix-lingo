@@ -13,12 +13,8 @@ public class SourceFileConverter : IValueConverter
         {
             var type = source.Type == FileType.Json ? "JSON" : "RESX";
             
-            // If directory path exists, show it in the display
-            if (!string.IsNullOrEmpty(source.DirectoryPath))
-            {
-                return $"{source.Name} ({type}) — {source.DirectoryPath}";
-            }
-            
+            // For simple display (e.g., in dropdown), show name and type only
+            // The grid will use a custom template with minimal path
             return $"{source.Name} ({type})";
         }
 
