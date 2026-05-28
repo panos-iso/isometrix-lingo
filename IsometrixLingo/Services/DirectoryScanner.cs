@@ -77,6 +77,61 @@ public class DirectoryScanner
     }
 
     /// <summary>
+    /// Finds translation files only in the immediate directory (non-recursive)
+    /// </summary>
+    /// <param name="directoryPath">Directory to search</param>
+    /// <returns>List of file paths</returns>
+    public List<string> FindTranslationFilesInDirectory(string directoryPath)
+    {
+        var files = new List<string>();
+
+        if (!Directory.Exists(directoryPath))
+        {
+            return files;
+        }
+
+        try
+        {
+            // Only search immediate directory (non-recursive)
+            var allFiles = Directory.GetFiles(directoryPath, "*.*", SearchOption.TopDirectoryOnly);
+
+            foreach (var file in allFiles)
+            {
+                var extension = Path.GetExtension(file).ToLower();
+                var fileName = Path.GetFileName(file);
+
+                // Check if it's a translation file type
+                if (extension == ".json")
+                {
+                    // Validate JSON naming convention
+                    if (_jsonReader.ValidateNamingConvention(fileName))
+                    {
+                        files.Add(file);
+                    }
+                }
+                else if (extension == ".resx")
+                {
+                    // Validate RESX naming convention
+                    if (_resxReader.ValidateNamingConvention(fileName))
+                    {
+                        files.Add(file);
+                    }
+                }
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Skip directories we don't have permission to access
+        }
+        catch (Exception)
+        {
+            // Skip directories that cause other errors
+        }
+
+        return files;
+    }
+
+    /// <summary>
     /// Recursively finds all translation files (.json and .resx) in a directory tree
     /// Only includes files that match valid naming conventions
     /// </summary>

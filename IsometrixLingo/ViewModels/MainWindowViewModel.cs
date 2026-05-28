@@ -677,11 +677,11 @@ public partial class MainWindowViewModel : ViewModelBase
             // Step 5: Gather all files from parent directory AND selected subdirectories
             var allFilesToImport = new List<string>();
             
-            // First, check parent directory itself for translation files
-            var parentFiles = scanner.FindTranslationFiles(parentPath);
+            // First, check parent directory itself for translation files (non-recursive)
+            var parentFiles = scanner.FindTranslationFilesInDirectory(parentPath);
             allFilesToImport.AddRange(parentFiles);
             
-            // Then, gather files from selected subdirectories
+            // Then, gather files from selected subdirectories (recursive)
             var selectedDirectories = selectorViewModel.Directories.Where(d => d.IsSelected).ToList();
             foreach (var dir in selectedDirectories)
             {
