@@ -2,15 +2,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="IsometrixLingo.Views.BranchWarningDialog"
         Title="Important: Branch Status Check"
-        Width="550"
-        Height="300"
+        Width="600"
+        Height="380"
         WindowStartupLocation="CenterOwner"
         CanResize="False">
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -26,28 +26,36 @@
 
         <!-- Warning Message -->
         <Border Grid.Row="1" 
-                Background="#FFF3CD" 
+                Background="#40FFC107" 
                 BorderBrush="#FFC107" 
-                BorderThickness="1" 
+                BorderThickness="2" 
                 CornerRadius="4"
-                Padding="15"
-                Margin="0,0,0,15">
-            <StackPanel Spacing="10">
-                <TextBlock TextWrapping="Wrap" FontWeight="SemiBold">
+                Padding="20"
+                Margin="0,0,0,20">
+            <StackPanel Spacing="12">
+                <TextBlock TextWrapping="Wrap" 
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}">
                     Before importing translation files, please ensure:
                 </TextBlock>
-                <StackPanel Spacing="5" Margin="15,0,0,0">
-                    <TextBlock TextWrapping="Wrap">
+                <StackPanel Spacing="8" Margin="20,0,0,0">
+                    <TextBlock TextWrapping="Wrap"
+                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}">
                         • All repositories are on the correct branch for translation work
                     </TextBlock>
-                    <TextBlock TextWrapping="Wrap">
+                    <TextBlock TextWrapping="Wrap"
+                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}">
                         • All repositories have been pulled to get the latest changes
                     </TextBlock>
-                    <TextBlock TextWrapping="Wrap">
+                    <TextBlock TextWrapping="Wrap"
+                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}">
                         • No uncommitted changes exist in translation files
                     </TextBlock>
                 </StackPanel>
-                <TextBlock TextWrapping="Wrap" FontStyle="Italic" Margin="0,5,0,0">
+                <TextBlock TextWrapping="Wrap" 
+                           FontStyle="Italic" 
+                           Margin="0,8,0,0"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}">
                     This ensures you're working with the correct and most up-to-date translations.
                 </TextBlock>
             </StackPanel>
@@ -57,7 +65,8 @@
         <CheckBox Grid.Row="2" 
                   x:Name="ConfirmationCheckBox"
                   Margin="0,0,0,20">
-            <TextBlock TextWrapping="Wrap">
+            <TextBlock TextWrapping="Wrap"
+                       MaxWidth="520">
                 I confirm all repositories are on the correct branch and up to date
             </TextBlock>
         </CheckBox>
