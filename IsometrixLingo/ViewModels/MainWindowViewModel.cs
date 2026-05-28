@@ -63,6 +63,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private ObservableCollection<FileFilterItem> _fileFilterItems = new();
 
     [ObservableProperty]
+    private string _selectedNamespacesText = "All";
+
+    [ObservableProperty]
+    private string _selectedFilesText = "All";
+
+    [ObservableProperty]
     private string _searchText = string.Empty;
 
     [ObservableProperty]
@@ -1048,6 +1054,9 @@ public partial class MainWindowViewModel : ViewModelBase
             item.SelectionChanged += OnNamespaceFilterItemSelectionChanged;
             NamespaceFilterItems.Add(item);
         }
+
+        // Update display text
+        UpdateNamespacesDisplayText();
     }
 
     private void UpdateFileFilterItems()
@@ -1100,6 +1109,9 @@ public partial class MainWindowViewModel : ViewModelBase
             item.SelectionChanged += OnFileFilterItemSelectionChanged;
             FileFilterItems.Add(item);
         }
+
+        // Update display text
+        UpdateFilesDisplayText();
     }
 
     private string GetTopLevelDirectory(string? directoryPath)
@@ -1147,6 +1159,9 @@ public partial class MainWindowViewModel : ViewModelBase
         // Update file filter items based on selected namespaces
         UpdateFileFilterItems();
 
+        // Update display text
+        UpdateNamespacesDisplayText();
+
         // Apply filters
         ApplyFileFilters();
     }
@@ -1184,8 +1199,59 @@ public partial class MainWindowViewModel : ViewModelBase
             }
         }
 
+        // Update display text
+        UpdateFilesDisplayText();
+
         // Apply filters
         ApplyFileFilters();
+    }
+
+    private void UpdateNamespacesDisplayText()
+    {
+        var allItem = NamespaceFilterItems.FirstOrDefault();
+        if (allItem?.IsSelected == true)
+        {
+            SelectedNamespacesText = "All Namespaces";
+            return;
+        }
+
+        var selected = NamespaceFilterItems.Where(n => n.IsSelected && n.Namespace != string.Empty).ToList();
+        if (selected.Count == 0)
+        {
+            SelectedNamespacesText = "All Namespaces";
+        }
+        else if (selected.Count == 1)
+        {
+            SelectedNamespacesText = selected[0].Namespace;
+        }
+        else
+        {
+            SelectedNamespacesText = $"{selected.Count} namespaces";
+        }
+    }
+
+    private void UpdateFilesDisplayText()
+    {
+        var allItem = FileFilterItems.FirstOrDefault();
+        if (allItem?.IsSelected == true)
+        {
+            SelectedFilesText = "All Files";
+            return;
+        }
+
+        var selected = FileFilterItems.Where(f => f.IsSelected && f.Source.Name != "All Files").ToList();
+        if (selected.Count == 0)
+        {
+            SelectedFilesText = "All Files";
+        }
+        else if (selected.Count == 1)
+        {
+            SelectedFilesText = selected[0].DisplayName;
+        }
+        else
+        {
+            SelectedFilesText = $"{selected.Count} files";
+        }
     }
 
     private void ApplyFileFilters()
