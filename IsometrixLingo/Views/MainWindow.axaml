@@ -764,7 +764,7 @@
                             </Button.Content>
                             <Button.Flyout>
                                 <Flyout Placement="BottomEdgeAlignedLeft">
-                                    <ScrollViewer MaxHeight="300" MinWidth="200">
+                                    <ScrollViewer MaxHeight="250" MinWidth="200" VerticalScrollBarVisibility="Auto">
                                         <ItemsControl ItemsSource="{Binding NamespaceFilterItems}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate DataType="models:NamespaceFilterItem">
@@ -810,7 +810,7 @@
                             </Button.Content>
                             <Button.Flyout>
                                 <Flyout Placement="BottomEdgeAlignedLeft">
-                                    <ScrollViewer MaxHeight="400" MinWidth="300">
+                                    <ScrollViewer MaxHeight="300" MinWidth="300" VerticalScrollBarVisibility="Auto">
                                         <ItemsControl ItemsSource="{Binding FileFilterItems}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate DataType="models:FileFilterItem">
