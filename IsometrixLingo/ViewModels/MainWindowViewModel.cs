@@ -861,10 +861,13 @@ public partial class MainWindowViewModel : ViewModelBase
                         _translationStore.SetJsonTemplate(baseName, template);
                     }
 
-                    // Add imported file names to the list for display
+                    // Add imported file names to the list for display (include directory path)
                     foreach (var file in group)
                     {
-                        ImportedFileNames.Add(file.fileName);
+                        var displayPath = !string.IsNullOrEmpty(directoryPath)
+                            ? $"{directoryPath}/{file.fileName}"
+                            : file.fileName;
+                        ImportedFileNames.Add(displayPath);
                     }
 
                     successCount += filesToConsolidate.Count;
@@ -1136,7 +1139,12 @@ public partial class MainWindowViewModel : ViewModelBase
                     translationFile.RelativeDirectoryPath = relativePath != "." ? relativePath : null;
 
                     translationFiles.Add(translationFile);
-                    ImportedFileNames.Add(fileName);
+                    
+                    // Add to imported file names with directory path if applicable
+                    var displayPath = translationFile.RelativeDirectoryPath != null
+                        ? $"{translationFile.RelativeDirectoryPath}/{fileName}"
+                        : fileName;
+                    ImportedFileNames.Add(displayPath);
                 }
                 catch (Exception ex)
                 {
@@ -1735,14 +1743,13 @@ public partial class MainWindowViewModel : ViewModelBase
             StringComparer.OrdinalIgnoreCase
         );
 
-        // Group keys by source file
-        var groupedByFile = allKeys.GroupBy(k => k.Source.Name);
+        // Group keys by source file (including directory path)
+        var groupedByFile = allKeys.GroupBy(k => k.Source);
 
         foreach (var fileGroup in groupedByFile)
         {
-            var sourceFile = fileGroup.Key;
+            var source = fileGroup.Key;
             var fileKeys = fileGroup.ToList();
-            var fileType = fileKeys.First().Source.Type;
 
             // Get all languages for this file
             var languages = fileKeys
@@ -1754,20 +1761,25 @@ public partial class MainWindowViewModel : ViewModelBase
             foreach (var language in languages)
             {
                 string fileName;
-                if (fileType == FileType.Json)
+                if (source.Type == FileType.Json)
                 {
-                    fileName = $"{sourceFile}.{language}.json";
+                    fileName = $"{source.Name}.{language}.json";
                 }
                 else // RESX
                 {
                     fileName = language == "en" 
-                        ? $"{sourceFile}.resx" 
-                        : $"{sourceFile}_{language}.resx";
+                        ? $"{source.Name}.resx" 
+                        : $"{source.Name}_{language}.resx";
                 }
 
-                if (!importedFileNamesLower.Contains(fileName.ToLower()))
+                // Include directory path in the comparison
+                var fullPath = !string.IsNullOrEmpty(source.DirectoryPath)
+                    ? $"{source.DirectoryPath}/{fileName}"
+                    : fileName;
+
+                if (!importedFileNamesLower.Contains(fullPath.ToLower()))
                 {
-                    newFiles.Add(fileName);
+                    newFiles.Add(fullPath);
                 }
             }
         }
@@ -2844,10 +2856,13 @@ public partial class MainWindowViewModel : ViewModelBase
             }
         }
 
-        // Add to imported file names
-        if (!ImportedFileNames.Any(f => string.Equals(f, newFileName, StringComparison.OrdinalIgnoreCase)))
+        // Add to imported file names (include directory path)
+        var displayPath = !string.IsNullOrEmpty(pair.DirectoryPath)
+            ? $"{pair.DirectoryPath}/{newFileName}"
+            : newFileName;
+        if (!ImportedFileNames.Any(f => string.Equals(f, displayPath, StringComparison.OrdinalIgnoreCase)))
         {
-            ImportedFileNames.Add(newFileName);
+            ImportedFileNames.Add(displayPath);
         }
 
         // Update the pair
