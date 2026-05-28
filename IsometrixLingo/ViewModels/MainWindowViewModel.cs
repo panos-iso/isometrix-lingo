@@ -807,6 +807,12 @@ public partial class MainWindowViewModel : ViewModelBase
                         _translationStore.SetJsonTemplate(baseName, template);
                     }
 
+                    // Add imported file names to the list for display
+                    foreach (var file in group)
+                    {
+                        ImportedFileNames.Add(file.fileName);
+                    }
+
                     successCount += filesToConsolidate.Count;
                 }
             }
