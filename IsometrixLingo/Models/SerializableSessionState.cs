@@ -44,6 +44,7 @@ public class SerializableSourceFile
 {
     public string Name { get; set; } = string.Empty;
     public FileType Type { get; set; }
+    public string? DirectoryPath { get; set; }
 }
 
 /// <summary>
