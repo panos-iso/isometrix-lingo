@@ -853,19 +853,6 @@
                                 </Style>
                             </DataGrid.Styles>
                             <DataGrid.Columns>
-                                <DataGridTemplateColumn Header="Key" 
-                                                        Width="1.5*" 
-                                                        MinWidth="150"
-                                                        MaxWidth="300">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Key}" 
-                                                       TextWrapping="Wrap"
-                                                       Padding="5,4"
-                                                       VerticalAlignment="Center"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
                                 <DataGridTemplateColumn Header="Source File" 
                                                         Width="*" 
                                                         MinWidth="120"
@@ -884,6 +871,19 @@
                                                            TextWrapping="Wrap"
                                                            IsVisible="{Binding Source.DirectoryPath, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                                             </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Key" 
+                                                        Width="1.5*" 
+                                                        MinWidth="150"
+                                                        MaxWidth="300">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Key}" 
+                                                       TextWrapping="Wrap"
+                                                       Padding="5,4"
+                                                       VerticalAlignment="Center"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
