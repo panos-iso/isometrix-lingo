@@ -501,7 +501,15 @@
                     </StackPanel>
 
                     <!-- Mode Selection Boxes -->
-                    <Grid ColumnDefinitions="*,20,*" Margin="0,20,0,0">
+                    <Grid Margin="0,20,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
                         <!-- Edit Mode Box -->
                         <Border Grid.Column="0"
                                 Background="#E3F2FD"
@@ -597,6 +605,59 @@
                                         Padding="10,5"
                                         HorizontalAlignment="Center"
                                         IsVisible="{Binding CurrentMode, Converter={StaticResource IsSuggestModeConverter}}"
+                                        Margin="0,10,0,0">
+                                    <TextBlock Text="✓ SELECTED"
+                                               Foreground="White"
+                                               FontWeight="Bold"
+                                               FontSize="14"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Deployment Mode Box (Developer Only) -->
+                        <Border Grid.Column="4"
+                                Background="#FFF3E0"
+                                BorderThickness="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderThicknessConverter}, ConverterParameter=Deployment}"
+                                CornerRadius="10"
+                                Padding="30"
+                                Cursor="Hand"
+                                Tapped="OnDeploymentModeBoxTapped"
+                                BoxShadow="0 4 8 0 #40000000"
+                                IsVisible="{Binding IsDeveloper}">
+                            <Border.BorderBrush>
+                                <SolidColorBrush Color="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderColorConverter}, ConverterParameter=Deployment}"/>
+                            </Border.BorderBrush>
+                            <Border.Styles>
+                                <Style Selector="Border:pointerover">
+                                    <Setter Property="BoxShadow" Value="0 6 16 0 #60000000"/>
+                                </Style>
+                            </Border.Styles>
+                            <StackPanel Spacing="15">
+                                <TextBlock Text="🚀 Deployment Mode"
+                                           FontSize="24"
+                                           FontWeight="Bold"
+                                           Foreground="#E65100"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="Deploy translations directly to repository"
+                                           FontSize="16"
+                                           TextWrapping="Wrap"
+                                           HorizontalAlignment="Center"
+                                           Foreground="#F57C00"/>
+                                <Border Height="2" Background="#FFE0B2" Margin="0,5,0,5"/>
+                                <TextBlock TextWrapping="Wrap"
+                                           FontSize="14"
+                                           Foreground="#424242">
+                                    <Run Text="• Skip editing - fast deployment"/><LineBreak/>
+                                    <Run Text="• Auto-validate paths before deploy"/><LineBreak/>
+                                    <Run Text="• Deploy to original repo locations"/><LineBreak/>
+                                    <Run Text="• Developer mode only"/>
+                                </TextBlock>
+                                <!-- Selected indicator -->
+                                <Border Background="#FF6F00"
+                                        CornerRadius="5"
+                                        Padding="10,5"
+                                        HorizontalAlignment="Center"
+                                        IsVisible="{Binding CurrentMode, Converter={StaticResource IsDeploymentModeConverter}}"
                                         Margin="0,10,0,0">
                                     <TextBlock Text="✓ SELECTED"
                                                Foreground="White"

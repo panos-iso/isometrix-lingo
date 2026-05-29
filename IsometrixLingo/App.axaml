@@ -26,6 +26,7 @@
                     <converters:EditDialogLabelConverter x:Key="EditDialogLabelConverter"/>
                     <converters:IsEditModeConverter x:Key="IsEditModeConverter"/>
                     <converters:IsSuggestModeConverter x:Key="IsSuggestModeConverter"/>
+                    <converters:IsDeploymentModeConverter x:Key="IsDeploymentModeConverter"/>
                     <converters:ModeSelectionBorderColorConverter x:Key="ModeSelectionBorderColorConverter"/>
                     <converters:ModeSelectionBorderThicknessConverter x:Key="ModeSelectionBorderThicknessConverter"/>
                 </ResourceDictionary>

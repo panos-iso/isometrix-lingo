@@ -26,6 +26,13 @@ public class ModeSelectionBorderColorConverter : IValueConverter
                     ? Color.Parse("#7B1FA2")  // Dark purple when selected
                     : Color.Parse("#9C27B0");  // Light purple when not selected
             }
+            else if (targetMode == "Deployment")
+            {
+                // Deployment mode box: orange when selected, lighter orange when not
+                return currentMode == EditMode.Deployment 
+                    ? Color.Parse("#F57C00")  // Dark orange when selected
+                    : Color.Parse("#FF9800");  // Light orange when not selected
+            }
         }
 
         return Color.Parse("#2196F3"); // Default to blue

@@ -632,4 +632,12 @@ public partial class MainWindow : Window
             viewModel.SelectModeCommand.Execute(EditMode.Suggest);
         }
     }
+
+    private void OnDeploymentModeBoxTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.SelectModeCommand.Execute(EditMode.Deployment);
+        }
+    }
 }

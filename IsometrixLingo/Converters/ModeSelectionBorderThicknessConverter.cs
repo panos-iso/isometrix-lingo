@@ -13,7 +13,8 @@ public class ModeSelectionBorderThicknessConverter : IValueConverter
         if (value is EditMode currentMode && parameter is string targetMode)
         {
             if ((targetMode == "Edit" && currentMode == EditMode.Edit) ||
-                (targetMode == "Suggest" && currentMode == EditMode.Suggest))
+                (targetMode == "Suggest" && currentMode == EditMode.Suggest) ||
+                (targetMode == "Deployment" && currentMode == EditMode.Deployment))
             {
                 // Selected: thick bold border
                 return new Thickness(4);
