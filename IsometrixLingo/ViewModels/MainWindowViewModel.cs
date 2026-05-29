@@ -983,10 +983,17 @@ public partial class MainWindowViewModel : ViewModelBase
             }
 
             // Step 2: Open folder picker for parent directory
+            // Load last import directory from settings
+            var settings = _settingsService.Load();
+            var defaultImportPath = !string.IsNullOrEmpty(settings?.LastImportDirectory) && Directory.Exists(settings.LastImportDirectory)
+                ? settings.LastImportDirectory
+                : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
             var folders = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
                 Title = "Select Parent Directory Containing Repositories",
-                AllowMultiple = false
+                AllowMultiple = false,
+                SuggestedStartLocation = await window.StorageProvider.TryGetFolderFromPathAsync(defaultImportPath)
             });
 
             if (folders.Count == 0)
@@ -995,6 +1002,14 @@ public partial class MainWindowViewModel : ViewModelBase
             }
 
             var parentPath = folders[0].Path.LocalPath;
+
+            // Save the selected directory to settings for next time
+            if (settings == null)
+            {
+                settings = new UserSettings { Username = Username };
+            }
+            settings.LastImportDirectory = parentPath;
+            _settingsService.Save(settings);
 
             // Step 3: Scan directories using DirectoryScanner
             var scanner = new DirectoryScanner(_jsonReader, _resxReader);
