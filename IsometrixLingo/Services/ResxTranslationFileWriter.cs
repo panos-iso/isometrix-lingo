@@ -85,6 +85,7 @@ public class ResxTranslationFileWriter
 
     /// <summary>
     /// Update a RESX file in-place by modifying existing values and appending new keys at the end.
+    /// PRESERVES original file's key order.
     /// </summary>
     private void UpdateResxFileInPlace(string filePath, List<TranslationKey> keys, string language, string? username, EditMode currentMode)
     {
@@ -96,82 +97,84 @@ public class ResxTranslationFileWriter
             return;
         }
 
-        // Track which keys exist in original file
+        // Create lookup dictionary from keys list for fast access
+        var keyLookup = keys.ToDictionary(k => k.Key, k => k);
+        var processedKeys = new HashSet<string>();
+
+        // Iterate through ORIGINAL file's data elements in their existing order
         var existingDataElements = root.Elements("data").ToList();
-        var existingKeys = new HashSet<string>();
         
         foreach (var dataElement in existingDataElements)
         {
             var keyName = dataElement.Attribute("name")?.Value;
-            if (keyName != null)
+            if (keyName == null)
+                continue;
+
+            // If we have this key in our keys list, update it
+            if (keyLookup.TryGetValue(keyName, out var translationKey))
             {
-                existingKeys.Add(keyName);
+                var value = translationKey.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+                
+                // Update value element
+                var valueElement = dataElement.Element("value");
+                if (valueElement != null)
+                {
+                    valueElement.Value = value;
+                }
+                else
+                {
+                    dataElement.Add(new XElement("value", value));
+                }
+                
+                // Update annotations (only in Edit and Suggest modes)
+                if (currentMode != EditMode.Deployment)
+                {
+                    // Remove existing annotation comments
+                    dataElement.Nodes().OfType<XComment>().ToList().ForEach(c => c.Remove());
+                    AddAnnotationsAsComments(dataElement, translationKey, language, username, currentMode == EditMode.Edit);
+                }
+
+                processedKeys.Add(keyName);
             }
+            // If key doesn't exist in our keys list, leave it unchanged (preserve original)
         }
 
-        // Update existing values and collect new keys
-        var newKeys = new List<TranslationKey>();
-        
+        // Append NEW keys that weren't in the original file
         foreach (var key in keys)
         {
-            if (existingKeys.Contains(key.Key))
+            if (!processedKeys.Contains(key.Key))
             {
-                // Update existing key
-                var dataElement = existingDataElements.FirstOrDefault(e => e.Attribute("name")?.Value == key.Key);
-                if (dataElement != null)
+                var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+                
+                var dataElement = new XElement("data",
+                    new XAttribute("name", key.Key),
+                    new XAttribute(XNamespace.Xml + "space", "preserve"),
+                    new XElement("value", value)
+                );
+
+                // Add annotations (only in Edit and Suggest modes)
+                if (currentMode != EditMode.Deployment)
                 {
-                    var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                    
-                    // Update value element
-                    var valueElement = dataElement.Element("value");
-                    if (valueElement != null)
-                    {
-                        valueElement.Value = value;
-                    }
-                    else
-                    {
-                        dataElement.Add(new XElement("value", value));
-                    }
-                    
-                    // Update annotations (only in Edit and Suggest modes)
-                    if (currentMode != EditMode.Deployment)
-                    {
-                        // Remove existing annotation comments
-                        dataElement.Nodes().OfType<XComment>().ToList().ForEach(c => c.Remove());
-                        AddAnnotationsAsComments(dataElement, key, language, username, currentMode == EditMode.Edit);
-                    }
+                    AddAnnotationsAsComments(dataElement, key, language, username, currentMode == EditMode.Edit);
                 }
-            }
-            else
-            {
-                // New key - will append at end
-                newKeys.Add(key);
+
+                // Append to end
+                root.Add(dataElement);
             }
         }
 
-        // Append new keys at the end of root element
-        foreach (var key in newKeys)
+        // Save with XML declaration preserved
+        var settings = new System.Xml.XmlWriterSettings
         {
-            var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-            
-            var dataElement = new XElement("data",
-                new XAttribute("name", key.Key),
-                new XAttribute(XNamespace.Xml + "space", "preserve"),
-                new XElement("value", value)
-            );
+            Indent = true,
+            Encoding = System.Text.Encoding.UTF8,
+            OmitXmlDeclaration = false
+        };
 
-            // Add annotations (only in Edit and Suggest modes)
-            if (currentMode != EditMode.Deployment)
-            {
-                AddAnnotationsAsComments(dataElement, key, language, username, currentMode == EditMode.Edit);
-            }
-
-            // Append to end
-            root.Add(dataElement);
+        using (var writer = System.Xml.XmlWriter.Create(filePath, settings))
+        {
+            doc.Save(writer);
         }
-
-        // Save preserving original content
-        doc.Save(filePath);
     }
 
     /// <summary>

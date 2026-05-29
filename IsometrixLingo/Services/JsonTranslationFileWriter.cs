@@ -86,6 +86,7 @@ public class JsonTranslationFileWriter
 
     /// <summary>
     /// Update a JSON file in-place by modifying existing values and appending new keys at the end.
+    /// PRESERVES original file's key order.
     /// </summary>
     private void UpdateJsonFileInPlace(string filePath, List<TranslationKey> keys, string language, string? username, EditMode currentMode)
     {
@@ -108,49 +109,51 @@ public class JsonTranslationFileWriter
             }
         }
 
-        // Track which keys exist in original file
-        var existingKeys = new HashSet<string>();
-        CollectExistingKeys(rootObject, "", existingKeys, isNested);
+        // Create lookup dictionary from keys list for fast access
+        var keyLookup = keys.ToDictionary(k => k.Key, k => k);
+        var processedKeys = new HashSet<string>();
 
-        // Update existing values and collect new keys
-        var newKeys = new List<TranslationKey>();
-        
-        foreach (var key in keys)
+        // Collect all keys from original file in their original order
+        var originalKeys = new List<string>();
+        CollectExistingKeysInOrder(rootObject, "", originalKeys, isNested);
+
+        // Iterate through ORIGINAL file's keys in their existing order and update values
+        foreach (var originalKey in originalKeys)
         {
-            var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-            var finalValue = currentMode == EditMode.Deployment 
-                ? value 
-                : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
+            if (keyLookup.TryGetValue(originalKey, out var translationKey))
+            {
+                var value = translationKey.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+                var finalValue = currentMode == EditMode.Deployment 
+                    ? value 
+                    : AppendAnnotations(value, translationKey, language, username, currentMode == EditMode.Edit);
 
-            if (existingKeys.Contains(key.Key))
-            {
-                // Update existing key
-                UpdateValueInJson(rootObject, key.Key, finalValue, isNested);
+                // Update existing key in-place (preserves position)
+                UpdateValueInJson(rootObject, originalKey, finalValue, isNested);
+                processedKeys.Add(originalKey);
             }
-            else
-            {
-                // New key - will append at end
-                newKeys.Add(key);
-            }
+            // If key doesn't exist in our keys list, leave it unchanged (preserve original)
         }
 
-        // Append new keys at the end
-        foreach (var key in newKeys)
+        // Append NEW keys that weren't in the original file
+        foreach (var key in keys)
         {
-            var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-            var finalValue = currentMode == EditMode.Deployment 
-                ? value 
-                : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
+            if (!processedKeys.Contains(key.Key))
+            {
+                var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+                var finalValue = currentMode == EditMode.Deployment 
+                    ? value 
+                    : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
 
-            if (isNested)
-            {
-                // Add to nested structure
-                AddToNestedStructure(rootObject, key.Key, finalValue);
-            }
-            else
-            {
-                // Add as flat key
-                rootObject[key.Key] = JsonValue.Create(finalValue);
+                if (isNested)
+                {
+                    // Add to nested structure
+                    AddToNestedStructure(rootObject, key.Key, finalValue);
+                }
+                else
+                {
+                    // Add as flat key
+                    rootObject[key.Key] = JsonValue.Create(finalValue);
+                }
             }
         }
 
@@ -167,9 +170,9 @@ public class JsonTranslationFileWriter
     }
 
     /// <summary>
-    /// Collect all existing keys from JSON (handles both flat and nested)
+    /// Collect all existing keys from JSON in order (handles both flat and nested)
     /// </summary>
-    private void CollectExistingKeys(JsonObject obj, string prefix, HashSet<string> keys, bool isNested)
+    private void CollectExistingKeysInOrder(JsonObject obj, string prefix, List<string> keys, bool isNested)
     {
         foreach (var kvp in obj)
         {
@@ -178,11 +181,11 @@ public class JsonTranslationFileWriter
             if (kvp.Value is JsonObject nestedObj && isNested)
             {
                 // Recurse into nested object
-                CollectExistingKeys(nestedObj, fullKey, keys, isNested);
+                CollectExistingKeysInOrder(nestedObj, fullKey, keys, isNested);
             }
             else
             {
-                // Leaf value
+                // Leaf value - add to list
                 keys.Add(fullKey);
             }
         }
