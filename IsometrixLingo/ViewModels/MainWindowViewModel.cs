@@ -2249,7 +2249,16 @@ public partial class MainWindowViewModel : ViewModelBase
                 ModeSelectionStepStatus = ModeSelectionStepStatus,
                 EditStepStatus = EditStepStatus,
                 ExportStepStatus = ExportStepStatus,
-                CurrentMode = CurrentMode
+                DeployStepStatus = DeployStepStatus,
+                CurrentMode = CurrentMode,
+                
+                // Deployment-related properties
+                RootDirectoryPath = _rootDirectoryPath ?? string.Empty,
+                DeploymentRootPath = DeploymentRootPath != "Click 'Select Folder' to choose deployment directory" ? DeploymentRootPath : string.Empty,
+                SuggestedDeploymentRoot = SuggestedDeploymentRoot,
+                LastExportFolder = _lastExportFolder ?? string.Empty,
+                LastExportFileName = _lastExportFileName ?? string.Empty,
+                DeploymentPreviewItems = DeploymentPreviewItems.ToList()
             };
 
             _progressService.SaveProgress(sessionState);
@@ -2902,7 +2911,33 @@ public partial class MainWindowViewModel : ViewModelBase
             ModeSelectionStepStatus = sessionState.ModeSelectionStepStatus;
             EditStepStatus = sessionState.EditStepStatus;
             ExportStepStatus = sessionState.ExportStepStatus;
+            DeployStepStatus = sessionState.DeployStepStatus;
             CurrentMode = sessionState.CurrentMode;
+            
+            // Restore deployment-related state
+            _rootDirectoryPath = sessionState.RootDirectoryPath;
+            if (!string.IsNullOrEmpty(sessionState.DeploymentRootPath))
+            {
+                DeploymentRootPath = sessionState.DeploymentRootPath;
+            }
+            SuggestedDeploymentRoot = sessionState.SuggestedDeploymentRoot;
+            _lastExportFolder = sessionState.LastExportFolder;
+            _lastExportFileName = sessionState.LastExportFileName;
+            
+            // Restore deployment preview items
+            DeploymentPreviewItems.Clear();
+            foreach (var item in sessionState.DeploymentPreviewItems)
+            {
+                DeploymentPreviewItems.Add(item);
+            }
+            
+            // Notify property changes for deployment-related computed properties
+            if (DeploymentPreviewItems.Count > 0)
+            {
+                OnPropertyChanged(nameof(HasDeploymentPreview));
+                OnPropertyChanged(nameof(CanDeploy));
+                DeploymentPreviewSummary = $"{DeploymentPreviewItems.Count} file(s) ready for deployment";
+            }
 
             // Regenerate file pairs if we're on the FileMapping step
             if (CurrentStep == WorkflowStep.FileMapping || FileMappingStepStatus != StepStatus.NotStarted)

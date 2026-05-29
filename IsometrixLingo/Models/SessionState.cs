@@ -14,5 +14,14 @@ public class SessionState
     public StepStatus ModeSelectionStepStatus { get; set; } = StepStatus.NotStarted;
     public StepStatus EditStepStatus { get; set; } = StepStatus.NotStarted;
     public StepStatus ExportStepStatus { get; set; } = StepStatus.NotStarted;
+    public StepStatus DeployStepStatus { get; set; } = StepStatus.NotStarted;
     public EditMode CurrentMode { get; set; } = EditMode.Edit;
+    
+    // Deployment-related properties
+    public string RootDirectoryPath { get; set; } = string.Empty;
+    public string DeploymentRootPath { get; set; } = string.Empty;
+    public string SuggestedDeploymentRoot { get; set; } = string.Empty;
+    public string LastExportFolder { get; set; } = string.Empty;
+    public string LastExportFileName { get; set; } = string.Empty;
+    public List<DeploymentPreviewItem> DeploymentPreviewItems { get; set; } = new();
 }

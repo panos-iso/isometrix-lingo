@@ -63,7 +63,22 @@ public class ProgressService
             ModeSelectionStepStatus = state.ModeSelectionStepStatus,
             EditStepStatus = state.EditStepStatus,
             ExportStepStatus = state.ExportStepStatus,
-            CurrentMode = state.CurrentMode
+            DeployStepStatus = state.DeployStepStatus,
+            CurrentMode = state.CurrentMode,
+            
+            // Deployment-related properties
+            RootDirectoryPath = state.RootDirectoryPath,
+            DeploymentRootPath = state.DeploymentRootPath,
+            SuggestedDeploymentRoot = state.SuggestedDeploymentRoot,
+            LastExportFolder = state.LastExportFolder,
+            LastExportFileName = state.LastExportFileName,
+            DeploymentPreviewItems = state.DeploymentPreviewItems.Select(dpi => new SerializableDeploymentPreviewItem
+            {
+                SourcePath = dpi.SourcePath,
+                TargetPath = dpi.TargetPath,
+                IsValid = dpi.IsValid,
+                ErrorMessage = dpi.ErrorMessage
+            }).ToList()
         };
 
         var json = JsonSerializer.Serialize(serializableState, AppJsonSerializerContext.Default.SerializableSessionState);
@@ -128,7 +143,22 @@ public class ProgressService
                 ModeSelectionStepStatus = serializableState.ModeSelectionStepStatus,
                 EditStepStatus = serializableState.EditStepStatus,
                 ExportStepStatus = serializableState.ExportStepStatus,
-                CurrentMode = serializableState.CurrentMode
+                DeployStepStatus = serializableState.DeployStepStatus,
+                CurrentMode = serializableState.CurrentMode,
+                
+                // Deployment-related properties
+                RootDirectoryPath = serializableState.RootDirectoryPath,
+                DeploymentRootPath = serializableState.DeploymentRootPath,
+                SuggestedDeploymentRoot = serializableState.SuggestedDeploymentRoot,
+                LastExportFolder = serializableState.LastExportFolder,
+                LastExportFileName = serializableState.LastExportFileName,
+                DeploymentPreviewItems = serializableState.DeploymentPreviewItems.Select(sdpi => new DeploymentPreviewItem
+                {
+                    SourcePath = sdpi.SourcePath,
+                    TargetPath = sdpi.TargetPath,
+                    IsValid = sdpi.IsValid,
+                    ErrorMessage = sdpi.ErrorMessage
+                }).ToList()
             };
 
             return sessionState;
