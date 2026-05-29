@@ -23,6 +23,11 @@ Built with **Avalonia UI** and **.NET 10** for macOS and Windows.
 - ✅ **Accept/Reject Suggestions** - Review and apply or discard suggested translations
 - ✅ **Confirmation Tracking** - Auto-track confirmed translations with username and timestamp during export
 - 👤 **Profile Management** - Set your username for audit trails
+- 🚀 **Deployment Mode** - Developer-only feature to quickly deploy translations back to repository (LP-13172)
+  - Smart path detection and validation
+  - All-or-nothing deployment with automatic rollback
+  - Pre-deployment warnings for missing translations
+  - Deploy Again for iterative workflows
 
 ### User Interface
 - 🎨 **Theme-aware UI** - adapts to system dark/light mode
@@ -103,6 +108,28 @@ Download the latest release for your platform:
 7. **Export**: Save accepted suggestions to your files
 
 > **Workflow**: Suggest Mode is designed for team collaboration where one person suggests translations and another reviews/accepts them.
+
+**Deployment Mode (Developer Only):**
+1. **Enable Developer Mode**: Click profile icon (👤) and check "Developer Mode"
+2. **Import Files**: Import translation files as usual
+3. **Select Deployment Mode**: Choose the 🚀 Deployment Mode option
+4. **Skip Editing**: The tool automatically skips the editing step
+5. **Export**: Translations are exported to a ZIP file
+6. **Deploy**:
+   - Smart suggestion automatically detects the original repository location
+   - Select deployment root directory (or use suggested location)
+   - Preview all file paths before deployment
+   - Validate paths (soft warning for name mismatches, hard abort for invalid paths)
+   - Click "Validate & Deploy" to copy files back to repository
+7. **Deploy Again**: Quickly re-deploy after making changes (iterative workflow)
+
+> **Use Case**: Deployment Mode is designed for developers who need to quickly deploy translation files back to their original repository locations without editing. It includes path validation to ensure files are deployed to the correct locations.
+
+> **Safety Features**:
+> - **All-or-nothing deployment**: If any file fails, all changes are rolled back
+> - **Path validation**: Ensures files are deployed within the deployment root
+> - **Smart defaults**: Automatically suggests the most likely deployment location
+> - **Pre-deployment warning**: Alerts about missing translations before exporting
 
 ### Additional Features
 

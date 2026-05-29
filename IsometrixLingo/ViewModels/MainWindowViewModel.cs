@@ -2333,7 +2333,21 @@ public partial class MainWindowViewModel : ViewModelBase
         ModeSelectionStepStatus = StepStatus.NotStarted;
         EditStepStatus = StepStatus.NotStarted;
         ExportStepStatus = StepStatus.NotStarted;
+        DeployStepStatus = StepStatus.NotStarted;
         CurrentMode = EditMode.Edit;
+
+        // Clear deployment state
+        DeploymentRootPath = "Click 'Select Folder' to choose deployment directory";
+        SuggestedDeploymentRoot = string.Empty;
+        DeploymentPreviewItems.Clear();
+        DeploymentPreviewSummary = string.Empty;
+        ValidationMessage = string.Empty;
+        ShowDeployAgainButton = false;
+        ImportErrors.Clear();
+        HasErrors = false;
+        ErrorCount = 0;
+        _lastExportFolder = string.Empty;
+        _lastExportFileName = string.Empty;
 
         UpdateFileFilters();
         StatusMessage = "Ready. Click Import to load translation files.";
@@ -2627,6 +2641,13 @@ public partial class MainWindowViewModel : ViewModelBase
             // In deployment mode, transition to Deploy step instead of prompting to start over
             if (CurrentMode == EditMode.Deployment)
             {
+                // Clear any previous deployment errors
+                ImportErrors.Clear();
+                HasErrors = false;
+                ErrorCount = 0;
+                ValidationMessage = string.Empty;
+                ShowDeployAgainButton = false;
+                
                 DeployStepStatus = StepStatus.InProgress;
                 CurrentStep = WorkflowStep.Deploy;
                 StatusMessage = "Export complete. Ready for deployment.";
@@ -3335,6 +3356,12 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task SelectDeploymentRoot()
     {
+        // Clear previous deployment errors when selecting a new root
+        ImportErrors.Clear();
+        HasErrors = false;
+        ErrorCount = 0;
+        ValidationMessage = string.Empty;
+
         var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
             ? desktop.MainWindow
             : null;
