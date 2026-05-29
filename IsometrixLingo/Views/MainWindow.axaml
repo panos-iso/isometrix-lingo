@@ -637,7 +637,8 @@
                                            FontSize="24"
                                            FontWeight="Bold"
                                            Foreground="#E65100"
-                                           HorizontalAlignment="Center"/>
+                                           HorizontalAlignment="Center"
+                                           TextWrapping="Wrap"/>
                                 <TextBlock Text="Deploy translations directly to repository"
                                            FontSize="16"
                                            TextWrapping="Wrap"

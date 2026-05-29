@@ -2596,12 +2596,15 @@ public partial class MainWindowViewModel : ViewModelBase
             zipFileName = $"exported_translations_{timestamp}.zip";
         }
 
-        var tempFolderPath = Path.Combine(Path.GetTempPath(), $"isometrix_lingo_export_{timestamp}");
+        // Create folder name without .zip extension for the ZIP contents
+        var folderName = Path.GetFileNameWithoutExtension(zipFileName);
+        var tempRootPath = Path.Combine(Path.GetTempPath(), $"isometrix_lingo_export_{timestamp}");
+        var tempFolderPath = Path.Combine(tempRootPath, folderName);
         var zipFilePath = Path.Combine(outputPath, zipFileName);
 
         try
         {
-            // Create temporary folder for exported files
+            // Create temporary folder structure for exported files
             Directory.CreateDirectory(tempFolderPath);
 
             // Group all keys by file type and export to temp folder
@@ -2618,12 +2621,12 @@ public partial class MainWindowViewModel : ViewModelBase
                 _resxWriter.WriteFiles(resxKeys, tempFolderPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName), Username, CurrentMode == EditMode.Edit);
             }
 
-            // Create ZIP file
+            // Create ZIP file from the root temp folder (includes the named folder)
             if (File.Exists(zipFilePath))
             {
                 File.Delete(zipFilePath);
             }
-            ZipFile.CreateFromDirectory(tempFolderPath, zipFilePath);
+            ZipFile.CreateFromDirectory(tempRootPath, zipFilePath);
 
             // Clean up temp folder
             Directory.Delete(tempFolderPath, true);
@@ -3086,11 +3089,35 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (CurrentMode == EditMode.Deployment)
         {
-            // Deployment mode: skip Edit step and go directly to Export
+            // Deployment mode: skip Edit and Export steps, go directly to Deploy
             EditStepStatus = StepStatus.NotStarted; // Skipped
-            ExportStepStatus = StepStatus.InProgress;
-            CurrentStep = WorkflowStep.Export;
-            StatusMessage = "Deployment mode selected. Click 'Export as ZIP' to prepare translations for deployment.";
+            ExportStepStatus = StepStatus.NotStarted; // Skipped
+            DeployStepStatus = StepStatus.InProgress;
+            CurrentStep = WorkflowStep.Deploy;
+            
+            // Set the last export info from the imported directory
+            if (!string.IsNullOrEmpty(_rootDirectoryPath))
+            {
+                var parentDir = Directory.GetParent(_rootDirectoryPath);
+                if (parentDir != null)
+                {
+                    _lastExportFolder = parentDir.FullName;
+                    _lastExportFileName = Path.GetFileName(_rootDirectoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) + ".zip";
+                }
+            }
+            
+            StatusMessage = "Deployment mode selected. Ready to deploy translations.";
+            
+            // Generate smart deployment root suggestion
+            if (!string.IsNullOrEmpty(_lastExportFolder) && !string.IsNullOrEmpty(_lastExportFileName))
+            {
+                var suggestion = _deploymentService.SuggestDeploymentRoot(_lastExportFolder, _lastExportFileName);
+                if (!string.IsNullOrEmpty(suggestion))
+                {
+                    SuggestedDeploymentRoot = suggestion;
+                    StatusMessage = $"Deployment mode selected. Smart suggestion found: {Path.GetFileName(suggestion)}";
+                }
+            }
         }
         else
         {
@@ -3437,15 +3464,14 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        var zipFilePath = Path.Combine(_lastExportFolder, _lastExportFileName);
-        if (!File.Exists(zipFilePath))
+        if (string.IsNullOrEmpty(_rootDirectoryPath) || !Directory.Exists(_rootDirectoryPath))
         {
-            StatusMessage = "Export file not found. Please export again.";
+            StatusMessage = "Session root directory not found. Please re-import translations.";
             return;
         }
 
         // Perform soft validation (root name match)
-        var (isMatch, message) = _deploymentService.ValidateRootNameMatch(DeploymentRootPath, _lastExportFileName);
+        var (isMatch, message) = _deploymentService.ValidateRootNameMatch(DeploymentRootPath, _rootDirectoryPath);
         if (!isMatch)
         {
             // Show warning but allow user to continue
@@ -3458,7 +3484,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         // Perform hard validation (all paths must be valid)
-        var validationErrors = _deploymentService.ValidateAllPaths(zipFilePath, DeploymentRootPath);
+        var validationErrors = _deploymentService.ValidateAllPathsFromDirectory(_rootDirectoryPath, DeploymentRootPath);
         if (validationErrors.Count > 0)
         {
             // Hard validation failed - show errors and abort
@@ -3477,7 +3503,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         // Execute deployment
         StatusMessage = "Deploying files...";
-        var (success, deploymentErrors) = _deploymentService.ExecuteDeployment(zipFilePath, DeploymentRootPath);
+        var (success, deploymentErrors) = _deploymentService.ExecuteDeploymentFromDirectory(_rootDirectoryPath, DeploymentRootPath);
 
         if (success)
         {
@@ -3558,21 +3584,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task GenerateDeploymentPreview()
     {
-        if (string.IsNullOrEmpty(_lastExportFolder) || string.IsNullOrEmpty(_lastExportFileName))
+        if (string.IsNullOrEmpty(_rootDirectoryPath) || !Directory.Exists(_rootDirectoryPath))
         {
-            StatusMessage = "No export file available for preview.";
-            return;
-        }
-
-        var zipFilePath = Path.Combine(_lastExportFolder, _lastExportFileName);
-        if (!File.Exists(zipFilePath))
-        {
-            StatusMessage = "Export file not found. Please export again.";
+            StatusMessage = "Session root directory not available for preview.";
             return;
         }
 
         // Generate preview
-        var previewItems = _deploymentService.GetDeploymentPreview(zipFilePath, DeploymentRootPath);
+        var previewItems = _deploymentService.GetDeploymentPreviewFromDirectory(_rootDirectoryPath, DeploymentRootPath);
         
         DeploymentPreviewItems.Clear();
         foreach (var item in previewItems)
