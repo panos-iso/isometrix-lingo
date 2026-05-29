@@ -40,11 +40,11 @@
                 Padding="15"
                 Margin="0,0,0,15">
             <StackPanel Spacing="5">
-                <TextBlock>
+                <TextBlock Foreground="#212121">
                     <Run Text="Total Repositories: "/>
                     <Run Text="{Binding TotalDirectories}" FontWeight="Bold"/>
                 </TextBlock>
-                <TextBlock>
+                <TextBlock Foreground="#212121">
                     <Run Text="Selected: "/>
                     <Run Text="{Binding SelectedDirectories}" FontWeight="Bold"/>
                     <Run Text=" | "/>

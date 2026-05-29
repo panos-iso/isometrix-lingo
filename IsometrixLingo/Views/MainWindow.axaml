@@ -1059,28 +1059,6 @@
                 <!-- Main content -->
                 <ScrollViewer>
                     <StackPanel Spacing="15">
-                        <!-- Deployment Success Message (centered) -->
-                        <Border Background="#4CAF50"
-                                BorderBrush="#4CAF50"
-                                BorderThickness="2"
-                                CornerRadius="8"
-                                Padding="30"
-                                IsVisible="{Binding ShowDeploymentSuccess}">
-                            <StackPanel Spacing="12"
-                                        HorizontalAlignment="Center">
-                                <TextBlock Text="🎉"
-                                           FontSize="40"
-                                           HorizontalAlignment="Center"/>
-                                <TextBlock Text="{Binding DeploymentSuccessMessage}"
-                                           FontSize="16"
-                                           FontWeight="Bold"
-                                           TextAlignment="Center"
-                                           TextWrapping="Wrap"
-                                           Foreground="White"
-                                           HorizontalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-
                         <!-- Deployment Root Selection -->
                         <Border BorderBrush="#FF9800"
                                 BorderThickness="2"
@@ -1148,6 +1126,33 @@
                                            TextWrapping="Wrap"
                                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
                                 <Button Content="View Details"
+                                        Command="{Binding ViewDeploymentDetailsCommand}"
+                                        Padding="12,6"
+                                        HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Deployment Success Message -->
+                        <Border Background="#4CAF50"
+                                BorderBrush="#4CAF50"
+                                BorderThickness="2"
+                                CornerRadius="8"
+                                Padding="30"
+                                IsVisible="{Binding ShowDeploymentSuccess}">
+                            <StackPanel Spacing="12"
+                                        HorizontalAlignment="Center">
+                                <TextBlock Text="🎉"
+                                           FontSize="40"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding DeploymentSuccessMessage}"
+                                           FontSize="16"
+                                           FontWeight="Bold"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           Foreground="White"
+                                           HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
                                         Command="{Binding ViewDeploymentDetailsCommand}"
                                         Padding="12,6"
                                         HorizontalAlignment="Left"/>
