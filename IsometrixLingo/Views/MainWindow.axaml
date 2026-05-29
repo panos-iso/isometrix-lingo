@@ -1153,6 +1153,59 @@
                                            Foreground="White"/>
                             </StackPanel>
                         </Border>
+
+                        <!-- Deployment History Log -->
+                        <Border BorderBrush="#E0E0E0"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="15"
+                                Background="#FAFAFA"
+                                IsVisible="{Binding DeploymentHistory.Count}">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Deployment History"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="#757575"/>
+                                <ItemsControl ItemsSource="{Binding DeploymentHistory}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="#E0E0E0"
+                                                    BorderThickness="0,0,0,1"
+                                                    Padding="8,6"
+                                                    Margin="0,0,0,4">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <TextBlock Grid.Column="0"
+                                                               Text="{Binding StatusIcon}"
+                                                               FontSize="16"
+                                                               Margin="0,0,10,0"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="{Binding StatusColor}"/>
+                                                    <StackPanel Grid.Column="1">
+                                                        <TextBlock Text="{Binding FormattedTimestamp}"
+                                                                   FontSize="11"
+                                                                   Foreground="#424242"/>
+                                                        <TextBlock FontSize="10"
+                                                                   Foreground="#757575">
+                                                            <Run Text="{Binding FileCount}"/>
+                                                            <Run Text="file(s) •"/>
+                                                            <Run Text="{Binding StatusText}"/>
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding DeploymentRoot}"
+                                                               FontSize="10"
+                                                               FontFamily="Courier New"
+                                                               Foreground="#9E9E9E"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               MaxWidth="200"
+                                                               VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </ScrollViewer>
             </DockPanel>

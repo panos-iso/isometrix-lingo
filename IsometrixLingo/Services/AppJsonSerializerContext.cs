@@ -12,6 +12,7 @@ namespace IsometrixLingo.Services;
 [JsonSerializable(typeof(SerializableSuggestion))]
 [JsonSerializable(typeof(SerializableConfirmation))]
 [JsonSerializable(typeof(SerializableDeploymentPreviewItem))]
+[JsonSerializable(typeof(SerializableDeploymentHistoryEntry))]
 [JsonSourceGenerationOptions(
     WriteIndented = true,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,

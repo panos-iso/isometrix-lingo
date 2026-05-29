@@ -28,4 +28,5 @@ public class SessionState
     public string DeploymentValidationMessage { get; set; } = string.Empty;
     public bool ShowDeploymentSuccess { get; set; } = false;
     public string DeploymentSuccessMessage { get; set; } = string.Empty;
+    public List<DeploymentHistoryEntry> DeploymentHistory { get; set; } = new();
 }

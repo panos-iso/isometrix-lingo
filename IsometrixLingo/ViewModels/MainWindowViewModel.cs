@@ -195,6 +195,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(DeployButtonText))]
     private bool _showDeploymentSuccess = false;
 
+    [ObservableProperty]
+    private ObservableCollection<DeploymentHistoryEntry> _deploymentHistory = new();
+
     public bool HasSuggestedDeploymentRoot => !string.IsNullOrWhiteSpace(SuggestedDeploymentRoot);
     public bool HasDeploymentPreview => DeploymentPreviewItems.Count > 0;
     public bool HasValidationMessage => !string.IsNullOrWhiteSpace(ValidationMessage);
@@ -2287,7 +2290,8 @@ public partial class MainWindowViewModel : ViewModelBase
                 DeploymentValidationSuccess = DeploymentValidationSuccess,
                 DeploymentValidationMessage = DeploymentValidationMessage,
                 ShowDeploymentSuccess = ShowDeploymentSuccess,
-                DeploymentSuccessMessage = DeploymentSuccessMessage
+                DeploymentSuccessMessage = DeploymentSuccessMessage,
+                DeploymentHistory = DeploymentHistory.ToList()
             };
 
             _progressService.SaveProgress(sessionState);
@@ -2975,6 +2979,13 @@ public partial class MainWindowViewModel : ViewModelBase
             ShowDeploymentSuccess = sessionState.ShowDeploymentSuccess;
             DeploymentSuccessMessage = sessionState.DeploymentSuccessMessage;
             
+            // Restore deployment history
+            DeploymentHistory.Clear();
+            foreach (var entry in sessionState.DeploymentHistory)
+            {
+                DeploymentHistory.Add(entry);
+            }
+            
             // Notify property changes for deployment-related computed properties
             if (DeploymentPreviewItems.Count > 0)
             {
@@ -3601,6 +3612,15 @@ public partial class MainWindowViewModel : ViewModelBase
             StatusMessage = $"Successfully deployed {DeploymentPreviewItems.Count} file(s) to {DeploymentRootPath}";
             ShowDeployAgainButton = true;
             
+            // Add to deployment history
+            DeploymentHistory.Add(new DeploymentHistoryEntry
+            {
+                Timestamp = DateTime.Now,
+                FileCount = DeploymentPreviewItems.Count,
+                Success = true,
+                DeploymentRoot = DeploymentRootPath
+            });
+            
             // Save progress after successful deployment
             SaveProgress();
         }
@@ -3617,6 +3637,15 @@ public partial class MainWindowViewModel : ViewModelBase
             DeploymentValidationSuccess = false;
             DeploymentValidationMessage = $"❌ Deployment failed: {deploymentErrors.Count} error(s) detected. All changes rolled back.";
             StatusMessage = $"Deployment failed with {deploymentErrors.Count} error(s). No files were changed.";
+            
+            // Add to deployment history
+            DeploymentHistory.Add(new DeploymentHistoryEntry
+            {
+                Timestamp = DateTime.Now,
+                FileCount = DeploymentPreviewItems.Count,
+                Success = false,
+                DeploymentRoot = DeploymentRootPath
+            });
             
             // Save progress even on failure (to persist error state)
             SaveProgress();

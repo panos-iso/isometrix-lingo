@@ -82,7 +82,14 @@ public class ProgressService
             DeploymentValidationSuccess = state.DeploymentValidationSuccess,
             DeploymentValidationMessage = state.DeploymentValidationMessage,
             ShowDeploymentSuccess = state.ShowDeploymentSuccess,
-            DeploymentSuccessMessage = state.DeploymentSuccessMessage
+            DeploymentSuccessMessage = state.DeploymentSuccessMessage,
+            DeploymentHistory = state.DeploymentHistory.Select(dh => new SerializableDeploymentHistoryEntry
+            {
+                Timestamp = dh.Timestamp,
+                FileCount = dh.FileCount,
+                Success = dh.Success,
+                DeploymentRoot = dh.DeploymentRoot
+            }).ToList()
         };
 
         var json = JsonSerializer.Serialize(serializableState, AppJsonSerializerContext.Default.SerializableSessionState);
@@ -166,7 +173,14 @@ public class ProgressService
                 DeploymentValidationSuccess = serializableState.DeploymentValidationSuccess,
                 DeploymentValidationMessage = serializableState.DeploymentValidationMessage,
                 ShowDeploymentSuccess = serializableState.ShowDeploymentSuccess,
-                DeploymentSuccessMessage = serializableState.DeploymentSuccessMessage
+                DeploymentSuccessMessage = serializableState.DeploymentSuccessMessage,
+                DeploymentHistory = serializableState.DeploymentHistory.Select(sdh => new DeploymentHistoryEntry
+                {
+                    Timestamp = sdh.Timestamp,
+                    FileCount = sdh.FileCount,
+                    Success = sdh.Success,
+                    DeploymentRoot = sdh.DeploymentRoot
+                }).ToList()
             };
 
             return sessionState;

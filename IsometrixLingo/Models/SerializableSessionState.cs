@@ -32,6 +32,7 @@ public class SerializableSessionState
     public string DeploymentValidationMessage { get; set; } = string.Empty;
     public bool ShowDeploymentSuccess { get; set; } = false;
     public string DeploymentSuccessMessage { get; set; } = string.Empty;
+    public List<SerializableDeploymentHistoryEntry> DeploymentHistory { get; set; } = new();
 }
 
 /// <summary>
