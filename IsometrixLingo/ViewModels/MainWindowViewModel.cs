@@ -115,6 +115,10 @@ public partial class MainWindowViewModel : ViewModelBase
     private StepStatus _exportStepStatus = StepStatus.NotStarted;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Step6Background), nameof(Step6Foreground), nameof(Step6Status))]
+    private StepStatus _deployStepStatus = StepStatus.NotStarted;
+
+    [ObservableProperty]
     private bool _showOriginalValues;
 
     [ObservableProperty]
@@ -149,6 +153,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool ShowModeSelectionStep => CurrentStep == WorkflowStep.ModeSelection;
     public bool ShowEditStep => CurrentStep == WorkflowStep.Edit;
     public bool ShowExportStep => CurrentStep == WorkflowStep.Export;
+    public bool ShowDeployStep => CurrentStep == WorkflowStep.Deploy;
 
     public string StartOverButtonText => ExportStepStatus == StepStatus.Completed ? "Start New Session" : "Start Over";
 
@@ -187,6 +192,13 @@ public partial class MainWindowViewModel : ViewModelBase
         _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
     };
 
+    public SolidColorBrush Step6Background => DeployStepStatus switch
+    {
+        StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
+        StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
+        _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
+    };
+
     public SolidColorBrush Step1Foreground => ImportStepStatus switch
     {
         StepStatus.NotStarted => new SolidColorBrush(Colors.White),
@@ -212,6 +224,12 @@ public partial class MainWindowViewModel : ViewModelBase
     };
 
     public SolidColorBrush Step5Foreground => ExportStepStatus switch
+    {
+        StepStatus.NotStarted => new SolidColorBrush(Colors.White),
+        _ => new SolidColorBrush(Colors.White)
+    };
+
+    public SolidColorBrush Step6Foreground => DeployStepStatus switch
     {
         StepStatus.NotStarted => new SolidColorBrush(Colors.White),
         _ => new SolidColorBrush(Colors.White)
@@ -246,6 +264,13 @@ public partial class MainWindowViewModel : ViewModelBase
     };
 
     public string Step5Status => ExportStepStatus switch
+    {
+        StepStatus.Completed => "✓ Complete",
+        StepStatus.InProgress => "In Progress",
+        _ => "Not Started"
+    };
+
+    public string Step6Status => DeployStepStatus switch
     {
         StepStatus.Completed => "✓ Complete",
         StepStatus.InProgress => "In Progress",
