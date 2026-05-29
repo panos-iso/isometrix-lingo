@@ -487,7 +487,7 @@
                 </StackPanel>
 
                 <!-- Main content -->
-                <StackPanel Spacing="20">
+                <StackPanel Spacing="20" Margin="0,0,0,20">
                     <!-- Header -->
                     <StackPanel Spacing="10">
                         <TextBlock Text="Step 3: Choose Your Mode"
