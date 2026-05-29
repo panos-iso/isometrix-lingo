@@ -9,6 +9,9 @@ public partial class WelcomeViewModel : ViewModelBase
     [ObservableProperty]
     private string _username = string.Empty;
 
+    [ObservableProperty]
+    private bool _isDeveloper = false;
+
     private readonly UserSettingsService _settingsService;
 
     public WelcomeViewModel()
@@ -20,7 +23,11 @@ public partial class WelcomeViewModel : ViewModelBase
     {
         if (!string.IsNullOrWhiteSpace(Username))
         {
-            var settings = new UserSettings { Username = Username.Trim() };
+            var settings = new UserSettings 
+            { 
+                Username = Username.Trim(),
+                IsDeveloper = IsDeveloper
+            };
             _settingsService.Save(settings);
         }
     }
