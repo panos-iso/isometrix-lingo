@@ -3853,6 +3853,22 @@ public partial class MainWindowViewModel : ViewModelBase
         
         if (keysWithSuggestions.Count > 0)
         {
+            // Populate ImportErrors with details about suggestions
+            ImportErrors.Clear();
+            foreach (var key in keysWithSuggestions)
+            {
+                var languages = string.Join(", ", key.SuggestedValues.Keys);
+                ImportErrors.Add(new ImportError
+                {
+                    ErrorType = ImportErrorType.Other,
+                    FileName = key.Source.Name,
+                    Message = $"Key '{key.Key}' has unresolved suggestion(s) for: {languages}",
+                    Guidance = "Accept or reject the suggestion before deploying."
+                });
+            }
+            
+            HasErrors = true;
+            ErrorCount = keysWithSuggestions.Count;
             DeploymentValidationSuccess = false;
             DeploymentValidationMessage = $"❌ Cannot deploy: {keysWithSuggestions.Count} translation(s) have unresolved suggestions. Please accept or reject all suggestions before deploying.";
             StatusMessage = $"Deployment blocked: {keysWithSuggestions.Count} unresolved suggestion(s).";
