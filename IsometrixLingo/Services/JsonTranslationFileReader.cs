@@ -139,57 +139,27 @@ public class JsonTranslationFileReader
     }
 
     /// <summary>
-    /// Parse a value string that may contain a suggestion and/or confirmation
-    /// Format: "actual value SUGGESTION:suggested_value,by:[username],at:[datetime] CONFIRMED:by:[username],at:[datetime]"
-    /// Returns the actual value, parsed suggestion (if present), and parsed confirmation (if present)
+    /// Parse a value string that may contain a suggestion
+    /// Format: "actual value iso-lingo-audit:SUGGESTION:suggested_value,by:[username],at:[datetime]"
+    /// Returns the actual value and parsed suggestion (if present)
     /// </summary>
-    private (string actualValue, Suggestion? suggestion, Confirmation? confirmation) ParseValue(string rawValue, string language)
+    private (string actualValue, Suggestion? suggestion) ParseValue(string rawValue, string language)
     {
-        const string suggestionPrefix = " SUGGESTION:";
-        const string confirmedPrefix = " CONFIRMED:";
+        const string suggestionPrefix = " iso-lingo-audit:SUGGESTION:";
         
         var actualValue = rawValue;
         Suggestion? suggestion = null;
-        Confirmation? confirmation = null;
         
         // Check for SUGGESTION
         var suggestionIndex = rawValue.IndexOf(suggestionPrefix, StringComparison.Ordinal);
         if (suggestionIndex != -1)
         {
             actualValue = rawValue.Substring(0, suggestionIndex);
-            var remainingAfterValue = rawValue.Substring(suggestionIndex + 1); // Skip the leading space
-            
-            // Find where suggestion ends (either at CONFIRMED or end of string)
-            var confirmedIndexInRemaining = remainingAfterValue.IndexOf(confirmedPrefix, StringComparison.Ordinal);
-            
-            string suggestionPart;
-            if (confirmedIndexInRemaining != -1)
-            {
-                suggestionPart = remainingAfterValue.Substring(0, confirmedIndexInRemaining);
-            }
-            else
-            {
-                suggestionPart = remainingAfterValue;
-            }
-            
+            var suggestionPart = rawValue.Substring(suggestionIndex + 1); // Skip the leading space
             suggestion = Suggestion.FromFileFormat(suggestionPart);
         }
         
-        // Check for CONFIRMED
-        var confirmedIndex = rawValue.IndexOf(confirmedPrefix, StringComparison.Ordinal);
-        if (confirmedIndex != -1)
-        {
-            // If there's no suggestion, extract actual value up to CONFIRMED
-            if (suggestionIndex == -1)
-            {
-                actualValue = rawValue.Substring(0, confirmedIndex);
-            }
-            
-            var confirmedPart = rawValue.Substring(confirmedIndex + 1); // Skip the leading space
-            confirmation = Confirmation.FromFileFormat(confirmedPart);
-        }
-        
-        return (actualValue, suggestion, confirmation);
+        return (actualValue, suggestion);
     }
 
     private void ParseJsonElement(JsonElement element, string prefix, List<TranslationKey> keys, string baseFileName, string language)
@@ -205,7 +175,7 @@ public class JsonTranslationFileReader
                 if (property.Value.ValueKind == JsonValueKind.String)
                 {
                     var rawValue = property.Value.GetString() ?? string.Empty;
-                    var (actualValue, suggestion, confirmation) = ParseValue(rawValue, language);
+                    var (actualValue, suggestion) = ParseValue(rawValue, language);
                     
                     var translationKey = new TranslationKey
                     {
@@ -220,12 +190,6 @@ public class JsonTranslationFileReader
                     if (suggestion != null)
                     {
                         translationKey.SuggestedValues[language] = suggestion;
-                    }
-                    
-                    // Confirmation is at key level, only parse from English file
-                    if (confirmation != null && language == "en")
-                    {
-                        translationKey.ConfirmedBy = confirmation;
                     }
                     
                     keys.Add(translationKey);

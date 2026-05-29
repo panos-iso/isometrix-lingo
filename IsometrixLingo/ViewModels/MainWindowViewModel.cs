@@ -3832,6 +3832,18 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task PerformDeploymentValidation()
     {
+        // Check if any suggestions exist - must be resolved before deployment
+        var allKeys = _translationStore.GetAllKeys();
+        var keysWithSuggestions = allKeys.Where(k => k.SuggestedValues.Any()).ToList();
+        
+        if (keysWithSuggestions.Count > 0)
+        {
+            DeploymentValidationSuccess = false;
+            DeploymentValidationMessage = $"❌ Cannot deploy: {keysWithSuggestions.Count} translation(s) have unresolved suggestions. Please accept or reject all suggestions before deploying.";
+            StatusMessage = $"Deployment blocked: {keysWithSuggestions.Count} unresolved suggestion(s).";
+            return;
+        }
+        
         // Validate that we have the source directory
         if (string.IsNullOrEmpty(_rootDirectoryPath) || !Directory.Exists(_rootDirectoryPath))
         {

@@ -190,57 +190,7 @@ public class ResxTranslationFileWriter
         {
             dataElement.Add(new XText("    "));
             dataElement.Add(new XComment($" {suggestion.ToFileFormat()} "));
-        }
-        
-        // For base file (English), add confirmation comment (auto-create/update/remove only in Edit mode)
-        if (language == "en")
-        {
-            if (isEditMode)
-            {
-                var hasEnglish = key.LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue);
-                var hasSpanish = key.LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue);
-                
-                // If key has both languages, ensure it has confirmation
-                if (hasEnglish && hasSpanish)
-                {
-                    // If key was edited, override confirmation with new one
-                    if (key.IsModified && !string.IsNullOrWhiteSpace(username))
-                    {
-                        key.ConfirmedBy = new Confirmation
-                        {
-                            Username = username,
-                            Timestamp = DateTime.UtcNow
-                        };
-                    }
-                    // If key was not edited and has no confirmation, create one
-                    else if (!key.IsModified && key.ConfirmedBy == null && !string.IsNullOrWhiteSpace(username))
-                    {
-                        key.ConfirmedBy = new Confirmation
-                        {
-                            Username = username,
-                            Timestamp = DateTime.UtcNow
-                        };
-                    }
-                    // Otherwise keep existing confirmation (if any)
-                }
-                // If key is incomplete, remove any existing confirmation
-                else if (key.ConfirmedBy != null)
-                {
-                    key.ConfirmedBy = null;
-                }
-            }
-            
-            // Always write existing confirmations to file (both Edit and Suggest mode)
-            if (key.ConfirmedBy != null)
-            {
-                dataElement.Add(new XText("    "));
-                dataElement.Add(new XComment($" {key.ConfirmedBy.ToFileFormat()} "));
-            }
-        }
-        
-        // Add final newline and indentation before closing tag if any comments were added
-        if (dataElement.Nodes().OfType<XComment>().Any())
-        {
+            // Add final newline and indentation before closing tag
             dataElement.Add(new XText("\n  "));
         }
     }

@@ -157,9 +157,8 @@ public class JsonTranslationFileWriter
     }
 
     /// <summary>
-    /// Append suggestion and confirmation annotations to value
-    /// Format: "actual value SUGGESTION:...,by:[username],at:[datetime] CONFIRMED:by:[username],at:[datetime]"
-    /// Auto-creates/updates confirmation for keys with both en and es values when writing English files (Edit mode only)
+    /// Append suggestion annotation to value (no confirmations)
+    /// Format: "actual value iso-lingo-audit:SUGGESTION:...,by:[username],at:[datetime]"
     /// </summary>
     private string AppendAnnotations(string actualValue, TranslationKey key, string language, string? username, bool isEditMode)
     {
@@ -169,51 +168,6 @@ public class JsonTranslationFileWriter
         if (key.SuggestedValues.TryGetValue(language, out var suggestion))
         {
             result = $"{result} {suggestion.ToFileFormat()}";
-        }
-        
-        // For English files, append confirmation (auto-create/update/remove only in Edit mode)
-        if (language == "en")
-        {
-            if (isEditMode)
-            {
-                var hasEnglish = key.LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue);
-                var hasSpanish = key.LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue);
-                
-                // If key has both languages, ensure it has confirmation
-                if (hasEnglish && hasSpanish)
-                {
-                    // If key was edited, override confirmation with new one
-                    if (key.IsModified && !string.IsNullOrWhiteSpace(username))
-                    {
-                        key.ConfirmedBy = new Confirmation
-                        {
-                            Username = username,
-                            Timestamp = DateTime.UtcNow
-                        };
-                    }
-                    // If key was not edited and has no confirmation, create one
-                    else if (!key.IsModified && key.ConfirmedBy == null && !string.IsNullOrWhiteSpace(username))
-                    {
-                        key.ConfirmedBy = new Confirmation
-                        {
-                            Username = username,
-                            Timestamp = DateTime.UtcNow
-                        };
-                    }
-                    // Otherwise keep existing confirmation (if any)
-                }
-                // If key is incomplete, remove any existing confirmation
-                else if (key.ConfirmedBy != null)
-                {
-                    key.ConfirmedBy = null;
-                }
-            }
-            
-            // Always write existing confirmations to file (both Edit and Suggest mode)
-            if (key.ConfirmedBy != null)
-            {
-                result = $"{result} {key.ConfirmedBy.ToFileFormat()}";
-            }
         }
         
         return result;
