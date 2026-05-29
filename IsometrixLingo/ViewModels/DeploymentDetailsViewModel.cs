@@ -20,8 +20,12 @@ public partial class DeploymentDetailsViewModel : ObservableObject
     [ObservableProperty]
     private bool _showErrors;
 
+    [ObservableProperty]
+    private bool _showHistory;
+
     public ObservableCollection<DeploymentPreviewItem> PreviewItems { get; } = new();
     public ObservableCollection<ImportError> Errors { get; } = new();
+    public ObservableCollection<DeploymentHistoryEntry> HistoryEntries { get; } = new();
 
     public DeploymentDetailsViewModel()
     {
@@ -34,7 +38,8 @@ public partial class DeploymentDetailsViewModel : ObservableObject
             Title = "Deployment Preview",
             Subtitle = $"{items.Count} file(s) ready for deployment",
             ShowPreviewItems = true,
-            ShowErrors = false
+            ShowErrors = false,
+            ShowHistory = false
         };
 
         foreach (var item in items)
@@ -52,12 +57,32 @@ public partial class DeploymentDetailsViewModel : ObservableObject
             Title = "Deployment Validation Errors",
             Subtitle = $"{errors.Count} error(s) detected - deployment cannot proceed",
             ShowPreviewItems = false,
-            ShowErrors = true
+            ShowErrors = true,
+            ShowHistory = false
         };
 
         foreach (var error in errors)
         {
             vm.Errors.Add(error);
+        }
+
+        return vm;
+    }
+
+    public static DeploymentDetailsViewModel CreateForHistory(List<DeploymentHistoryEntry> historyEntries)
+    {
+        var vm = new DeploymentDetailsViewModel
+        {
+            Title = "Deployment History",
+            Subtitle = $"Last {historyEntries.Count} deployment(s)",
+            ShowPreviewItems = false,
+            ShowErrors = false,
+            ShowHistory = true
+        };
+
+        foreach (var entry in historyEntries)
+        {
+            vm.HistoryEntries.Add(entry);
         }
 
         return vm;

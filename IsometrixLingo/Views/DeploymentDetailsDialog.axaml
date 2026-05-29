@@ -109,6 +109,49 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
+                <!-- History Entries -->
+                <ItemsControl ItemsSource="{Binding HistoryEntries}"
+                              IsVisible="{Binding ShowHistory}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="models:DeploymentHistoryEntry">
+                            <Border Background="#FAFAFA"
+                                    BorderBrush="#E0E0E0"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="15"
+                                    Margin="0,0,0,10">
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding StatusIcon}"
+                                               FontSize="24"
+                                               Margin="0,0,15,0"
+                                               VerticalAlignment="Center"
+                                               Foreground="{Binding StatusColor}"/>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding FormattedTimestamp}"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#212121"/>
+                                        <TextBlock FontSize="12"
+                                                   Foreground="#757575"
+                                                   Margin="0,3,0,0">
+                                            <Run Text="{Binding FileCount}"/>
+                                            <Run Text="file(s) •"/>
+                                            <Run Text="{Binding StatusText}"/>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding DeploymentRoot}"
+                                                   FontSize="11"
+                                                   FontFamily="Courier New"
+                                                   Foreground="#9E9E9E"
+                                                   Margin="0,3,0,0"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
         </ScrollViewer>
 

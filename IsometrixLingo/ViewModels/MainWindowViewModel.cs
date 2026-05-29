@@ -2261,7 +2261,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void SaveProgress()
+    private void SaveProgress(bool showMessage = true)
     {
         try
         {
@@ -2297,7 +2297,10 @@ public partial class MainWindowViewModel : ViewModelBase
             _progressService.SaveProgress(sessionState);
             _translationStore.MarkAllChangesSaved();
             HasUnsavedChanges = false;
-            StatusMessage = "Progress saved successfully.";
+            if (showMessage)
+            {
+                StatusMessage = "Progress saved successfully.";
+            }
         }
         catch (Exception ex)
         {
@@ -3607,12 +3610,11 @@ public partial class MainWindowViewModel : ViewModelBase
         if (success)
         {
             DeployStepStatus = StepStatus.Completed;
-            DeploymentSuccessMessage = $"✓ Deployment Successful!\n{DeploymentPreviewItems.Count} file(s) deployed to repository.";
+            DeploymentSuccessMessage = $"✓ Deployment successful! {DeploymentPreviewItems.Count} file(s) deployed.";
             ShowDeploymentSuccess = true;
-            StatusMessage = $"Successfully deployed {DeploymentPreviewItems.Count} file(s) to {DeploymentRootPath}";
             ShowDeployAgainButton = true;
             
-            // Add to deployment history
+            // Add to deployment history (keep only last 5)
             DeploymentHistory.Add(new DeploymentHistoryEntry
             {
                 Timestamp = DateTime.Now,
@@ -3621,8 +3623,22 @@ public partial class MainWindowViewModel : ViewModelBase
                 DeploymentRoot = DeploymentRootPath
             });
             
-            // Save progress after successful deployment
-            SaveProgress();
+            // Keep only last 5 entries
+            while (DeploymentHistory.Count > 5)
+            {
+                DeploymentHistory.RemoveAt(0);
+            }
+            
+            // Save progress after successful deployment (without showing message)
+            SaveProgress(showMessage: false);
+            
+            // Show "Progress saved" message for 1 second, then switch to deployment message
+            StatusMessage = "Progress saved successfully.";
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(1000);
+                StatusMessage = $"Successfully deployed {DeploymentPreviewItems.Count} file(s) to {DeploymentRootPath}";
+            });
         }
         else
         {
@@ -3638,7 +3654,7 @@ public partial class MainWindowViewModel : ViewModelBase
             DeploymentValidationMessage = $"❌ Deployment failed: {deploymentErrors.Count} error(s) detected. All changes rolled back.";
             StatusMessage = $"Deployment failed with {deploymentErrors.Count} error(s). No files were changed.";
             
-            // Add to deployment history
+            // Add to deployment history (keep only last 5)
             DeploymentHistory.Add(new DeploymentHistoryEntry
             {
                 Timestamp = DateTime.Now,
@@ -3647,11 +3663,42 @@ public partial class MainWindowViewModel : ViewModelBase
                 DeploymentRoot = DeploymentRootPath
             });
             
+            // Keep only last 5 entries
+            while (DeploymentHistory.Count > 5)
+            {
+                DeploymentHistory.RemoveAt(0);
+            }
+            
             // Save progress even on failure (to persist error state)
-            SaveProgress();
+            SaveProgress(showMessage: false);
         }
 
         await Task.CompletedTask;
+    }
+
+    [RelayCommand]
+    private async Task ViewDeploymentHistory()
+    {
+        var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+
+        if (window == null)
+        {
+            StatusMessage = "Unable to show deployment history.";
+            return;
+        }
+
+        // Show history in reverse chronological order (most recent first)
+        var historyToShow = DeploymentHistory.Reverse().ToList();
+        var viewModel = DeploymentDetailsViewModel.CreateForHistory(historyToShow);
+
+        var dialog = new DeploymentDetailsDialog
+        {
+            DataContext = viewModel
+        };
+
+        await dialog.ShowDialog(window);
     }
 
     [RelayCommand]
