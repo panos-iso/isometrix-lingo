@@ -92,9 +92,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     // Workflow state properties
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowFileMappingStep), nameof(ShowModeSelectionStep), nameof(ShowEditStep), nameof(ShowExportStep),
-                               nameof(Step1Background), nameof(Step2Background), nameof(Step3Background), nameof(Step4Background), nameof(Step5Background),
-                               nameof(Step1Status), nameof(Step2Status), nameof(Step3Status), nameof(Step4Status), nameof(Step5Status))]
+    [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowFileMappingStep), nameof(ShowModeSelectionStep), nameof(ShowEditStep), nameof(ShowExportStep), nameof(ShowDeployStep),
+                               nameof(Step1Background), nameof(Step2Background), nameof(Step3Background), nameof(Step4Background), nameof(Step5Background), nameof(Step6Background),
+                               nameof(Step1Status), nameof(Step2Status), nameof(Step3Status), nameof(Step4Status), nameof(Step5Status), nameof(Step6Status))]
     private WorkflowStep _currentStep = WorkflowStep.Import;
 
     [ObservableProperty]
@@ -150,6 +150,39 @@ public partial class MainWindowViewModel : ViewModelBase
     
     [ObservableProperty]
     private int _errorCount;
+
+    // Deployment properties
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanDeploy))]
+    private string _deploymentRootPath = "Click 'Select Folder' to choose deployment directory";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSuggestedDeploymentRoot))]
+    private string _suggestedDeploymentRoot = string.Empty;
+
+    [ObservableProperty]
+    private ObservableCollection<DeploymentPreviewItem> _deploymentPreviewItems = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDeploymentPreview))]
+    private string _deploymentPreviewSummary = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasValidationMessage))]
+    private string _validationMessage = string.Empty;
+
+    [ObservableProperty]
+    private SolidColorBrush _validationMessageColor = new SolidColorBrush(Colors.Black);
+
+    [ObservableProperty]
+    private bool _showDeployAgainButton = false;
+
+    public bool HasSuggestedDeploymentRoot => !string.IsNullOrWhiteSpace(SuggestedDeploymentRoot);
+    public bool HasDeploymentPreview => DeploymentPreviewItems.Count > 0;
+    public bool HasValidationMessage => !string.IsNullOrWhiteSpace(ValidationMessage);
+    public bool CanDeploy => !string.IsNullOrWhiteSpace(DeploymentRootPath) && 
+                             DeploymentRootPath != "Click 'Select Folder' to choose deployment directory" &&
+                             HasDeploymentPreview;
 
     public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
     public bool ShowFileMappingStep => CurrentStep == WorkflowStep.FileMapping;
@@ -2589,8 +2622,20 @@ public partial class MainWindowViewModel : ViewModelBase
             _lastExportFolder = outputPath;
             _lastExportFileName = zipFileName;
 
-            // Prompt to start over
-            await PromptToStartOverAfterExport();
+            // In deployment mode, transition to Deploy step instead of prompting to start over
+            if (CurrentMode == EditMode.Deployment)
+            {
+                DeployStepStatus = StepStatus.InProgress;
+                CurrentStep = WorkflowStep.Deploy;
+                StatusMessage = "Export complete. Ready for deployment.";
+                
+                // TODO: Phase 7 - Generate smart deployment root suggestion
+            }
+            else
+            {
+                // Prompt to start over in Edit/Suggest modes
+                await PromptToStartOverAfterExport();
+            }
         }
         catch (Exception ex)
         {
@@ -3276,5 +3321,140 @@ public partial class MainWindowViewModel : ViewModelBase
         
         StatusMessage = $"Rejected suggestion for '{key.Key}' in {LanguageHelper.GetLanguageName(language)}.";
     }
+
+    #region Deployment Commands
+
+    [RelayCommand]
+    private async Task SelectDeploymentRoot()
+    {
+        var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+
+        if (window == null)
+        {
+            StatusMessage = "Unable to show folder picker.";
+            return;
+        }
+
+        // Load last deployment root from settings, or use parent of last export directory
+        var settings = _settingsService.Load();
+        var defaultPath = !string.IsNullOrEmpty(settings?.LastDeploymentRoot) && Directory.Exists(settings.LastDeploymentRoot)
+            ? settings.LastDeploymentRoot
+            : !string.IsNullOrEmpty(settings?.LastExportDirectory)
+                ? Directory.GetParent(settings.LastExportDirectory)?.FullName ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+                : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+        var folders = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select Deployment Root Directory",
+            AllowMultiple = false,
+            SuggestedStartLocation = await window.StorageProvider.TryGetFolderFromPathAsync(defaultPath)
+        });
+
+        if (folders.Count == 0)
+        {
+            StatusMessage = "Deployment root selection cancelled.";
+            return;
+        }
+
+        DeploymentRootPath = folders[0].Path.LocalPath;
+
+        // Save to settings
+        if (settings == null)
+        {
+            settings = new UserSettings { Username = Username };
+        }
+        settings.LastDeploymentRoot = DeploymentRootPath;
+        _settingsService.Save(settings);
+
+        StatusMessage = $"Deployment root set to: {DeploymentRootPath}";
+        
+        // TODO: Phase 7 - Trigger preview generation
+    }
+
+    [RelayCommand]
+    private void UseSuggestedRoot()
+    {
+        if (!HasSuggestedDeploymentRoot)
+            return;
+
+        DeploymentRootPath = SuggestedDeploymentRoot;
+        
+        // Save to settings
+        var settings = _settingsService.Load() ?? new UserSettings { Username = Username };
+        settings.LastDeploymentRoot = DeploymentRootPath;
+        _settingsService.Save(settings);
+
+        StatusMessage = $"Using suggested deployment root: {DeploymentRootPath}";
+        
+        // TODO: Phase 7 - Trigger preview generation
+    }
+
+    [RelayCommand]
+    private async Task ValidateAndDeploy()
+    {
+        if (!CanDeploy)
+        {
+            StatusMessage = "Cannot deploy: Please select a deployment root and generate a preview first.";
+            return;
+        }
+
+        // TODO: Phase 7 - Implement validation and deployment
+        await Task.CompletedTask;
+        StatusMessage = "Deployment functionality will be implemented in Phase 7.";
+    }
+
+    [RelayCommand]
+    private async Task DeployAgain()
+    {
+        // Re-deploy to the same location without requiring re-selection
+        if (!CanDeploy)
+        {
+            StatusMessage = "Cannot deploy: Please select a deployment root first.";
+            return;
+        }
+
+        // TODO: Phase 7 - Implement re-deployment
+        await Task.CompletedTask;
+        StatusMessage = "Deploy Again functionality will be implemented in Phase 7.";
+    }
+
+    [RelayCommand]
+    private async Task ViewExportedFiles()
+    {
+        if (string.IsNullOrEmpty(_lastExportFolder))
+        {
+            StatusMessage = "No export folder available.";
+            return;
+        }
+
+        try
+        {
+            // Open the export folder in file explorer
+            if (OperatingSystem.IsWindows())
+            {
+                Process.Start("explorer.exe", _lastExportFolder);
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                Process.Start("open", _lastExportFolder);
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                Process.Start("xdg-open", _lastExportFolder);
+            }
+
+            StatusMessage = $"Opened export folder: {_lastExportFolder}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Failed to open export folder: {ex.Message}";
+        }
+
+        await Task.CompletedTask;
+    }
+
+    #endregion
 }
 

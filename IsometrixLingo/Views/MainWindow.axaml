@@ -1013,6 +1013,173 @@
                     </StackPanel>
                 </Border>
             </DockPanel>
+
+            <!-- Step 6: Deploy to Repository -->
+            <DockPanel IsVisible="{Binding ShowDeployStep}" LastChildFill="True">
+                <!-- Action buttons at bottom -->
+                <StackPanel DockPanel.Dock="Bottom"
+                            Orientation="Horizontal" 
+                            HorizontalAlignment="Right" 
+                            Spacing="10"
+                            Margin="0,15,0,0">
+                    <Button Content="View Exported Files"
+                            Command="{Binding ViewExportedFilesCommand}"
+                            Padding="15,8"/>
+                    <Button Content="Start Over"
+                            Command="{Binding StartOverCommand}"
+                            Padding="15,8"/>
+                    <Button Content="Deploy Again"
+                            Command="{Binding DeployAgainCommand}"
+                            IsVisible="{Binding ShowDeployAgainButton}"
+                            Padding="15,8"/>
+                    <Button Content="Validate &amp; Deploy"
+                            Classes="PrimaryButton"
+                            Command="{Binding ValidateAndDeployCommand}"
+                            IsEnabled="{Binding CanDeploy}"
+                            Padding="15,8"/>
+                </StackPanel>
+
+                <!-- Header at top -->
+                <StackPanel DockPanel.Dock="Top" Spacing="5" Margin="0,0,0,15">
+                    <TextBlock Text="Step 6: Deploy to Repository"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                    <TextBlock Text="Select the deployment root directory and review the file paths before deploying."
+                               TextWrapping="Wrap"
+                               FontSize="14"
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                </StackPanel>
+
+                <!-- Main content -->
+                <ScrollViewer>
+                    <StackPanel Spacing="15">
+                        <!-- Deployment Root Selection -->
+                        <Border BorderBrush="#FF9800"
+                                BorderThickness="2"
+                                Background="{DynamicResource SystemControlAcrylicWindowBrush}"
+                                CornerRadius="8"
+                                Padding="20">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Deployment Root Directory"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="#E65100"/>
+                                
+                                <!-- Smart suggestion (if available) -->
+                                <Border Background="#FFF3E0"
+                                        BorderBrush="#FFE0B2"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="12"
+                                        IsVisible="{Binding HasSuggestedDeploymentRoot}">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="💡 Smart Suggestion"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#F57C00"/>
+                                        <TextBlock Text="{Binding SuggestedDeploymentRoot}"
+                                                   FontSize="12"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="#424242"/>
+                                        <Button Content="Use Suggestion"
+                                                Command="{Binding UseSuggestedRootCommand}"
+                                                Padding="10,5"
+                                                FontSize="12"
+                                                HorizontalAlignment="Left"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Current selection or prompt -->
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding DeploymentRootPath}"
+                                               FontSize="14"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                    <Button Grid.Column="1"
+                                            Content="Select Folder"
+                                            Command="{Binding SelectDeploymentRootCommand}"
+                                            Padding="12,6"
+                                            Margin="10,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Validation Results -->
+                        <Border BorderBrush="#2196F3"
+                                BorderThickness="2"
+                                Background="{DynamicResource SystemControlAcrylicWindowBrush}"
+                                CornerRadius="8"
+                                Padding="20"
+                                IsVisible="{Binding HasValidationMessage}">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Validation"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="#1976D2"/>
+                                <TextBlock Text="{Binding ValidationMessage}"
+                                           FontSize="14"
+                                           TextWrapping="Wrap"
+                                           Foreground="{Binding ValidationMessageColor}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Deployment Preview -->
+                        <Border BorderBrush="#4CAF50"
+                                BorderThickness="2"
+                                Background="{DynamicResource SystemControlAcrylicWindowBrush}"
+                                CornerRadius="8"
+                                Padding="20"
+                                IsVisible="{Binding HasDeploymentPreview}">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Deployment Preview"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="#388E3C"/>
+                                <TextBlock Text="{Binding DeploymentPreviewSummary}"
+                                           FontSize="13"
+                                           Foreground="#666666"
+                                           Margin="0,0,0,5"/>
+                                
+                                <ScrollViewer MaxHeight="300">
+                                    <ItemsControl ItemsSource="{Binding DeploymentPreviewItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="#F5F5F5"
+                                                        BorderBrush="#E0E0E0"
+                                                        BorderThickness="1"
+                                                        CornerRadius="4"
+                                                        Padding="10"
+                                                        Margin="0,0,0,5">
+                                                    <Grid ColumnDefinitions="*,Auto,*">
+                                                        <TextBlock Grid.Column="0"
+                                                                   Text="{Binding SourcePath}"
+                                                                   FontSize="12"
+                                                                   TextWrapping="Wrap"
+                                                                   FontFamily="Courier New"/>
+                                                        <TextBlock Grid.Column="1"
+                                                                   Text=" → "
+                                                                   FontSize="12"
+                                                                   Margin="8,0"
+                                                                   Foreground="#4CAF50"/>
+                                                        <TextBlock Grid.Column="2"
+                                                                   Text="{Binding TargetPath}"
+                                                                   FontSize="12"
+                                                                   TextWrapping="Wrap"
+                                                                   FontFamily="Courier New"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
         </Grid>
         </DockPanel>
     </Panel>
