@@ -72,12 +72,109 @@ public class JsonTranslationFileWriter
 
     private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, string? template, string? username, EditMode currentMode)
     {
-        // ALWAYS write flat JSON - no nested objects
-        // Keys with dots stay as literal keys: "buttons.activate" not { "buttons": { "activate": ... }}
-        // PRESERVE ORIGINAL KEY ORDER - JsonObject maintains insertion order in .NET 5+
-        var jsonObject = new JsonObject();
+        // Detect original structure from template or existing file
+        string? originalContent = null;
+        bool isNested = false;
         
-        // Iterate keys in original order - NO SORTING
+        // First check template if available
+        if (!string.IsNullOrEmpty(template))
+        {
+            originalContent = template;
+            isNested = IsNestedStructure(template);
+        }
+        // Otherwise check existing file at target location
+        else if (File.Exists(filePath))
+        {
+            originalContent = File.ReadAllText(filePath);
+            isNested = IsNestedStructure(originalContent);
+        }
+        
+        // Build JSON object in appropriate structure
+        JsonObject jsonObject;
+        
+        if (isNested)
+        {
+            // Convert flat dot-notation keys to nested structure
+            jsonObject = ConvertToNestedStructure(keys, language, username, currentMode);
+        }
+        else
+        {
+            // Write as flat key-value pairs
+            jsonObject = new JsonObject();
+            
+            // Iterate keys in original order - NO SORTING
+            foreach (var key in keys)
+            {
+                var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+                
+                // In Deployment mode, write clean values without annotations
+                // In Edit/Suggest modes, append annotations inline
+                var finalValue = currentMode == EditMode.Deployment 
+                    ? value 
+                    : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
+                
+                // Write as flat key-value pair (no nesting)
+                jsonObject[key.Key] = JsonValue.Create(finalValue);
+            }
+        }
+
+        var json = jsonObject.ToJsonString(_options);
+        
+        // Preserve trailing newlines from original file
+        string? trailingWhitespace = null;
+        
+        if (originalContent != null)
+        {
+            var trailingCount = originalContent.Length - originalContent.TrimEnd('\r', '\n').Length;
+            if (trailingCount > 0)
+            {
+                trailingWhitespace = originalContent.Substring(originalContent.Length - trailingCount);
+            }
+        }
+        
+        if (trailingWhitespace != null)
+        {
+            json += trailingWhitespace;
+        }
+        
+        File.WriteAllText(filePath, json);
+    }
+    
+    /// <summary>
+    /// Detect if JSON content has nested structure or is flat key-value pairs
+    /// </summary>
+    private bool IsNestedStructure(string jsonContent)
+    {
+        try
+        {
+            var jsonNode = JsonNode.Parse(jsonContent);
+            if (jsonNode is not JsonObject jsonObject)
+                return false;
+            
+            // If any top-level value is an object, it's nested
+            foreach (var kvp in jsonObject)
+            {
+                if (kvp.Value is JsonObject)
+                    return true;
+            }
+            
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    
+    /// <summary>
+    /// Convert flat dot-notation keys to nested JSON structure
+    /// Example: "config.dateFormat" -> { "config": { "dateFormat": "value" } }
+    /// </summary>
+    private JsonObject ConvertToNestedStructure(List<TranslationKey> keys, string language, string? username, EditMode currentMode)
+    {
+        var root = new JsonObject();
+        
+        // Process keys in original order to maintain sequence
         foreach (var key in keys)
         {
             var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
@@ -88,41 +185,37 @@ public class JsonTranslationFileWriter
                 ? value 
                 : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
             
-            // Write as flat key-value pair (no nesting)
-            jsonObject[key.Key] = JsonValue.Create(finalValue);
-        }
-
-        var json = jsonObject.ToJsonString(_options);
-        
-        // Preserve trailing newlines from original file
-        string? trailingWhitespace = null;
-        
-        // First check template if available
-        if (!string.IsNullOrEmpty(template))
-        {
-            var templateTrailing = template.Length - template.TrimEnd('\r', '\n').Length;
-            if (templateTrailing > 0)
+            // Split key by dots and create nested structure
+            var parts = key.Key.Split('.');
+            
+            if (parts.Length == 1)
             {
-                trailingWhitespace = template.Substring(template.Length - templateTrailing);
+                // No nesting - direct key-value
+                root[key.Key] = JsonValue.Create(finalValue);
+            }
+            else
+            {
+                // Navigate/create nested objects
+                JsonObject current = root;
+                
+                for (int i = 0; i < parts.Length - 1; i++)
+                {
+                    var part = parts[i];
+                    
+                    if (!current.ContainsKey(part))
+                    {
+                        current[part] = new JsonObject();
+                    }
+                    
+                    current = (JsonObject)current[part]!;
+                }
+                
+                // Set the final value
+                current[parts[^1]] = JsonValue.Create(finalValue);
             }
         }
-        // Otherwise check existing file at target location
-        else if (File.Exists(filePath))
-        {
-            var originalContent = File.ReadAllText(filePath);
-            var trailingNewlines = originalContent.Length - originalContent.TrimEnd('\r', '\n').Length;
-            if (trailingNewlines > 0)
-            {
-                trailingWhitespace = originalContent.Substring(originalContent.Length - trailingNewlines);
-            }
-        }
         
-        if (trailingWhitespace != null)
-        {
-            json += trailingWhitespace;
-        }
-        
-        File.WriteAllText(filePath, json);
+        return root;
     }
 
     /// <summary>
