@@ -89,7 +89,8 @@ public class ResxTranslationFileWriter
     /// </summary>
     private void UpdateResxFileInPlace(string filePath, List<TranslationKey> keys, string language, string? username, EditMode currentMode)
     {
-        var doc = XDocument.Load(filePath);
+        // Load with PreserveWhitespace to maintain exact formatting
+        var doc = XDocument.Load(filePath, LoadOptions.PreserveWhitespace);
         var root = doc.Root;
         
         if (root == null)
@@ -163,18 +164,14 @@ public class ResxTranslationFileWriter
             }
         }
 
-        // Save with XML declaration preserved
-        var settings = new System.Xml.XmlWriterSettings
+        // Explicitly ensure XML declaration exists before saving
+        if (doc.Declaration == null)
         {
-            Indent = true,
-            Encoding = System.Text.Encoding.UTF8,
-            OmitXmlDeclaration = false
-        };
-
-        using (var writer = System.Xml.XmlWriter.Create(filePath, settings))
-        {
-            doc.Save(writer);
+            doc.Declaration = new XDeclaration("1.0", "utf-8", null);
         }
+
+        // Save - this will write the declaration and preserve structure
+        doc.Save(filePath);
     }
 
     /// <summary>
