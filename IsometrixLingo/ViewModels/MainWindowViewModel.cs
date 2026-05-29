@@ -1485,6 +1485,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
         // Update display text
         UpdateFilesDisplayText();
+        
+        // Apply file filters to ensure TranslationStore state is in sync with UI
+        // (this is needed because setting IsSelected during initialization doesn't trigger events)
+        ApplyFileFilters();
     }
 
     private string GetTopLevelDirectory(string? directoryPath)
