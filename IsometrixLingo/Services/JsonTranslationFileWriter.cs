@@ -93,6 +93,35 @@ public class JsonTranslationFileWriter
         }
 
         var json = jsonObject.ToJsonString(_options);
+        
+        // Preserve trailing newlines from original file
+        string? trailingWhitespace = null;
+        
+        // First check template if available
+        if (!string.IsNullOrEmpty(template))
+        {
+            var templateTrailing = template.Length - template.TrimEnd('\r', '\n').Length;
+            if (templateTrailing > 0)
+            {
+                trailingWhitespace = template.Substring(template.Length - templateTrailing);
+            }
+        }
+        // Otherwise check existing file at target location
+        else if (File.Exists(filePath))
+        {
+            var originalContent = File.ReadAllText(filePath);
+            var trailingNewlines = originalContent.Length - originalContent.TrimEnd('\r', '\n').Length;
+            if (trailingNewlines > 0)
+            {
+                trailingWhitespace = originalContent.Substring(originalContent.Length - trailingNewlines);
+            }
+        }
+        
+        if (trailingWhitespace != null)
+        {
+            json += trailingWhitespace;
+        }
+        
         File.WriteAllText(filePath, json);
     }
 

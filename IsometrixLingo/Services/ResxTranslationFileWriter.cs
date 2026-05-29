@@ -175,7 +175,21 @@ public class ResxTranslationFileWriter
             root
         );
 
-        doc.Save(filePath);
+        // Save and preserve trailing newlines from original file
+        var savedContent = doc.ToString();
+        
+        // Check if original file exists and has trailing newlines
+        if (File.Exists(filePath))
+        {
+            var originalContent = File.ReadAllText(filePath);
+            var trailingNewlines = originalContent.Length - originalContent.TrimEnd('\r', '\n').Length;
+            if (trailingNewlines > 0)
+            {
+                savedContent += originalContent.Substring(originalContent.Length - trailingNewlines);
+            }
+        }
+        
+        File.WriteAllText(filePath, savedContent);
     }
 
     /// <summary>
