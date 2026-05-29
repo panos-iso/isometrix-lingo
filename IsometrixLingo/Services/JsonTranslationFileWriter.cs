@@ -23,8 +23,8 @@ public class JsonTranslationFileWriter
     /// <param name="outputDirectory">Output directory for files</param>
     /// <param name="templateProvider">Optional function to provide JSON template for a given source file name</param>
     /// <param name="username">Username for confirmation auditing (optional)</param>
-    /// <param name="isEditMode">Whether in Edit mode (confirmations only created/updated in Edit mode)</param>
-    public void WriteFiles(List<TranslationKey> keys, string outputDirectory, Func<string, string?>? templateProvider = null, string? username = null, bool isEditMode = true)
+    /// <param name="currentMode">Current workflow mode (Edit/Suggest/Deployment)</param>
+    public void WriteFiles(List<TranslationKey> keys, string outputDirectory, Func<string, string?>? templateProvider = null, string? username = null, EditMode currentMode = EditMode.Edit)
     {
         if (!Directory.Exists(outputDirectory))
         {
@@ -65,12 +65,12 @@ public class JsonTranslationFileWriter
                 // Get template for this source file if available
                 var template = templateProvider?.Invoke(source.Name);
 
-                WriteLanguageFile(filePath, fileKeys, language, template, username, isEditMode);
+                WriteLanguageFile(filePath, fileKeys, language, template, username, currentMode);
             }
         }
     }
 
-    private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, string? template, string? username, bool isEditMode)
+    private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, string? template, string? username, EditMode currentMode)
     {
         JsonObject jsonObject;
 
@@ -87,11 +87,16 @@ public class JsonTranslationFileWriter
 
                 foreach (var key in keys)
                 {
-                    // Get actual value and suggestion
+                    // Get actual value
                     var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                    var fullValue = AppendAnnotations(value, key, language, username, isEditMode);
                     
-                    if (UpdateNestedValue(jsonObject, key.Key, fullValue))
+                    // In Deployment mode, write clean values without annotations
+                    // In Edit/Suggest modes, append annotations inline (JSON doesn't support comments natively)
+                    var finalValue = currentMode == EditMode.Deployment 
+                        ? value 
+                        : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
+                    
+                    if (UpdateNestedValue(jsonObject, key.Key, finalValue))
                     {
                         processedKeys.Add(key.Key);
                     }
@@ -103,8 +108,13 @@ public class JsonTranslationFileWriter
                     if (!processedKeys.Contains(key.Key))
                     {
                         var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                        var fullValue = AppendAnnotations(value, key, language, username, isEditMode);
-                        SetNestedValue(jsonObject, key.Key, fullValue);
+                        
+                        // In Deployment mode, write clean values without annotations
+                        var finalValue = currentMode == EditMode.Deployment 
+                            ? value 
+                            : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
+                        
+                        SetNestedValue(jsonObject, key.Key, finalValue);
                     }
                 }
             }
@@ -115,8 +125,13 @@ public class JsonTranslationFileWriter
                 foreach (var key in keys)
                 {
                     var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                    var fullValue = AppendAnnotations(value, key, language, username, isEditMode);
-                    SetNestedValue(jsonObject, key.Key, fullValue);
+                    
+                    // In Deployment mode, write clean values without annotations
+                    var finalValue = currentMode == EditMode.Deployment 
+                        ? value 
+                        : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
+                    
+                    SetNestedValue(jsonObject, key.Key, finalValue);
                 }
             }
         }
@@ -127,8 +142,13 @@ public class JsonTranslationFileWriter
             foreach (var key in keys)
             {
                 var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                var fullValue = AppendAnnotations(value, key, language, username, isEditMode);
-                SetNestedValue(jsonObject, key.Key, fullValue);
+                
+                // In Deployment mode, write clean values without annotations  
+                var finalValue = currentMode == EditMode.Deployment 
+                    ? value 
+                    : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
+                
+                SetNestedValue(jsonObject, key.Key, finalValue);
             }
         }
 

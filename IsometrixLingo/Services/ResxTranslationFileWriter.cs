@@ -19,8 +19,8 @@ public class ResxTranslationFileWriter
     /// <param name="outputDirectory">Output directory for files</param>
     /// <param name="templateProvider">Optional function to provide RESX template for a given source file name</param>
     /// <param name="username">Username for confirmation auditing (optional)</param>
-    /// <param name="isEditMode">Whether in Edit mode (confirmations only created/updated in Edit mode)</param>
-    public void WriteFiles(List<TranslationKey> keys, string outputDirectory, Func<string, XDocument?>? templateProvider = null, string? username = null, bool isEditMode = true)
+    /// <param name="currentMode">Current workflow mode (Edit/Suggest/Deployment)</param>
+    public void WriteFiles(List<TranslationKey> keys, string outputDirectory, Func<string, XDocument?>? templateProvider = null, string? username = null, EditMode currentMode = EditMode.Edit)
     {
         if (!Directory.Exists(outputDirectory))
         {
@@ -64,12 +64,12 @@ public class ResxTranslationFileWriter
                 // Get template for this source file if available
                 var template = templateProvider?.Invoke(source.Name);
 
-                WriteLanguageFile(filePath, fileKeys, language, template, username, isEditMode);
+                WriteLanguageFile(filePath, fileKeys, language, template, username, currentMode);
             }
         }
     }
 
-    private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, XDocument? template, string? username, bool isEditMode)
+    private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, XDocument? template, string? username, EditMode currentMode)
     {
         XElement root;
 
@@ -93,19 +93,28 @@ public class ResxTranslationFileWriter
 
                     if (translationKey != null)
                     {
-                        // Get actual value and append suggestion if exists
+                        // Get actual value
                         var value = translationKey.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                        var fullValue = AppendAnnotations(value, translationKey, language, username, isEditMode);
+                        
                         // Update the value in the existing data element
                         var valueElement = dataElement.Element("value");
                         if (valueElement != null)
                         {
-                            valueElement.Value = fullValue;
+                            valueElement.Value = value;
                         }
                         else
                         {
-                            dataElement.Add(new XElement("value", fullValue));
+                            dataElement.Add(new XElement("value", value));
                         }
+                        
+                        // Add annotations as comments (only in Edit and Suggest modes)
+                        if (currentMode != EditMode.Deployment)
+                        {
+                            // Remove existing comments from this data element
+                            dataElement.Nodes().OfType<XComment>().ToList().ForEach(c => c.Remove());
+                            AddAnnotationsAsComments(dataElement, translationKey, language, username, currentMode == EditMode.Edit);
+                        }
+                        
                         processedKeys.Add(keyName);
                     }
                 }
@@ -117,12 +126,18 @@ public class ResxTranslationFileWriter
                 if (!processedKeys.Contains(key.Key))
                 {
                     var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                    var fullValue = AppendAnnotations(value, key, language, username, isEditMode);
+                    
                     var dataElement = new XElement("data",
                         new XAttribute("name", key.Key),
                         new XAttribute(XNamespace.Xml + "space", "preserve"),
-                        new XElement("value", fullValue)
+                        new XElement("value", value)
                     );
+
+                    // Add annotations as comments (only in Edit and Suggest modes)
+                    if (currentMode != EditMode.Deployment)
+                    {
+                        AddAnnotationsAsComments(dataElement, key, language, username, currentMode == EditMode.Edit);
+                    }
 
                     root.Add(dataElement);
                 }
@@ -137,12 +152,19 @@ public class ResxTranslationFileWriter
             foreach (var key in keys.OrderBy(k => k.Key))
             {
                 var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                var fullValue = AppendAnnotations(value, key, language, username, isEditMode);
+                
+                // Create data element with clean value only
                 var dataElement = new XElement("data",
                     new XAttribute("name", key.Key),
                     new XAttribute(XNamespace.Xml + "space", "preserve"),
-                    new XElement("value", fullValue)
+                    new XElement("value", value)
                 );
+
+                // Add annotations as XML comments (only in Edit and Suggest modes, not Deployment)
+                if (currentMode != EditMode.Deployment)
+                {
+                    AddAnnotationsAsComments(dataElement, key, language, username, currentMode == EditMode.Edit);
+                }
 
                 root.Add(dataElement);
             }
@@ -157,21 +179,19 @@ public class ResxTranslationFileWriter
     }
 
     /// <summary>
-    /// Append suggestion and confirmation annotations to value
-    /// Format: "actual value SUGGESTION:...,by:[username],at:[datetime] CONFIRMED:by:[username],at:[datetime]"
-    /// Auto-creates/updates confirmation for keys with both en and es values when writing base file
+    /// Add suggestion and confirmation annotations as XML comments after the value element
+    /// Format: <!-- SUGGESTION:...,by:[username],at:[datetime] --> <!-- CONFIRMED:by:[username],at:[datetime] -->
+    /// Auto-creates/updates confirmation for keys with both en and es values when writing base file (Edit mode only)
     /// </summary>
-    private string AppendAnnotations(string actualValue, TranslationKey key, string language, string? username, bool isEditMode)
+    private void AddAnnotationsAsComments(XElement dataElement, TranslationKey key, string language, string? username, bool isEditMode)
     {
-        var result = actualValue;
-        
-        // Append suggestion if exists for this language
+        // Add suggestion comment if exists for this language
         if (key.SuggestedValues.TryGetValue(language, out var suggestion))
         {
-            result = $"{result} {suggestion.ToFileFormat()}";
+            dataElement.Add(new XComment($" {suggestion.ToFileFormat()} "));
         }
         
-        // For base file (English), append confirmation (auto-create/update/remove only in Edit mode)
+        // For base file (English), add confirmation comment (auto-create/update/remove only in Edit mode)
         if (language == "en")
         {
             if (isEditMode)
@@ -212,11 +232,9 @@ public class ResxTranslationFileWriter
             // Always write existing confirmations to file (both Edit and Suggest mode)
             if (key.ConfirmedBy != null)
             {
-                result = $"{result} {key.ConfirmedBy.ToFileFormat()}";
+                dataElement.Add(new XComment($" {key.ConfirmedBy.ToFileFormat()} "));
             }
         }
-        
-        return result;
     }
 
     private XElement CreateResxDocument()
