@@ -178,12 +178,32 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _showDeployAgainButton = false;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDeploymentValidationResult))]
+    [NotifyPropertyChangedFor(nameof(DeploymentValidationBorderBrush))]
+    [NotifyPropertyChangedFor(nameof(CanDeploy))]
+    private bool _deploymentValidationSuccess = false;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDeploymentValidationResult))]
+    private string _deploymentValidationMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _deploymentSuccessMessage = string.Empty;
+
+    [ObservableProperty]
+    private bool _showDeploymentSuccess = false;
+
     public bool HasSuggestedDeploymentRoot => !string.IsNullOrWhiteSpace(SuggestedDeploymentRoot);
     public bool HasDeploymentPreview => DeploymentPreviewItems.Count > 0;
     public bool HasValidationMessage => !string.IsNullOrWhiteSpace(ValidationMessage);
+    public bool HasDeploymentValidationResult => !string.IsNullOrWhiteSpace(DeploymentValidationMessage);
+    public SolidColorBrush DeploymentValidationBorderBrush => DeploymentValidationSuccess 
+        ? new SolidColorBrush(Color.FromRgb(76, 175, 80))   // Green
+        : new SolidColorBrush(Color.FromRgb(239, 83, 80));  // Red
     public bool CanDeploy => !string.IsNullOrWhiteSpace(DeploymentRootPath) && 
                              DeploymentRootPath != "Click 'Select Folder' to choose deployment directory" &&
-                             HasDeploymentPreview;
+                             DeploymentValidationSuccess;
 
     public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
     public bool ShowFileMappingStep => CurrentStep == WorkflowStep.FileMapping;
@@ -3452,11 +3472,15 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task SelectDeploymentRoot()
     {
-        // Clear previous deployment errors when selecting a new root
+        // Clear previous deployment state when selecting a new root
         ImportErrors.Clear();
         HasErrors = false;
         ErrorCount = 0;
         ValidationMessage = string.Empty;
+        DeploymentValidationMessage = string.Empty;
+        DeploymentValidationSuccess = false;
+        DeploymentPreviewItems.Clear();
+        ShowDeploymentSuccess = false;
 
         var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
             ? desktop.MainWindow
@@ -3501,8 +3525,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
         StatusMessage = $"Deployment root set to: {DeploymentRootPath}";
         
-        // Generate deployment preview
-        await GenerateDeploymentPreview();
+        // Perform validation automatically
+        await PerformDeploymentValidation();
     }
 
     [RelayCommand]
@@ -3510,6 +3534,16 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (!HasSuggestedDeploymentRoot)
             return;
+
+        // Clear previous deployment state
+        ImportErrors.Clear();
+        HasErrors = false;
+        ErrorCount = 0;
+        ValidationMessage = string.Empty;
+        DeploymentValidationMessage = string.Empty;
+        DeploymentValidationSuccess = false;
+        DeploymentPreviewItems.Clear();
+        ShowDeploymentSuccess = false;
 
         DeploymentRootPath = SuggestedDeploymentRoot;
         
@@ -3520,8 +3554,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
         StatusMessage = $"Using suggested deployment root: {DeploymentRootPath}";
         
-        // Generate deployment preview
-        await GenerateDeploymentPreview();
+        // Perform validation automatically
+        await PerformDeploymentValidation();
     }
 
     [RelayCommand]
@@ -3529,7 +3563,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (!CanDeploy)
         {
-            StatusMessage = "Cannot deploy: Please select a deployment root and generate a preview first.";
+            StatusMessage = "Cannot deploy: Validation must pass before deployment.";
             return;
         }
 
@@ -3539,46 +3573,15 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        // Perform soft validation (root name match)
-        var (isMatch, message) = _deploymentService.ValidateRootNameMatch(DeploymentRootPath, _rootDirectoryPath);
-        if (!isMatch)
-        {
-            // Show warning but allow user to continue
-            var shouldContinue = await ShowSoftValidationWarning(message);
-            if (!shouldContinue)
-            {
-                StatusMessage = "Deployment cancelled.";
-                return;
-            }
-        }
-
-        // Perform hard validation (all paths must be valid)
-        var validationErrors = _deploymentService.ValidateAllPathsFromDirectory(_rootDirectoryPath, DeploymentRootPath);
-        if (validationErrors.Count > 0)
-        {
-            // Hard validation failed - show errors and abort
-            ImportErrors.Clear();
-            foreach (var error in validationErrors)
-            {
-                ImportErrors.Add(error);
-            }
-            HasErrors = true;
-            ErrorCount = validationErrors.Count;
-            ValidationMessage = $"❌ Validation failed: {validationErrors.Count} error(s) detected. Deployment aborted.";
-            ValidationMessageColor = new SolidColorBrush(Colors.Red);
-            StatusMessage = $"Deployment validation failed with {validationErrors.Count} error(s).";
-            return;
-        }
-
-        // Execute deployment
+        // Execute deployment (validation already done)
         StatusMessage = "Deploying files...";
         var (success, deploymentErrors) = _deploymentService.ExecuteDeploymentFromDirectory(_rootDirectoryPath, DeploymentRootPath);
 
         if (success)
         {
             DeployStepStatus = StepStatus.Completed;
-            ValidationMessage = $"✓ Deployment successful! {DeploymentPreviewItems.Count} file(s) deployed to repository.";
-            ValidationMessageColor = new SolidColorBrush(Colors.Green);
+            DeploymentSuccessMessage = $"✓ Deployment Successful!\n{DeploymentPreviewItems.Count} file(s) deployed to repository.";
+            ShowDeploymentSuccess = true;
             StatusMessage = $"Successfully deployed {DeploymentPreviewItems.Count} file(s) to {DeploymentRootPath}";
             ShowDeployAgainButton = true;
             
@@ -3595,8 +3598,8 @@ public partial class MainWindowViewModel : ViewModelBase
             }
             HasErrors = true;
             ErrorCount = deploymentErrors.Count;
-            ValidationMessage = $"❌ Deployment failed: {deploymentErrors.Count} error(s) detected. All changes rolled back.";
-            ValidationMessageColor = new SolidColorBrush(Colors.Red);
+            DeploymentValidationSuccess = false;
+            DeploymentValidationMessage = $"❌ Deployment failed: {deploymentErrors.Count} error(s) detected. All changes rolled back.";
             StatusMessage = $"Deployment failed with {deploymentErrors.Count} error(s). No files were changed.";
             
             // Save progress even on failure (to persist error state)
@@ -3604,6 +3607,40 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         await Task.CompletedTask;
+    }
+
+    [RelayCommand]
+    private async Task ViewDeploymentDetails()
+    {
+        var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+
+        if (window == null)
+        {
+            StatusMessage = "Unable to show deployment details.";
+            return;
+        }
+
+        DeploymentDetailsViewModel viewModel;
+
+        if (DeploymentValidationSuccess)
+        {
+            // Show preview items
+            viewModel = DeploymentDetailsViewModel.CreateForPreview(DeploymentPreviewItems.ToList());
+        }
+        else
+        {
+            // Show validation errors
+            viewModel = DeploymentDetailsViewModel.CreateForErrors(ImportErrors.ToList());
+        }
+
+        var dialog = new DeploymentDetailsDialog
+        {
+            DataContext = viewModel
+        };
+
+        await dialog.ShowDialog(window);
     }
 
     [RelayCommand]
@@ -3696,6 +3733,72 @@ public partial class MainWindowViewModel : ViewModelBase
         StatusMessage = $"Preview generated: {previewItems.Count} file(s) will be deployed.";
 
         // Save progress after generating preview
+        SaveProgress();
+
+        await Task.CompletedTask;
+    }
+
+    private async Task PerformDeploymentValidation()
+    {
+        // Validate that we have the source directory
+        if (string.IsNullOrEmpty(_rootDirectoryPath) || !Directory.Exists(_rootDirectoryPath))
+        {
+            DeploymentValidationSuccess = false;
+            DeploymentValidationMessage = "❌ Session root directory not found. Please re-import translations.";
+            StatusMessage = "Validation failed: import directory not found.";
+            return;
+        }
+
+        // Validate deployment root is set
+        if (string.IsNullOrEmpty(DeploymentRootPath) || DeploymentRootPath == "Click 'Select Folder' to choose deployment directory")
+        {
+            DeploymentValidationSuccess = false;
+            DeploymentValidationMessage = "❌ Please select a deployment root directory.";
+            StatusMessage = "Validation failed: no deployment root selected.";
+            return;
+        }
+
+        // Step 1: Generate preview
+        var previewItems = _deploymentService.GetDeploymentPreviewFromDirectory(_rootDirectoryPath, DeploymentRootPath);
+        
+        DeploymentPreviewItems.Clear();
+        foreach (var item in previewItems)
+        {
+            DeploymentPreviewItems.Add(item);
+        }
+
+        // Step 2: Soft validation (root name match) - warn but don't fail
+        var (isMatch, matchMessage) = _deploymentService.ValidateRootNameMatch(DeploymentRootPath, _rootDirectoryPath);
+        if (!isMatch && IsDeveloper)
+        {
+            // For developers, show a warning in the message but don't fail validation
+            DeploymentValidationMessage = $"⚠️ Warning: {matchMessage}. You can still proceed.";
+        }
+
+        // Step 3: Hard validation (all paths must be valid)
+        var validationErrors = _deploymentService.ValidateAllPathsFromDirectory(_rootDirectoryPath, DeploymentRootPath);
+        if (validationErrors.Count > 0)
+        {
+            // Hard validation failed - show errors and block deployment
+            ImportErrors.Clear();
+            foreach (var error in validationErrors)
+            {
+                ImportErrors.Add(error);
+            }
+            HasErrors = true;
+            ErrorCount = validationErrors.Count;
+            DeploymentValidationSuccess = false;
+            DeploymentValidationMessage = $"❌ Validation failed: {validationErrors.Count} error(s) detected.";
+            StatusMessage = $"Deployment validation failed with {validationErrors.Count} error(s).";
+            return;
+        }
+
+        // Validation succeeded
+        DeploymentValidationSuccess = true;
+        DeploymentValidationMessage = $"✅ Validation successful: {previewItems.Count} file(s) ready for deployment.";
+        StatusMessage = $"Validation successful: {previewItems.Count} file(s) ready to deploy.";
+
+        // Save progress after validation
         SaveProgress();
 
         await Task.CompletedTask;

@@ -1037,7 +1037,7 @@
                             Command="{Binding DeployAgainCommand}"
                             IsVisible="{Binding ShowDeployAgainButton}"
                             Padding="15,8"/>
-                    <Button Content="Validate &amp; Deploy"
+                    <Button Content="Deploy"
                             Classes="PrimaryButton"
                             Command="{Binding ValidateAndDeployCommand}"
                             IsEnabled="{Binding CanDeploy}"
@@ -1050,7 +1050,7 @@
                                FontSize="20"
                                FontWeight="Bold"
                                Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
-                    <TextBlock Text="Select the deployment root directory and review the file paths before deploying."
+                    <TextBlock Text="Select the deployment root directory. Validation will run automatically."
                                TextWrapping="Wrap"
                                FontSize="14"
                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
@@ -1059,6 +1059,30 @@
                 <!-- Main content -->
                 <ScrollViewer>
                     <StackPanel Spacing="15">
+                        <!-- Deployment Success Message (centered) -->
+                        <Border Background="#E8F5E9"
+                                BorderBrush="#4CAF50"
+                                BorderThickness="3"
+                                CornerRadius="12"
+                                Padding="40"
+                                HorizontalAlignment="Center"
+                                MinWidth="500"
+                                IsVisible="{Binding ShowDeploymentSuccess}">
+                            <StackPanel Spacing="15"
+                                        HorizontalAlignment="Center">
+                                <TextBlock Text="🎉"
+                                           FontSize="48"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding DeploymentSuccessMessage}"
+                                           FontSize="18"
+                                           FontWeight="Bold"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           Foreground="#2E7D32"
+                                           HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Deployment Root Selection -->
                         <Border BorderBrush="#FF9800"
                                 BorderThickness="2"
@@ -1112,76 +1136,23 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Validation Results -->
-                        <Border BorderBrush="#2196F3"
+                        <!-- Validation Results Banner -->
+                        <Border BorderBrush="{Binding DeploymentValidationBorderBrush}"
                                 BorderThickness="2"
                                 Background="{DynamicResource SystemControlAcrylicWindowBrush}"
                                 CornerRadius="8"
                                 Padding="20"
-                                IsVisible="{Binding HasValidationMessage}">
+                                IsVisible="{Binding HasDeploymentValidationResult}">
                             <StackPanel Spacing="10">
-                                <TextBlock Text="Validation"
-                                           FontSize="16"
-                                           FontWeight="SemiBold"
-                                           Foreground="#1976D2"/>
-                                <TextBlock Text="{Binding ValidationMessage}"
+                                <TextBlock Text="{Binding DeploymentValidationMessage}"
                                            FontSize="14"
-                                           TextWrapping="Wrap"
-                                           Foreground="{Binding ValidationMessageColor}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Deployment Preview -->
-                        <Border BorderBrush="#4CAF50"
-                                BorderThickness="2"
-                                Background="{DynamicResource SystemControlAcrylicWindowBrush}"
-                                CornerRadius="8"
-                                Padding="20"
-                                IsVisible="{Binding HasDeploymentPreview}">
-                            <StackPanel Spacing="10">
-                                <TextBlock Text="Deployment Preview"
-                                           FontSize="16"
                                            FontWeight="SemiBold"
-                                           Foreground="#388E3C"/>
-                                <TextBlock Text="{Binding DeploymentPreviewSummary}"
-                                           FontSize="13"
-                                           Foreground="#666666"
-                                           Margin="0,0,0,5"/>
-                                
-                                <ScrollViewer MaxHeight="300">
-                                    <ItemsControl ItemsSource="{Binding DeploymentPreviewItems}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Background="#F5F5F5"
-                                                        BorderBrush="#E0E0E0"
-                                                        BorderThickness="1"
-                                                        CornerRadius="4"
-                                                        Padding="10"
-                                                        Margin="0,0,0,5">
-                                                    <Grid ColumnDefinitions="*,Auto,*">
-                                                        <TextBlock Grid.Column="0"
-                                                                   Text="{Binding SourcePath}"
-                                                                   FontSize="12"
-                                                                   TextWrapping="Wrap"
-                                                                   FontFamily="Courier New"
-                                                                   Foreground="#212121"/>
-                                                        <TextBlock Grid.Column="1"
-                                                                   Text=" → "
-                                                                   FontSize="12"
-                                                                   Margin="8,0"
-                                                                   Foreground="#4CAF50"/>
-                                                        <TextBlock Grid.Column="2"
-                                                                   Text="{Binding TargetPath}"
-                                                                   FontSize="12"
-                                                                   TextWrapping="Wrap"
-                                                                   FontFamily="Courier New"
-                                                                   Foreground="#212121"/>
-                                                    </Grid>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                <Button Content="View Details"
+                                        Command="{Binding ViewDeploymentDetailsCommand}"
+                                        Padding="12,6"
+                                        HorizontalAlignment="Left"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
