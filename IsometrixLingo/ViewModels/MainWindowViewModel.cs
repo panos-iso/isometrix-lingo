@@ -2658,7 +2658,17 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             // Use the root directory name in the zip filename
             var rootDirName = Path.GetFileName(_rootDirectoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            zipFileName = $"{rootDirName}_exported_{timestamp}.zip";
+            
+            // Strip any existing "_exported_YYYYMMDD_HHMMSS" suffix to avoid stacking
+            // (e.g., "repos_exported_20260530_123456" becomes "repos")
+            var cleanedName = System.Text.RegularExpressions.Regex.Replace(
+                rootDirName, 
+                @"_exported_\d{8}_\d{6}$", 
+                "", 
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase
+            );
+            
+            zipFileName = $"{cleanedName}_exported_{timestamp}.zip";
         }
         else
         {
