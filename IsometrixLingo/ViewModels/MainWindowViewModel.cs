@@ -51,6 +51,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _username = "User";
 
     [ObservableProperty]
+    private bool _isDeveloper = false;
+
+    [ObservableProperty]
     private ObservableCollection<SourceFile?> _availableSourceFiles = new();
 
     [ObservableProperty]
@@ -2711,9 +2714,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private void LoadUserSettings()
     {
         var settings = _settingsService.Load();
-        if (settings != null && !string.IsNullOrWhiteSpace(settings.Username))
+        if (settings != null)
         {
-            Username = settings.Username;
+            if (!string.IsNullOrWhiteSpace(settings.Username))
+            {
+                Username = settings.Username;
+            }
+            IsDeveloper = settings.IsDeveloper;
         }
     }
 
@@ -2959,7 +2966,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             Title = "User Profile",
             Width = 400,
-            Height = 180,
+            Height = 230,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };
@@ -2987,6 +2994,15 @@ public partial class MainWindowViewModel : ViewModelBase
             Text = Username
         };
         contentPanel.Children.Add(usernameBox);
+
+        // Developer mode checkbox
+        var developerCheckBox = new CheckBox
+        {
+            Content = "Developer Mode (enables deployment features)",
+            IsChecked = IsDeveloper,
+            Margin = new Thickness(0, 10, 0, 0)
+        };
+        contentPanel.Children.Add(developerCheckBox);
 
         DockPanel.SetDock(contentPanel, Dock.Top);
         mainPanel.Children.Add(contentPanel);
@@ -3016,22 +3032,48 @@ public partial class MainWindowViewModel : ViewModelBase
             HorizontalContentAlignment = HorizontalAlignment.Center
         };
 
-        // Enable save button only when username changes
+        // Enable save button only when username or developer mode changes
         usernameBox.TextChanged += (s, e) =>
         {
             var newText = usernameBox.Text?.Trim() ?? "";
-            saveButton.IsEnabled = !string.IsNullOrWhiteSpace(newText) && newText != Username;
+            var newDeveloper = developerCheckBox.IsChecked == true;
+            saveButton.IsEnabled = (!string.IsNullOrWhiteSpace(newText) && newText != Username) || newDeveloper != IsDeveloper;
+        };
+
+        developerCheckBox.IsCheckedChanged += (s, e) =>
+        {
+            var newText = usernameBox.Text?.Trim() ?? "";
+            var newDeveloper = developerCheckBox.IsChecked == true;
+            saveButton.IsEnabled = (!string.IsNullOrWhiteSpace(newText) && newText != Username) || newDeveloper != IsDeveloper;
         };
 
         saveButton.Click += (s, args) =>
         {
             var newUsername = usernameBox.Text?.Trim();
+            var newDeveloper = developerCheckBox.IsChecked == true;
+            bool changed = false;
+
             if (!string.IsNullOrWhiteSpace(newUsername) && newUsername != Username)
             {
                 Username = newUsername;
-                var settings = new UserSettings { Username = newUsername };
+                changed = true;
+            }
+
+            if (newDeveloper != IsDeveloper)
+            {
+                IsDeveloper = newDeveloper;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                var settings = _settingsService.Load() ?? new UserSettings();
+                settings.Username = Username;
+                settings.IsDeveloper = IsDeveloper;
+                settings.LastExportDirectory = settings.LastExportDirectory; // Preserve existing
+                settings.LastDeploymentRoot = settings.LastDeploymentRoot; // Preserve existing
                 _settingsService.Save(settings);
-                StatusMessage = $"Username updated to '{newUsername}'.";
+                StatusMessage = "Profile updated successfully.";
             }
             dialog.Close();
         };
