@@ -22,22 +22,38 @@ public class ResxTranslationFileReader
         var xdoc = XDocument.Load(filePath);
 
         // Query the <data> elements
-        var resources = xdoc.Descendants("data")
-            .Where(data => data.Attribute("name") != null && data.Element("value") != null)
-            .Select(data => new
-            {
-                Name = data.Attribute("name")!.Value,
-                Value = data.Element("value")!.Value
-            });
+        var dataElements = xdoc.Descendants("data")
+            .Where(data => data.Attribute("name") != null && data.Element("value") != null);
 
-        foreach (var resource in resources)
+        foreach (var dataElement in dataElements)
         {
-            var rawValue = resource.Value;
+            var keyName = dataElement.Attribute("name")!.Value;
+            var rawValue = dataElement.Element("value")!.Value;
+            
+            // First, parse value for backwards compatibility (old format with annotations inside <value>)
             var (actualValue, suggestion, confirmation) = ParseValue(rawValue, language);
+            
+            // Then check for XML comments (new format) - these override old format if present
+            var comments = dataElement.Nodes().OfType<XComment>().ToList();
+            foreach (var comment in comments)
+            {
+                var commentText = comment.Value.Trim();
+                
+                // Check if comment contains suggestion
+                if (commentText.StartsWith("SUGGESTION:", StringComparison.Ordinal))
+                {
+                    suggestion = Suggestion.FromFileFormat(commentText);
+                }
+                // Check if comment contains confirmation
+                else if (commentText.StartsWith("CONFIRMED:", StringComparison.Ordinal))
+                {
+                    confirmation = Confirmation.FromFileFormat(commentText);
+                }
+            }
             
             var translationKey = new TranslationKey
             {
-                Key = resource.Name,
+                Key = keyName,
                 Source = new SourceFile(baseFileName, FileType.Resx),
                 LanguageValues = new Dictionary<string, string>
                 {
