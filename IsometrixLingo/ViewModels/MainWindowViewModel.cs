@@ -33,6 +33,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly ProgressService _progressService;
     private readonly UserSettingsService _settingsService;
     private readonly PathDisplayService _pathDisplayService;
+    private readonly DeploymentService _deploymentService;
     private string _lastExportFolder = string.Empty;
     private string _lastExportFileName = string.Empty;
     
@@ -327,6 +328,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _progressService = new ProgressService();
         _settingsService = new UserSettingsService();
         _pathDisplayService = new PathDisplayService();
+        _deploymentService = new DeploymentService();
 
         // Load username from settings
         LoadUserSettings();
@@ -2629,7 +2631,13 @@ public partial class MainWindowViewModel : ViewModelBase
                 CurrentStep = WorkflowStep.Deploy;
                 StatusMessage = "Export complete. Ready for deployment.";
                 
-                // TODO: Phase 7 - Generate smart deployment root suggestion
+                // Generate smart deployment root suggestion
+                var suggestion = _deploymentService.SuggestDeploymentRoot(_lastExportFolder, _lastExportFileName);
+                if (!string.IsNullOrEmpty(suggestion))
+                {
+                    SuggestedDeploymentRoot = suggestion;
+                    StatusMessage = $"Export complete. Smart suggestion found: {Path.GetFileName(suggestion)}";
+                }
             }
             else
             {
@@ -3370,11 +3378,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
         StatusMessage = $"Deployment root set to: {DeploymentRootPath}";
         
-        // TODO: Phase 7 - Trigger preview generation
+        // Generate deployment preview
+        await GenerateDeploymentPreview();
     }
 
     [RelayCommand]
-    private void UseSuggestedRoot()
+    private async Task UseSuggestedRoot()
     {
         if (!HasSuggestedDeploymentRoot)
             return;
@@ -3388,7 +3397,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
         StatusMessage = $"Using suggested deployment root: {DeploymentRootPath}";
         
-        // TODO: Phase 7 - Trigger preview generation
+        // Generate deployment preview
+        await GenerateDeploymentPreview();
     }
 
     [RelayCommand]
@@ -3400,9 +3410,72 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        // TODO: Phase 7 - Implement validation and deployment
+        var zipFilePath = Path.Combine(_lastExportFolder, _lastExportFileName);
+        if (!File.Exists(zipFilePath))
+        {
+            StatusMessage = "Export file not found. Please export again.";
+            return;
+        }
+
+        // Perform soft validation (root name match)
+        var (isMatch, message) = _deploymentService.ValidateRootNameMatch(DeploymentRootPath, _lastExportFileName);
+        if (!isMatch)
+        {
+            // Show warning but allow user to continue
+            var shouldContinue = await ShowSoftValidationWarning(message);
+            if (!shouldContinue)
+            {
+                StatusMessage = "Deployment cancelled.";
+                return;
+            }
+        }
+
+        // Perform hard validation (all paths must be valid)
+        var validationErrors = _deploymentService.ValidateAllPaths(zipFilePath, DeploymentRootPath);
+        if (validationErrors.Count > 0)
+        {
+            // Hard validation failed - show errors and abort
+            ImportErrors.Clear();
+            foreach (var error in validationErrors)
+            {
+                ImportErrors.Add(error);
+            }
+            HasErrors = true;
+            ErrorCount = validationErrors.Count;
+            ValidationMessage = $"❌ Validation failed: {validationErrors.Count} error(s) detected. Deployment aborted.";
+            ValidationMessageColor = new SolidColorBrush(Colors.Red);
+            StatusMessage = $"Deployment validation failed with {validationErrors.Count} error(s).";
+            return;
+        }
+
+        // Execute deployment
+        StatusMessage = "Deploying files...";
+        var (success, deploymentErrors) = _deploymentService.ExecuteDeployment(zipFilePath, DeploymentRootPath);
+
+        if (success)
+        {
+            DeployStepStatus = StepStatus.Completed;
+            ValidationMessage = $"✓ Deployment successful! {DeploymentPreviewItems.Count} file(s) deployed to repository.";
+            ValidationMessageColor = new SolidColorBrush(Colors.Green);
+            StatusMessage = $"Successfully deployed {DeploymentPreviewItems.Count} file(s) to {DeploymentRootPath}";
+            ShowDeployAgainButton = true;
+        }
+        else
+        {
+            // Deployment failed - show errors
+            ImportErrors.Clear();
+            foreach (var error in deploymentErrors)
+            {
+                ImportErrors.Add(error);
+            }
+            HasErrors = true;
+            ErrorCount = deploymentErrors.Count;
+            ValidationMessage = $"❌ Deployment failed: {deploymentErrors.Count} error(s) detected. All changes rolled back.";
+            ValidationMessageColor = new SolidColorBrush(Colors.Red);
+            StatusMessage = $"Deployment failed with {deploymentErrors.Count} error(s). No files were changed.";
+        }
+
         await Task.CompletedTask;
-        StatusMessage = "Deployment functionality will be implemented in Phase 7.";
     }
 
     [RelayCommand]
@@ -3415,9 +3488,10 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        // TODO: Phase 7 - Implement re-deployment
-        await Task.CompletedTask;
-        StatusMessage = "Deploy Again functionality will be implemented in Phase 7.";
+        // Clear previous validation state and re-execute deployment
+        ValidationMessage = string.Empty;
+        ShowDeployAgainButton = false;
+        await ValidateAndDeploy();
     }
 
     [RelayCommand]
@@ -3453,6 +3527,146 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         await Task.CompletedTask;
+    }
+
+    private async Task GenerateDeploymentPreview()
+    {
+        if (string.IsNullOrEmpty(_lastExportFolder) || string.IsNullOrEmpty(_lastExportFileName))
+        {
+            StatusMessage = "No export file available for preview.";
+            return;
+        }
+
+        var zipFilePath = Path.Combine(_lastExportFolder, _lastExportFileName);
+        if (!File.Exists(zipFilePath))
+        {
+            StatusMessage = "Export file not found. Please export again.";
+            return;
+        }
+
+        // Generate preview
+        var previewItems = _deploymentService.GetDeploymentPreview(zipFilePath, DeploymentRootPath);
+        
+        DeploymentPreviewItems.Clear();
+        foreach (var item in previewItems)
+        {
+            DeploymentPreviewItems.Add(item);
+        }
+
+        DeploymentPreviewSummary = $"{previewItems.Count} file(s) ready for deployment";
+        StatusMessage = $"Preview generated: {previewItems.Count} file(s) will be deployed.";
+
+        await Task.CompletedTask;
+    }
+
+    private async Task<bool> ShowSoftValidationWarning(string warningMessage)
+    {
+        var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+
+        if (window == null)
+        {
+            return false;
+        }
+
+        var dialog = new Window
+        {
+            Title = "Deployment Warning",
+            Width = 500,
+            Height = 280,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        var panel = new StackPanel
+        {
+            Margin = new Thickness(20),
+            Spacing = 15
+        };
+
+        // Warning header
+        var headerPanel = new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#FFF3E0")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#FF9800")),
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(12)
+        };
+
+        var headerStack = new StackPanel { Spacing = 5 };
+        headerStack.Children.Add(new TextBlock
+        {
+            Text = "⚠️ Deployment Path Mismatch",
+            FontSize = 16,
+            FontWeight = FontWeight.Bold,
+            Foreground = new SolidColorBrush(Color.Parse("#E65100"))
+        });
+        headerStack.Children.Add(new TextBlock
+        {
+            Text = warningMessage,
+            FontSize = 13,
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            Foreground = new SolidColorBrush(Color.Parse("#424242"))
+        });
+        headerPanel.Child = headerStack;
+        panel.Children.Add(headerPanel);
+
+        // Explanation
+        panel.Children.Add(new TextBlock
+        {
+            Text = "This warning indicates the deployment directory name doesn't match the original import directory. You can continue if you're sure this is the correct location.",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            FontSize = 12,
+            Foreground = new SolidColorBrush(Color.Parse("#666666"))
+        });
+
+        // Buttons
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+            Spacing = 10,
+            Margin = new Thickness(0, 5, 0, 0)
+        };
+
+        bool continueDeployment = false;
+
+        var cancelButton = new Button
+        {
+            Content = "Cancel Deployment",
+            Width = 150,
+            Padding = new Thickness(10, 6)
+        };
+        cancelButton.Click += (s, args) =>
+        {
+            continueDeployment = false;
+            dialog.Close();
+        };
+
+        var continueButton = new Button
+        {
+            Content = "Continue Anyway",
+            Width = 150,
+            Padding = new Thickness(10, 6),
+            Background = new SolidColorBrush(Color.Parse("#FF9800")),
+            Foreground = Avalonia.Media.Brushes.White
+        };
+        continueButton.Click += (s, args) =>
+        {
+            continueDeployment = true;
+            dialog.Close();
+        };
+
+        buttonPanel.Children.Add(cancelButton);
+        buttonPanel.Children.Add(continueButton);
+        panel.Children.Add(buttonPanel);
+
+        dialog.Content = panel;
+        await dialog.ShowDialog(window);
+
+        return continueDeployment;
     }
 
     #endregion
