@@ -1928,6 +1928,115 @@ public partial class MainWindowViewModel : ViewModelBase
         return confirmed;
     }
 
+    private async Task<bool> ShowMissingTranslationsWarning(Window window, int missingCount)
+    {
+        var dialog = new Window
+        {
+            Title = "Missing Translations Warning",
+            Width = 550,
+            Height = 280,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        var mainPanel = new StackPanel
+        {
+            Margin = new Thickness(20),
+            Spacing = 15
+        };
+
+        // Warning header
+        mainPanel.Children.Add(new TextBlock
+        {
+            Text = "⚠ Missing Translations Detected",
+            FontSize = 18,
+            FontWeight = FontWeight.Bold,
+            Foreground = new SolidColorBrush(Color.FromRgb(255, 87, 34)) // Deep Orange
+        });
+
+        // Warning message
+        mainPanel.Children.Add(new TextBlock
+        {
+            Text = $"{missingCount} translation key(s) have missing values. These will be exported with empty values and deployed to your repositories.",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 14,
+            Foreground = new SolidColorBrush(Color.FromRgb(66, 66, 66))
+        });
+
+        // Recommendation box
+        var recommendationBox = new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(255, 248, 225)), // Light yellow
+            BorderBrush = new SolidColorBrush(Color.FromRgb(255, 193, 7)), // Amber
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(15),
+            Margin = new Thickness(0, 5, 0, 0)
+        };
+
+        var recommendationText = new TextBlock
+        {
+            Text = "💡 Recommendation: Consider using Edit or Suggest mode to resolve missing translations before deployment.",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.FromRgb(102, 60, 0))
+        };
+
+        recommendationBox.Child = recommendationText;
+        mainPanel.Children.Add(recommendationBox);
+
+        // Confirmation question
+        mainPanel.Children.Add(new TextBlock
+        {
+            Text = "Do you want to continue with deployment anyway?",
+            FontWeight = FontWeight.SemiBold,
+            FontSize = 14,
+            Margin = new Thickness(0, 10, 0, 0)
+        });
+
+        // Buttons
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = 10,
+            Margin = new Thickness(0, 20, 0, 0)
+        };
+
+        var cancelButton = new Button
+        {
+            Content = "Cancel Deployment",
+            Width = 150,
+            Padding = new Thickness(10, 8),
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
+
+        var continueButton = new Button
+        {
+            Content = "Continue Anyway",
+            Width = 150,
+            Padding = new Thickness(10, 8),
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            Background = new SolidColorBrush(Color.FromRgb(255, 87, 34)), // Deep Orange
+            Foreground = Brushes.White
+        };
+
+        bool shouldContinue = false;
+
+        cancelButton.Click += (s, args) => { shouldContinue = false; dialog.Close(); };
+        continueButton.Click += (s, args) => { shouldContinue = true; dialog.Close(); };
+
+        buttonPanel.Children.Add(cancelButton);
+        buttonPanel.Children.Add(continueButton);
+
+        mainPanel.Children.Add(buttonPanel);
+
+        dialog.Content = mainPanel;
+        await dialog.ShowDialog(window);
+
+        return shouldContinue;
+    }
+
     private async Task PromptAfterExport(Window window)
     {
         var dialog = new Window
@@ -2365,7 +2474,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        // Get the main window for the folder picker
+        // Get the main window for dialog and folder picker
         var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
             ? desktop.MainWindow
             : null;
@@ -2374,6 +2483,22 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             StatusMessage = "Unable to show folder picker.";
             return;
+        }
+
+        // In deployment mode, warn about missing translations before export
+        if (CurrentMode == EditMode.Deployment)
+        {
+            var keysWithMissingTranslations = allKeys.Where(k => k.HasMissingTranslations).ToList();
+            
+            if (keysWithMissingTranslations.Count > 0)
+            {
+                var continueWithExport = await ShowMissingTranslationsWarning(window, keysWithMissingTranslations.Count);
+                if (!continueWithExport)
+                {
+                    StatusMessage = "Export cancelled.";
+                    return;
+                }
+            }
         }
 
         // Load last export directory from settings, or use default
