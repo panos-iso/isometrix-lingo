@@ -7,7 +7,7 @@
         x:Class="IsometrixLingo.Views.WelcomeWindow"
         x:DataType="vm:WelcomeViewModel"
         Title="Welcome to Translation Management Tool"
-        Width="450" Height="280"
+        Width="400" Height="250"
         CanResize="False"
         WindowStartupLocation="CenterScreen">
 
@@ -16,32 +16,14 @@
         <TextBlock Text="Please enter your name to get started:" TextWrapping="Wrap"/>
         <TextBox Text="{Binding Username}" PlaceholderText="Enter your name"/>
         
-        <Border BorderBrush="#E0E0E0"
-                BorderThickness="1"
-                CornerRadius="6"
-                Padding="15"
-                Background="#F5F5F5"
-                Margin="0,5,0,0">
-            <StackPanel Spacing="10">
-                <TextBlock Text="User Type" 
-                           FontSize="14" 
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
-                <CheckBox IsChecked="{Binding IsDeveloper}">
-                    <TextBlock TextWrapping="Wrap">
-                        <Run Text="I am a developer/engineer"/>
-                    </TextBlock>
-                </CheckBox>
-                <TextBlock Text="Developers see advanced features like deployment mode and technical warnings."
-                           FontSize="11"
-                           FontStyle="Italic"
-                           TextWrapping="Wrap"
-                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-            </StackPanel>
-        </Border>
+        <CheckBox IsChecked="{Binding IsDeveloper}">
+            <TextBlock Text="I am a developer/engineer" TextWrapping="Wrap"/>
+        </CheckBox>
         
         <Button Content="Continue" 
-                HorizontalAlignment="Center" 
+                HorizontalAlignment="Center"
+                Padding="20,8"
+                FontSize="14"
                 Click="OnContinueClick"
                 IsEnabled="{Binding Username, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
     </StackPanel>

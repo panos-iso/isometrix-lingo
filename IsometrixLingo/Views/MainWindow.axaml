@@ -1060,25 +1060,23 @@
                 <ScrollViewer>
                     <StackPanel Spacing="15">
                         <!-- Deployment Success Message (centered) -->
-                        <Border Background="#E8F5E9"
+                        <Border Background="#4CAF50"
                                 BorderBrush="#4CAF50"
-                                BorderThickness="3"
-                                CornerRadius="12"
-                                Padding="40"
-                                HorizontalAlignment="Center"
-                                MinWidth="500"
+                                BorderThickness="2"
+                                CornerRadius="8"
+                                Padding="30"
                                 IsVisible="{Binding ShowDeploymentSuccess}">
-                            <StackPanel Spacing="15"
+                            <StackPanel Spacing="12"
                                         HorizontalAlignment="Center">
                                 <TextBlock Text="🎉"
-                                           FontSize="48"
+                                           FontSize="40"
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="{Binding DeploymentSuccessMessage}"
-                                           FontSize="18"
+                                           FontSize="16"
                                            FontWeight="Bold"
                                            TextAlignment="Center"
                                            TextWrapping="Wrap"
-                                           Foreground="#2E7D32"
+                                           Foreground="White"
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
