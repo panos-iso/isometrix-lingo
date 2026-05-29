@@ -188,6 +188,7 @@ public class ResxTranslationFileWriter
         // Add suggestion comment if exists for this language
         if (key.SuggestedValues.TryGetValue(language, out var suggestion))
         {
+            dataElement.Add(new XText("\n    "));
             dataElement.Add(new XComment($" {suggestion.ToFileFormat()} "));
         }
         
@@ -232,8 +233,15 @@ public class ResxTranslationFileWriter
             // Always write existing confirmations to file (both Edit and Suggest mode)
             if (key.ConfirmedBy != null)
             {
+                dataElement.Add(new XText("\n    "));
                 dataElement.Add(new XComment($" {key.ConfirmedBy.ToFileFormat()} "));
             }
+        }
+        
+        // Add final newline and indentation before closing tag if any comments were added
+        if (dataElement.Nodes().OfType<XComment>().Any())
+        {
+            dataElement.Add(new XText("\n  "));
         }
     }
 
