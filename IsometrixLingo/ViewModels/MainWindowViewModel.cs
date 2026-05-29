@@ -2915,14 +2915,23 @@ public partial class MainWindowViewModel : ViewModelBase
             CurrentMode = sessionState.CurrentMode;
             
             // Restore deployment-related state
-            _rootDirectoryPath = sessionState.RootDirectoryPath;
+            if (!string.IsNullOrEmpty(sessionState.RootDirectoryPath))
+            {
+                _rootDirectoryPath = sessionState.RootDirectoryPath;
+            }
             if (!string.IsNullOrEmpty(sessionState.DeploymentRootPath))
             {
                 DeploymentRootPath = sessionState.DeploymentRootPath;
             }
             SuggestedDeploymentRoot = sessionState.SuggestedDeploymentRoot;
-            _lastExportFolder = sessionState.LastExportFolder;
-            _lastExportFileName = sessionState.LastExportFileName;
+            if (!string.IsNullOrEmpty(sessionState.LastExportFolder))
+            {
+                _lastExportFolder = sessionState.LastExportFolder;
+            }
+            if (!string.IsNullOrEmpty(sessionState.LastExportFileName))
+            {
+                _lastExportFileName = sessionState.LastExportFileName;
+            }
             
             // Restore deployment preview items
             DeploymentPreviewItems.Clear();
@@ -2949,7 +2958,14 @@ public partial class MainWindowViewModel : ViewModelBase
             HasKeys = true;
             HasUnsavedChanges = false;
 
-            StatusMessage = $"Loaded {sessionState.TranslationKeys.Count} translation keys from saved progress ({confirmationsLoaded} confirmed).";
+            // Build status message with deployment info if on deploy step
+            var statusMsg = $"Loaded {sessionState.TranslationKeys.Count} translation keys from saved progress ({confirmationsLoaded} confirmed).";
+            if (CurrentStep == WorkflowStep.Deploy && !string.IsNullOrEmpty(_rootDirectoryPath))
+            {
+                statusMsg += $" Import directory: {Path.GetFileName(_rootDirectoryPath)}";
+            }
+            StatusMessage = statusMsg;
+            
             LanguagesChanged?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -3640,9 +3656,23 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task GenerateDeploymentPreview()
     {
-        if (string.IsNullOrEmpty(_rootDirectoryPath) || !Directory.Exists(_rootDirectoryPath))
+        // Validate that we have the source directory
+        if (string.IsNullOrEmpty(_rootDirectoryPath))
         {
-            StatusMessage = "Session root directory not available for preview.";
+            StatusMessage = "Error: No import directory found. Please start a new session and import files first.";
+            return;
+        }
+
+        if (!Directory.Exists(_rootDirectoryPath))
+        {
+            StatusMessage = $"Error: Import directory no longer exists: {_rootDirectoryPath}. Please start a new session.";
+            return;
+        }
+
+        // Validate deployment root is set
+        if (string.IsNullOrEmpty(DeploymentRootPath) || DeploymentRootPath == "Click 'Select Folder' to choose deployment directory")
+        {
+            StatusMessage = "Please select a deployment root directory first.";
             return;
         }
 
