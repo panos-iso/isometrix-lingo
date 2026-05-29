@@ -135,12 +135,24 @@ public class ResxTranslationFileWriter
                     dataElement.Add(new XElement("value", value));
                 }
                 
-                // Update annotations (only in Edit and Suggest modes)
+                // Clean up and rebuild the whitespace/annotation structure
+                // Remove all nodes after value element (old comments and whitespace)
+                var nodesToRemove = dataElement.Nodes()
+                    .SkipWhile(n => n != valueElement)
+                    .Skip(1) // Skip the value element itself
+                    .ToList();
+                nodesToRemove.ForEach(n => n.Remove());
+                
+                // Add annotations only in Edit and Suggest modes (includes whitespace)
                 if (currentMode != EditMode.Deployment)
                 {
-                    // Remove existing annotation comments
-                    dataElement.Nodes().OfType<XComment>().ToList().ForEach(c => c.Remove());
                     AddAnnotationsAsComments(dataElement, translationKey, language, username, currentMode == EditMode.Edit);
+                }
+                
+                // If no annotation was added, add proper closing whitespace
+                if (currentMode == EditMode.Deployment || !translationKey.SuggestedValues.ContainsKey(language))
+                {
+                    dataElement.Add(new XText("\n  "));
                 }
 
                 processedKeys.Add(keyName);
