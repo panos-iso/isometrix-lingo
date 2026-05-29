@@ -63,44 +63,51 @@ public class JsonTranslationFileReader
 
     public List<TranslationKey> ConsolidateKeys(List<TranslationFile> files)
     {
-        var consolidatedKeys = new Dictionary<string, TranslationKey>();
+        // Use a list to preserve the order keys are encountered (first file wins for order)
+        var consolidatedKeys = new List<TranslationKey>();
+        var keyIndex = new Dictionary<string, int>(); // Track which index each key is at
         var baseFileName = files.FirstOrDefault()?.FilePath;
         var baseName = baseFileName != null ? ExtractBaseFileName(baseFileName) : "unknown";
         var directoryPath = files.FirstOrDefault()?.RelativeDirectoryPath;
 
-        // Collect all unique keys across all files
+        // Collect all unique keys across all files IN ORDER
         foreach (var file in files)
         {
             foreach (var key in file.Keys)
             {
-                if (!consolidatedKeys.ContainsKey(key.Key))
+                if (!keyIndex.ContainsKey(key.Key))
                 {
-                    consolidatedKeys[key.Key] = new TranslationKey
+                    // New key - add to list
+                    var translationKey = new TranslationKey
                     {
                         Key = key.Key,
                         Source = new SourceFile(baseName, FileType.Json, directoryPath),
                         LanguageValues = new Dictionary<string, string>(),
                         SuggestedValues = new Dictionary<string, Suggestion>()
                     };
+                    consolidatedKeys.Add(translationKey);
+                    keyIndex[key.Key] = consolidatedKeys.Count - 1;
                 }
 
+                var index = keyIndex[key.Key];
+                
                 // Add language value
                 if (key.LanguageValues.ContainsKey(file.Language))
                 {
-                    consolidatedKeys[key.Key].LanguageValues[file.Language] = key.LanguageValues[file.Language];
+                    consolidatedKeys[index].LanguageValues[file.Language] = key.LanguageValues[file.Language];
                 }
                 
                 // Add suggestion if present
                 if (key.SuggestedValues.ContainsKey(file.Language))
                 {
-                    consolidatedKeys[key.Key].SuggestedValues[file.Language] = key.SuggestedValues[file.Language];
+                    consolidatedKeys[index].SuggestedValues[file.Language] = key.SuggestedValues[file.Language];
                 }
             }
         }
 
-        // Fill in missing language values with empty strings
+        // Fill in missing language values with empty strings for consistency
         var allLanguages = files.Select(f => f.Language).Distinct().ToList();
-        foreach (var translationKey in consolidatedKeys.Values)
+        foreach (var translationKey in consolidatedKeys)
         {
             foreach (var language in allLanguages)
             {
@@ -112,7 +119,7 @@ public class JsonTranslationFileReader
             translationKey.UpdateMissingTranslationsStatus();
         }
 
-        return consolidatedKeys.Values.ToList();
+        return consolidatedKeys;
     }
 
     private List<TranslationKey> ParseJsonKeys(string json, string baseFileName, string language)

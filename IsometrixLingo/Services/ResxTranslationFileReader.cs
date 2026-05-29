@@ -110,16 +110,19 @@ public class ResxTranslationFileReader
     /// </summary>
     public List<TranslationKey> ConsolidateKeys(List<TranslationFile> files)
     {
-        var consolidatedKeys = new Dictionary<string, TranslationKey>();
+        // Use a list to preserve the order keys are encountered (first file wins for order)
+        var consolidatedKeys = new List<TranslationKey>();
+        var keyIndex = new Dictionary<string, int>(); // Track which index each key is at
         var directoryPath = files.FirstOrDefault()?.RelativeDirectoryPath;
 
         foreach (var file in files)
         {
             foreach (var key in file.Keys)
             {
-                if (consolidatedKeys.TryGetValue(key.Key, out var existingKey))
+                if (keyIndex.TryGetValue(key.Key, out var index))
                 {
-                    // Merge language values
+                    // Key exists - merge language values
+                    var existingKey = consolidatedKeys[index];
                     foreach (var langValue in key.LanguageValues)
                     {
                         existingKey.LanguageValues[langValue.Key] = langValue.Value;
@@ -133,21 +136,23 @@ public class ResxTranslationFileReader
                 }
                 else
                 {
-                    // Create new key with updated Source including directory path
-                    consolidatedKeys[key.Key] = new TranslationKey
+                    // New key - add to list preserving order
+                    var translationKey = new TranslationKey
                     {
                         Key = key.Key,
                         Source = new SourceFile(key.Source.Name, key.Source.Type, directoryPath),
                         LanguageValues = new Dictionary<string, string>(key.LanguageValues),
                         SuggestedValues = new Dictionary<string, Suggestion>(key.SuggestedValues)
                     };
+                    consolidatedKeys.Add(translationKey);
+                    keyIndex[key.Key] = consolidatedKeys.Count - 1;
                 }
             }
         }
 
-        // Fill in missing language values with empty strings
+        // Fill in missing language values with empty strings for consistency
         var allLanguages = files.Select(f => f.Language).Distinct().ToList();
-        foreach (var translationKey in consolidatedKeys.Values)
+        foreach (var translationKey in consolidatedKeys)
         {
             foreach (var language in allLanguages)
             {
@@ -159,7 +164,8 @@ public class ResxTranslationFileReader
             translationKey.UpdateMissingTranslationsStatus();
         }
 
-        return consolidatedKeys.Values.OrderBy(k => k.Key).ToList();
+        // Return in original order - NO SORTING
+        return consolidatedKeys;
     }
 
     /// <summary>
