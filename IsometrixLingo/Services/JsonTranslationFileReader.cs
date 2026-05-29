@@ -95,12 +95,6 @@ public class JsonTranslationFileReader
                 {
                     consolidatedKeys[key.Key].SuggestedValues[file.Language] = key.SuggestedValues[file.Language];
                 }
-                
-                // Add confirmation if present (from English file)
-                if (key.ConfirmedBy != null && consolidatedKeys[key.Key].ConfirmedBy == null)
-                {
-                    consolidatedKeys[key.Key].ConfirmedBy = key.ConfirmedBy;
-                }
             }
         }
 

@@ -18,7 +18,7 @@ public class ResxTranslationFileWriter
     /// <param name="keys">Translation keys to write</param>
     /// <param name="outputDirectory">Output directory for files</param>
     /// <param name="templateProvider">Optional function to provide RESX template for a given source file name</param>
-    /// <param name="username">Username for confirmation auditing (optional)</param>
+    /// <param name="username">Username for auditing (optional)</param>
     /// <param name="currentMode">Current workflow mode (Edit/Suggest/Deployment)</param>
     public void WriteFiles(List<TranslationKey> keys, string outputDirectory, Func<string, XDocument?>? templateProvider = null, string? username = null, EditMode currentMode = EditMode.Edit)
     {
@@ -179,9 +179,8 @@ public class ResxTranslationFileWriter
     }
 
     /// <summary>
-    /// Add suggestion and confirmation annotations as XML comments after the value element
-    /// Format: <!-- SUGGESTION:...,by:[username],at:[datetime] --> <!-- CONFIRMED:by:[username],at:[datetime] -->
-    /// Auto-creates/updates confirmation for keys with both en and es values when writing base file (Edit mode only)
+    /// Add suggestion annotations as XML comments after the value element
+    /// Format: <!-- iso-lingo-audit:SUGGESTION:...,by:[username],at:[datetime] -->
     /// </summary>
     private void AddAnnotationsAsComments(XElement dataElement, TranslationKey key, string language, string? username, bool isEditMode)
     {

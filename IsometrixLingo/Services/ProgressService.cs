@@ -44,11 +44,6 @@ public class ProgressService
                         Timestamp = kvp.Value.Timestamp
                     }
                 ),
-                ConfirmedBy = tk.ConfirmedBy != null ? new SerializableConfirmation
-                {
-                    Username = tk.ConfirmedBy.Username,
-                    Timestamp = tk.ConfirmedBy.Timestamp
-                } : null,
                 IsModified = tk.IsModified,
                 OriginalValues = new Dictionary<string, string>(tk.OriginalValues),
                 ModifiedLanguages = tk.ModifiedLanguages.ToList(),
@@ -132,11 +127,6 @@ public class ProgressService
                                 Timestamp = kvp.Value.Timestamp
                             }
                         ),
-                        ConfirmedBy = stk.ConfirmedBy != null ? new Confirmation
-                        {
-                            Username = stk.ConfirmedBy.Username,
-                            Timestamp = stk.ConfirmedBy.Timestamp
-                        } : null,
                         IsModified = stk.IsModified,
                         OriginalValues = new Dictionary<string, string>(stk.OriginalValues),
                         ModifiedLanguages = new HashSet<string>(stk.ModifiedLanguages),

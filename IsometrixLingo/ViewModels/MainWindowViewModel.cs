@@ -2902,22 +2902,8 @@ public partial class MainWindowViewModel : ViewModelBase
         var sessionState = _progressService.LoadProgress();
         if (sessionState != null && sessionState.TranslationKeys.Count > 0)
         {
-            // DEBUG: Count confirmations before adding to store
-            var confirmationsLoaded = sessionState.TranslationKeys.Count(k => k.ConfirmedBy != null);
-            System.Diagnostics.Debug.WriteLine($"[LoadProgress] Loaded {confirmationsLoaded} keys with confirmations out of {sessionState.TranslationKeys.Count} total keys");
-            
-            // DEBUG: Show some details
-            foreach (var key in sessionState.TranslationKeys.Where(k => k.ConfirmedBy != null).Take(3))
-            {
-                System.Diagnostics.Debug.WriteLine($"  Key: {key.Key}, ConfirmationDisplayText: '{key.ConfirmationDisplayText}'");
-            }
-            
             // Restore translation keys
             _translationStore.AddTranslations(sessionState.TranslationKeys);
-            
-            // DEBUG: Count confirmations after adding to store
-            var confirmationsInStore = _translationStore.GetAllKeys().Count(k => k.ConfirmedBy != null);
-            System.Diagnostics.Debug.WriteLine($"[LoadProgress] Store now has {confirmationsInStore} keys with confirmations");
 
             // Restore templates
             _translationStore.RestoreResxTemplates(sessionState.ResxTemplates);
@@ -3002,7 +2988,7 @@ public partial class MainWindowViewModel : ViewModelBase
             HasUnsavedChanges = false;
 
             // Build status message with deployment info if on deploy step
-            var statusMsg = $"Loaded {sessionState.TranslationKeys.Count} translation keys from saved progress ({confirmationsLoaded} confirmed).";
+            var statusMsg = $"Loaded {sessionState.TranslationKeys.Count} translation keys from saved progress.";
             if (CurrentStep == WorkflowStep.Deploy && !string.IsNullOrEmpty(_rootDirectoryPath))
             {
                 statusMsg += $" Import directory: {Path.GetFileName(_rootDirectoryPath)}";

@@ -130,12 +130,6 @@ public class ResxTranslationFileReader
                     {
                         existingKey.SuggestedValues[suggestion.Key] = suggestion.Value;
                     }
-                    
-                    // Merge confirmation (from base file)
-                    if (key.ConfirmedBy != null && existingKey.ConfirmedBy == null)
-                    {
-                        existingKey.ConfirmedBy = key.ConfirmedBy;
-                    }
                 }
                 else
                 {
@@ -145,8 +139,7 @@ public class ResxTranslationFileReader
                         Key = key.Key,
                         Source = new SourceFile(key.Source.Name, key.Source.Type, directoryPath),
                         LanguageValues = new Dictionary<string, string>(key.LanguageValues),
-                        SuggestedValues = new Dictionary<string, Suggestion>(key.SuggestedValues),
-                        ConfirmedBy = key.ConfirmedBy
+                        SuggestedValues = new Dictionary<string, Suggestion>(key.SuggestedValues)
                     };
                 }
             }

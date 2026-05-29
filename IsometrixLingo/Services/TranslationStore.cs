@@ -65,12 +65,6 @@ public class TranslationStore
                 }
                 existingKey.SuggestedValues = mergedSuggestions;
 
-                // Merge confirmation if present in the new key
-                if (key.ConfirmedBy != null)
-                {
-                    existingKey.ConfirmedBy = key.ConfirmedBy;
-                }
-
                 // Update missing translations status
                 existingKey.UpdateMissingTranslationsStatus();
             }

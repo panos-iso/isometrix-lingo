@@ -381,62 +381,6 @@ public partial class MainWindow : Window
             TranslationsGrid.Columns.Add(column);
         }
 
-        // Add Last Confirmed column before Actions
-        var confirmedColumn = new DataGridTemplateColumn
-        {
-            Header = "Last Confirmed By",
-            Width = new DataGridLength(1.2, DataGridLengthUnitType.Star),
-            MinWidth = 180,
-            MaxWidth = 250,
-            CellTemplate = new FuncDataTemplate<object>((data, _) =>
-            {
-                if (data is not TranslationKey key || key.ConfirmedBy == null)
-                    return new TextBlock();
-
-                var panel = new StackPanel
-                {
-                    Orientation = Avalonia.Layout.Orientation.Vertical,
-                    Spacing = 4,
-                    Margin = new Avalonia.Thickness(5, 4),
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-                };
-
-                // Username text - don't set Foreground at all, let theme handle it
-                var usernameText = new TextBlock
-                {
-                    Text = key.ConfirmedBy.Username,
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-                };
-
-                // Date badge
-                var dateBorder = new Border
-                {
-                    Background = Brushes.DarkSlateGray,
-                    BorderBrush = Brushes.Gray,
-                    BorderThickness = new Avalonia.Thickness(1),
-                    CornerRadius = new Avalonia.CornerRadius(3),
-                    Padding = new Avalonia.Thickness(6, 2),
-                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-                };
-
-                var dateText = new TextBlock
-                {
-                    Text = key.ConfirmedBy.Timestamp.ToString("MMM dd, yyyy"),
-                    FontSize = 11,
-                    FontStyle = Avalonia.Media.FontStyle.Italic,
-                    Foreground = Brushes.White
-                };
-
-                dateBorder.Child = dateText;
-                panel.Children.Add(usernameText);
-                panel.Children.Add(dateBorder);
-
-                return panel;
-            })
-        };
-        TranslationsGrid.Columns.Add(confirmedColumn);
-
         // Add Actions column at the end
         var actionsColumn = new DataGridTemplateColumn
         {
