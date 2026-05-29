@@ -1,10 +1,10 @@
-# IsometrixLingo v3.4.0 Release Notes
+# IsometrixLingo v4.0.0 Release Notes
 
-**Release Date:** May 29, 2026
+**Release Date:** May 30, 2026
 
 ## 🎉 Major Feature: Deployment Mode
 
-Version 3.4.0 introduces **Deployment Mode** (LP-13172), a developer-focused workflow that automates the deployment of translation files back to their original repository locations with intelligent path validation and safety features.
+Version 4.0.0 introduces **Deployment Mode** (LP-13172), a developer-focused workflow that automates the deployment of translation files back to their original repository locations with intelligent path validation and safety features.
 
 ---
 
