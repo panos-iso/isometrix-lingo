@@ -71,13 +71,14 @@ public class ResxTranslationFileWriter
 
     private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, XDocument? template, string? username, EditMode currentMode)
     {
-        XElement root;
+        XDocument doc;
 
         if (template != null)
         {
             // Use the provided template (clone it to avoid modifying the original)
-            var clonedTemplate = new XDocument(template);
-            root = clonedTemplate.Root ?? throw new InvalidOperationException("Template root is null");
+            // This preserves ALL original content including comments, declarations, etc.
+            doc = new XDocument(template);
+            var root = doc.Root ?? throw new InvalidOperationException("Template root is null");
 
             // Update existing data elements and track which keys we've processed
             var processedKeys = new HashSet<string>();
@@ -148,7 +149,7 @@ public class ResxTranslationFileWriter
         else
         {
             // Fall back to creating a new RESX structure
-            root = CreateResxDocument();
+            var root = CreateResxDocument();
 
             // Add data elements for each key in original order
             // Keys are already ordered correctly from consolidation
@@ -171,12 +172,13 @@ public class ResxTranslationFileWriter
 
                 root.Add(dataElement);
             }
+            
+            // Create new document (no template to preserve)
+            doc = new XDocument(
+                new XDeclaration("1.0", "utf-8", null),
+                root
+            );
         }
-
-        var doc = new XDocument(
-            new XDeclaration("1.0", "utf-8", null),
-            root
-        );
 
         // Save and preserve trailing newlines from original file
         var savedContent = doc.ToString();
