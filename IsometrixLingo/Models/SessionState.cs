@@ -24,4 +24,8 @@ public class SessionState
     public string LastExportFolder { get; set; } = string.Empty;
     public string LastExportFileName { get; set; } = string.Empty;
     public List<DeploymentPreviewItem> DeploymentPreviewItems { get; set; } = new();
+    public bool DeploymentValidationSuccess { get; set; } = false;
+    public string DeploymentValidationMessage { get; set; } = string.Empty;
+    public bool ShowDeploymentSuccess { get; set; } = false;
+    public string DeploymentSuccessMessage { get; set; } = string.Empty;
 }

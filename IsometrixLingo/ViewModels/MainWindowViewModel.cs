@@ -2281,7 +2281,11 @@ public partial class MainWindowViewModel : ViewModelBase
                 SuggestedDeploymentRoot = SuggestedDeploymentRoot,
                 LastExportFolder = _lastExportFolder ?? string.Empty,
                 LastExportFileName = _lastExportFileName ?? string.Empty,
-                DeploymentPreviewItems = DeploymentPreviewItems.ToList()
+                DeploymentPreviewItems = DeploymentPreviewItems.ToList(),
+                DeploymentValidationSuccess = DeploymentValidationSuccess,
+                DeploymentValidationMessage = DeploymentValidationMessage,
+                ShowDeploymentSuccess = ShowDeploymentSuccess,
+                DeploymentSuccessMessage = DeploymentSuccessMessage
             };
 
             _progressService.SaveProgress(sessionState);
@@ -2963,6 +2967,12 @@ public partial class MainWindowViewModel : ViewModelBase
                 DeploymentPreviewItems.Add(item);
             }
             
+            // Restore deployment validation and success state
+            DeploymentValidationSuccess = sessionState.DeploymentValidationSuccess;
+            DeploymentValidationMessage = sessionState.DeploymentValidationMessage;
+            ShowDeploymentSuccess = sessionState.ShowDeploymentSuccess;
+            DeploymentSuccessMessage = sessionState.DeploymentSuccessMessage;
+            
             // Notify property changes for deployment-related computed properties
             if (DeploymentPreviewItems.Count > 0)
             {
@@ -2970,6 +2980,10 @@ public partial class MainWindowViewModel : ViewModelBase
                 OnPropertyChanged(nameof(CanDeploy));
                 DeploymentPreviewSummary = $"{DeploymentPreviewItems.Count} file(s) ready for deployment";
             }
+            
+            // Notify property changes for deployment validation and success
+            OnPropertyChanged(nameof(HasDeploymentValidationResult));
+            OnPropertyChanged(nameof(DeploymentValidationBorderBrush));
 
             // Regenerate file pairs if we're on the FileMapping step
             if (CurrentStep == WorkflowStep.FileMapping || FileMappingStepStatus != StepStatus.NotStarted)

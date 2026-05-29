@@ -78,7 +78,11 @@ public class ProgressService
                 TargetPath = dpi.TargetPath,
                 IsValid = dpi.IsValid,
                 ErrorMessage = dpi.ErrorMessage
-            }).ToList()
+            }).ToList(),
+            DeploymentValidationSuccess = state.DeploymentValidationSuccess,
+            DeploymentValidationMessage = state.DeploymentValidationMessage,
+            ShowDeploymentSuccess = state.ShowDeploymentSuccess,
+            DeploymentSuccessMessage = state.DeploymentSuccessMessage
         };
 
         var json = JsonSerializer.Serialize(serializableState, AppJsonSerializerContext.Default.SerializableSessionState);
@@ -158,7 +162,11 @@ public class ProgressService
                     TargetPath = sdpi.TargetPath,
                     IsValid = sdpi.IsValid,
                     ErrorMessage = sdpi.ErrorMessage
-                }).ToList()
+                }).ToList(),
+                DeploymentValidationSuccess = serializableState.DeploymentValidationSuccess,
+                DeploymentValidationMessage = serializableState.DeploymentValidationMessage,
+                ShowDeploymentSuccess = serializableState.ShowDeploymentSuccess,
+                DeploymentSuccessMessage = serializableState.DeploymentSuccessMessage
             };
 
             return sessionState;
