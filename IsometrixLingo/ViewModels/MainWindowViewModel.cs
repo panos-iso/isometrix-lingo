@@ -1809,20 +1809,27 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var outputPath = folder[0].Path.LocalPath;
 
-        // Group all keys by file type and export using appropriate writer
+        // Validate that we have the source directory (imported files location)
+        if (string.IsNullOrEmpty(_rootDirectoryPath) || !Directory.Exists(_rootDirectoryPath))
+        {
+            StatusMessage = "Source directory not found. Cannot export - please re-import files.";
+            return;
+        }
+
+        // Group all keys by file type and export using copy-then-update approach
         var jsonKeys = allKeys.Where(k => k.Source.Type == FileType.Json).ToList();
         var resxKeys = allKeys.Where(k => k.Source.Type == FileType.Resx).ToList();
 
         if (jsonKeys.Count > 0)
         {
-            // Provide template provider function to preserve original JSON structure
-            _jsonWriter.WriteFiles(jsonKeys, outputPath, sourceFileName => _translationStore.GetJsonTemplate(sourceFileName), Username, CurrentMode);
+            // Copy original files and update them in-place (preserves ALL original content)
+            _jsonWriter.CopyAndUpdateFiles(jsonKeys, _rootDirectoryPath, outputPath, Username, CurrentMode);
         }
 
         if (resxKeys.Count > 0)
         {
-            // Provide template provider function to preserve original RESX structure
-            _resxWriter.WriteFiles(resxKeys, outputPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName), Username, CurrentMode);
+            // Copy original files and update them in-place (preserves ALL original content)
+            _resxWriter.CopyAndUpdateFiles(resxKeys, _rootDirectoryPath, outputPath, Username, CurrentMode);
         }
 
         StatusMessage = $"Exported {allKeys.Count} translation key(s) to {outputPath}.";

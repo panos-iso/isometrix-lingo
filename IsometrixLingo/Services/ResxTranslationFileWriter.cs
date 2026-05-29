@@ -13,6 +13,168 @@ public class ResxTranslationFileWriter
     private static readonly XNamespace Msdata = "urn:schemas-microsoft-com:xml-msdata";
 
     /// <summary>
+    /// Copy original files and update them in-place with changes. Preserves ALL original file content.
+    /// </summary>
+    /// <param name="keys">Translation keys to export</param>
+    /// <param name="sourceDirectory">Source directory containing original imported files</param>
+    /// <param name="outputDirectory">Output directory for exported files</param>
+    /// <param name="username">Username for auditing (optional)</param>
+    /// <param name="currentMode">Current workflow mode (Edit/Suggest/Deployment)</param>
+    public void CopyAndUpdateFiles(List<TranslationKey> keys, string sourceDirectory, string outputDirectory, string? username = null, EditMode currentMode = EditMode.Edit)
+    {
+        if (!Directory.Exists(outputDirectory))
+        {
+            Directory.CreateDirectory(outputDirectory);
+        }
+
+        // Group keys by source file
+        var groupedByFile = keys.GroupBy(k => k.Source);
+
+        foreach (var fileGroup in groupedByFile)
+        {
+            var source = fileGroup.Key;
+            var fileKeys = fileGroup.ToList();
+
+            // Get all languages for this file
+            var languages = fileKeys
+                .SelectMany(k => k.LanguageValues.Keys)
+                .Distinct()
+                .ToList();
+
+            // Process each language file
+            foreach (var language in languages)
+            {
+                // For English, use base filename without language code; for others, add underscore + language
+                var fileName = language == "en"
+                    ? $"{source.Name}.resx"
+                    : $"{source.Name}_{language}.resx";
+                
+                // Build source and target paths
+                var sourcePath = string.IsNullOrEmpty(source.DirectoryPath)
+                    ? Path.Combine(sourceDirectory, fileName)
+                    : Path.Combine(sourceDirectory, source.DirectoryPath, fileName);
+
+                var targetDirectory = string.IsNullOrEmpty(source.DirectoryPath)
+                    ? outputDirectory
+                    : Path.Combine(outputDirectory, source.DirectoryPath);
+
+                if (!Directory.Exists(targetDirectory))
+                {
+                    Directory.CreateDirectory(targetDirectory);
+                }
+
+                var targetPath = Path.Combine(targetDirectory, fileName);
+
+                // Copy original file to preserve ALL content
+                if (File.Exists(sourcePath))
+                {
+                    File.Copy(sourcePath, targetPath, overwrite: true);
+                }
+                else
+                {
+                    // No original file - create new one (shouldn't happen in normal flow)
+                    WriteLanguageFile(targetPath, fileKeys, language, null, username, currentMode);
+                    continue;
+                }
+
+                // Update the copied file in-place
+                UpdateResxFileInPlace(targetPath, fileKeys, language, username, currentMode);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Update a RESX file in-place by modifying existing values and appending new keys at the end.
+    /// </summary>
+    private void UpdateResxFileInPlace(string filePath, List<TranslationKey> keys, string language, string? username, EditMode currentMode)
+    {
+        var doc = XDocument.Load(filePath);
+        var root = doc.Root;
+        
+        if (root == null)
+        {
+            return;
+        }
+
+        // Track which keys exist in original file
+        var existingDataElements = root.Elements("data").ToList();
+        var existingKeys = new HashSet<string>();
+        
+        foreach (var dataElement in existingDataElements)
+        {
+            var keyName = dataElement.Attribute("name")?.Value;
+            if (keyName != null)
+            {
+                existingKeys.Add(keyName);
+            }
+        }
+
+        // Update existing values and collect new keys
+        var newKeys = new List<TranslationKey>();
+        
+        foreach (var key in keys)
+        {
+            if (existingKeys.Contains(key.Key))
+            {
+                // Update existing key
+                var dataElement = existingDataElements.FirstOrDefault(e => e.Attribute("name")?.Value == key.Key);
+                if (dataElement != null)
+                {
+                    var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+                    
+                    // Update value element
+                    var valueElement = dataElement.Element("value");
+                    if (valueElement != null)
+                    {
+                        valueElement.Value = value;
+                    }
+                    else
+                    {
+                        dataElement.Add(new XElement("value", value));
+                    }
+                    
+                    // Update annotations (only in Edit and Suggest modes)
+                    if (currentMode != EditMode.Deployment)
+                    {
+                        // Remove existing annotation comments
+                        dataElement.Nodes().OfType<XComment>().ToList().ForEach(c => c.Remove());
+                        AddAnnotationsAsComments(dataElement, key, language, username, currentMode == EditMode.Edit);
+                    }
+                }
+            }
+            else
+            {
+                // New key - will append at end
+                newKeys.Add(key);
+            }
+        }
+
+        // Append new keys at the end of root element
+        foreach (var key in newKeys)
+        {
+            var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+            
+            var dataElement = new XElement("data",
+                new XAttribute("name", key.Key),
+                new XAttribute(XNamespace.Xml + "space", "preserve"),
+                new XElement("value", value)
+            );
+
+            // Add annotations (only in Edit and Suggest modes)
+            if (currentMode != EditMode.Deployment)
+            {
+                AddAnnotationsAsComments(dataElement, key, language, username, currentMode == EditMode.Edit);
+            }
+
+            // Append to end
+            root.Add(dataElement);
+        }
+
+        // Save preserving original content
+        doc.Save(filePath);
+    }
+
+    /// <summary>
     /// Writes translation keys to RESX files, grouped by language and source file
     /// </summary>
     /// <param name="keys">Translation keys to write</param>
