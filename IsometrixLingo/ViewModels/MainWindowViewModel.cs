@@ -2393,6 +2393,11 @@ public partial class MainWindowViewModel : ViewModelBase
         DeploymentPreviewSummary = string.Empty;
         ValidationMessage = string.Empty;
         ShowDeployAgainButton = false;
+        DeploymentValidationSuccess = false;
+        DeploymentValidationMessage = string.Empty;
+        ShowDeploymentSuccess = false;
+        DeploymentSuccessMessage = string.Empty;
+        DeploymentHistory.Clear();
         ImportErrors.Clear();
         HasErrors = false;
         ErrorCount = 0;
