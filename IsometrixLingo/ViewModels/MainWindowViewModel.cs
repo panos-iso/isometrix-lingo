@@ -192,6 +192,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _deploymentSuccessMessage = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DeployButtonText))]
     private bool _showDeploymentSuccess = false;
 
     public bool HasSuggestedDeploymentRoot => !string.IsNullOrWhiteSpace(SuggestedDeploymentRoot);
@@ -204,6 +205,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool CanDeploy => !string.IsNullOrWhiteSpace(DeploymentRootPath) && 
                              DeploymentRootPath != "Click 'Select Folder' to choose deployment directory" &&
                              DeploymentValidationSuccess;
+    public string DeployButtonText => ShowDeploymentSuccess ? "Re-deploy" : "Deploy";
 
     public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
     public bool ShowFileMappingStep => CurrentStep == WorkflowStep.FileMapping;

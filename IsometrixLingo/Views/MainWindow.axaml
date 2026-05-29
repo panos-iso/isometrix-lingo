@@ -1037,7 +1037,7 @@
                             Command="{Binding DeployAgainCommand}"
                             IsVisible="{Binding ShowDeployAgainButton}"
                             Padding="15,8"/>
-                    <Button Content="Deploy"
+                    <Button Content="{Binding DeployButtonText}"
                             Classes="PrimaryButton"
                             Command="{Binding ValidateAndDeployCommand}"
                             IsEnabled="{Binding CanDeploy}"
@@ -1137,25 +1137,20 @@
                                 BorderBrush="#4CAF50"
                                 BorderThickness="2"
                                 CornerRadius="8"
-                                Padding="30"
+                                Padding="20"
                                 IsVisible="{Binding ShowDeploymentSuccess}">
-                            <StackPanel Spacing="12"
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="15"
                                         HorizontalAlignment="Center">
                                 <TextBlock Text="🎉"
-                                           FontSize="40"
-                                           HorizontalAlignment="Center"/>
+                                           FontSize="32"
+                                           VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding DeploymentSuccessMessage}"
-                                           FontSize="16"
-                                           FontWeight="Bold"
-                                           TextAlignment="Center"
+                                           FontSize="14"
+                                           FontWeight="SemiBold"
                                            TextWrapping="Wrap"
-                                           Foreground="White"
-                                           HorizontalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-                                        Command="{Binding ViewDeploymentDetailsCommand}"
-                                        Padding="12,6"
-                                        HorizontalAlignment="Left"/>
+                                           VerticalAlignment="Center"
+                                           Foreground="White"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
