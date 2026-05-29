@@ -120,7 +120,8 @@ public class ResxTranslationFileWriter
                 }
             }
 
-            // Add new data elements for keys that weren't in the template (preserve original order)
+            // Add new data elements for keys that weren't in the template
+            // These are APPENDED AT THE END of the file (not inserted in the middle)
             foreach (var key in keys)
             {
                 if (!processedKeys.Contains(key.Key))
@@ -139,6 +140,7 @@ public class ResxTranslationFileWriter
                         AddAnnotationsAsComments(dataElement, key, language, username, currentMode == EditMode.Edit);
                     }
 
+                    // Append to end of file
                     root.Add(dataElement);
                 }
             }
@@ -148,7 +150,8 @@ public class ResxTranslationFileWriter
             // Fall back to creating a new RESX structure
             root = CreateResxDocument();
 
-            // Add data elements for each key (preserve original order)
+            // Add data elements for each key in original order
+            // Keys are already ordered correctly from consolidation
             foreach (var key in keys)
             {
                 var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;

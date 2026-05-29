@@ -71,13 +71,15 @@ public class JsonTranslationFileReader
         var directoryPath = files.FirstOrDefault()?.RelativeDirectoryPath;
 
         // Collect all unique keys across all files IN ORDER
+        // Keys from first file establish the order
+        // New keys from subsequent files are APPENDED AT THE END
         foreach (var file in files)
         {
             foreach (var key in file.Keys)
             {
                 if (!keyIndex.ContainsKey(key.Key))
                 {
-                    // New key - add to list
+                    // New key not seen before - APPEND to end of list
                     var translationKey = new TranslationKey
                     {
                         Key = key.Key,

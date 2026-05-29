@@ -111,6 +111,7 @@ public class ResxTranslationFileReader
     public List<TranslationKey> ConsolidateKeys(List<TranslationFile> files)
     {
         // Use a list to preserve the order keys are encountered (first file wins for order)
+        // New keys from subsequent files are APPENDED AT THE END
         var consolidatedKeys = new List<TranslationKey>();
         var keyIndex = new Dictionary<string, int>(); // Track which index each key is at
         var directoryPath = files.FirstOrDefault()?.RelativeDirectoryPath;
@@ -121,7 +122,7 @@ public class ResxTranslationFileReader
             {
                 if (keyIndex.TryGetValue(key.Key, out var index))
                 {
-                    // Key exists - merge language values
+                    // Key exists - merge language values (no position change)
                     var existingKey = consolidatedKeys[index];
                     foreach (var langValue in key.LanguageValues)
                     {
@@ -136,7 +137,7 @@ public class ResxTranslationFileReader
                 }
                 else
                 {
-                    // New key - add to list preserving order
+                    // New key not seen before - APPEND to end of list
                     var translationKey = new TranslationKey
                     {
                         Key = key.Key,
