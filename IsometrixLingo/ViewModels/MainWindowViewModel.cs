@@ -2672,23 +2672,32 @@ public partial class MainWindowViewModel : ViewModelBase
         var tempFolderPath = Path.Combine(tempRootPath, folderName);
         var zipFilePath = Path.Combine(outputPath, zipFileName);
 
+        // Validate that we have the source directory
+        if (string.IsNullOrEmpty(_rootDirectoryPath) || !Directory.Exists(_rootDirectoryPath))
+        {
+            StatusMessage = "Source directory not found. Cannot export - please re-import files.";
+            return;
+        }
+
         try
         {
             // Create temporary folder structure for exported files
             Directory.CreateDirectory(tempFolderPath);
 
-            // Group all keys by file type and export to temp folder
+            // Group all keys by file type and export to temp folder using copy-then-update
             var jsonKeys = allKeys.Where(k => k.Source.Type == FileType.Json).ToList();
             var resxKeys = allKeys.Where(k => k.Source.Type == FileType.Resx).ToList();
 
             if (jsonKeys.Count > 0)
             {
-                _jsonWriter.WriteFiles(jsonKeys, tempFolderPath, sourceFileName => _translationStore.GetJsonTemplate(sourceFileName), Username, CurrentMode);
+                // Copy original files and update them in-place (preserves ALL original content)
+                _jsonWriter.CopyAndUpdateFiles(jsonKeys, _rootDirectoryPath, tempFolderPath, Username, CurrentMode);
             }
 
             if (resxKeys.Count > 0)
             {
-                _resxWriter.WriteFiles(resxKeys, tempFolderPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName), Username, CurrentMode);
+                // Copy original files and update them in-place (preserves ALL original content)
+                _resxWriter.CopyAndUpdateFiles(resxKeys, _rootDirectoryPath, tempFolderPath, Username, CurrentMode);
             }
 
             // Create ZIP file from the root temp folder (includes the named folder)
