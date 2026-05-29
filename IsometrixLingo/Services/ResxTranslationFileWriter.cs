@@ -7,6 +7,14 @@ using IsometrixLingo.Models;
 
 namespace IsometrixLingo.Services;
 
+/// <summary>
+/// StringWriter that reports UTF-8 encoding (used for XML serialization)
+/// </summary>
+internal class Utf8StringWriter : StringWriter
+{
+    public override System.Text.Encoding Encoding => System.Text.Encoding.UTF8;
+}
+
 public class ResxTranslationFileWriter
 {
     private static readonly XNamespace Xsd = "http://www.w3.org/2001/XMLSchema";
@@ -170,8 +178,13 @@ public class ResxTranslationFileWriter
             doc.Declaration = new XDeclaration("1.0", "utf-8", null);
         }
 
-        // Save - this will write the declaration and preserve structure
-        doc.Save(filePath);
+        // Save to string first, then write to file WITHOUT BOM (original files don't have BOM)
+        var stringWriter = new Utf8StringWriter();
+        doc.Save(stringWriter, SaveOptions.DisableFormatting);
+        var xmlContent = stringWriter.ToString();
+        
+        // Write to file with UTF-8 encoding WITHOUT BOM
+        System.IO.File.WriteAllText(filePath, xmlContent, new System.Text.UTF8Encoding(false));
     }
 
     /// <summary>
