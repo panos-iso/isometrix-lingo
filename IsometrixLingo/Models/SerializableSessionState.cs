@@ -18,7 +18,21 @@ public class SerializableSessionState
     public StepStatus ModeSelectionStepStatus { get; set; } = StepStatus.NotStarted;
     public StepStatus EditStepStatus { get; set; } = StepStatus.NotStarted;
     public StepStatus ExportStepStatus { get; set; } = StepStatus.NotStarted;
+    public StepStatus DeployStepStatus { get; set; } = StepStatus.NotStarted;
     public EditMode CurrentMode { get; set; } = EditMode.Edit;
+    
+    // Deployment-related properties
+    public string RootDirectoryPath { get; set; } = string.Empty;
+    public string DeploymentRootPath { get; set; } = string.Empty;
+    public string SuggestedDeploymentRoot { get; set; } = string.Empty;
+    public string LastExportFolder { get; set; } = string.Empty;
+    public string LastExportFileName { get; set; } = string.Empty;
+    public List<SerializableDeploymentPreviewItem> DeploymentPreviewItems { get; set; } = new();
+    public bool DeploymentValidationSuccess { get; set; } = false;
+    public string DeploymentValidationMessage { get; set; } = string.Empty;
+    public bool ShowDeploymentSuccess { get; set; } = false;
+    public string DeploymentSuccessMessage { get; set; } = string.Empty;
+    public List<SerializableDeploymentHistoryEntry> DeploymentHistory { get; set; } = new();
 }
 
 /// <summary>
@@ -64,4 +78,15 @@ public class SerializableConfirmation
 {
     public string Username { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
+}
+
+/// <summary>
+/// Serializable version of DeploymentPreviewItem
+/// </summary>
+public class SerializableDeploymentPreviewItem
+{
+    public string SourcePath { get; set; } = string.Empty;
+    public string TargetPath { get; set; } = string.Empty;
+    public bool IsValid { get; set; } = true;
+    public string? ErrorMessage { get; set; }
 }

@@ -19,7 +19,6 @@ public class TranslationStore
     private string _currentSearchTerm = string.Empty;
     private bool _showOnlyMissingTranslations = false;
     private bool _showOnlyWithSuggestions = false;
-    private bool _showOnlyUnconfirmed = false;
     private bool _hasUnsavedChanges = false;
 
     public ObservableCollection<TranslationKey> FilteredKeys => _filteredKeys;
@@ -65,12 +64,6 @@ public class TranslationStore
                     }
                 }
                 existingKey.SuggestedValues = mergedSuggestions;
-
-                // Merge confirmation if present in the new key
-                if (key.ConfirmedBy != null)
-                {
-                    existingKey.ConfirmedBy = key.ConfirmedBy;
-                }
 
                 // Update missing translations status
                 existingKey.UpdateMissingTranslationsStatus();
@@ -153,12 +146,6 @@ public class TranslationStore
         ApplyFilters();
     }
 
-    public void FilterByConfirmation(bool showOnlyUnconfirmed)
-    {
-        _showOnlyUnconfirmed = showOnlyUnconfirmed;
-        ApplyFilters();
-    }
-
     private void ApplyFilters()
     {
         _filteredKeys.Clear();
@@ -199,12 +186,6 @@ public class TranslationStore
         if (_showOnlyWithSuggestions)
         {
             keysToShow = keysToShow.Where(k => k.HasAnySuggestions);
-        }
-
-        // Apply unconfirmed filter if enabled
-        if (_showOnlyUnconfirmed)
-        {
-            keysToShow = keysToShow.Where(k => !k.IsConfirmed);
         }
 
         foreach (var key in keysToShow)

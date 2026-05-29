@@ -40,3 +40,21 @@ public class IsSuggestModeConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+
+public class IsDeploymentModeConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is EditMode mode)
+        {
+            return mode == EditMode.Deployment;
+        }
+
+        return false; // Default to not showing Deployment mode UI
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}

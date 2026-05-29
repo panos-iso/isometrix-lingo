@@ -22,22 +22,31 @@ public class ResxTranslationFileReader
         var xdoc = XDocument.Load(filePath);
 
         // Query the <data> elements
-        var resources = xdoc.Descendants("data")
-            .Where(data => data.Attribute("name") != null && data.Element("value") != null)
-            .Select(data => new
-            {
-                Name = data.Attribute("name")!.Value,
-                Value = data.Element("value")!.Value
-            });
+        var dataElements = xdoc.Descendants("data")
+            .Where(data => data.Attribute("name") != null && data.Element("value") != null);
 
-        foreach (var resource in resources)
+        foreach (var dataElement in dataElements)
         {
-            var rawValue = resource.Value;
-            var (actualValue, suggestion, confirmation) = ParseValue(rawValue, language);
+            var keyName = dataElement.Attribute("name")!.Value;
+            var actualValue = dataElement.Element("value")!.Value;
+            Suggestion? suggestion = null;
+            
+            // Check for XML comments (iso-lingo-audit format)
+            var comments = dataElement.Nodes().OfType<XComment>().ToList();
+            foreach (var comment in comments)
+            {
+                var commentText = comment.Value.Trim();
+                
+                // Check if comment contains suggestion
+                if (commentText.StartsWith("iso-lingo-audit:SUGGESTION:", StringComparison.Ordinal))
+                {
+                    suggestion = Suggestion.FromFileFormat(commentText);
+                }
+            }
             
             var translationKey = new TranslationKey
             {
-                Key = resource.Name,
+                Key = keyName,
                 Source = new SourceFile(baseFileName, FileType.Resx),
                 LanguageValues = new Dictionary<string, string>
                 {
@@ -48,12 +57,6 @@ public class ResxTranslationFileReader
             if (suggestion != null)
             {
                 translationKey.SuggestedValues[language] = suggestion;
-            }
-            
-            // Confirmation is at key level, store in base file (English)
-            if (confirmation != null && language == "en")
-            {
-                translationKey.ConfirmedBy = confirmation;
             }
             
             keys.Add(translationKey);
@@ -107,16 +110,20 @@ public class ResxTranslationFileReader
     /// </summary>
     public List<TranslationKey> ConsolidateKeys(List<TranslationFile> files)
     {
-        var consolidatedKeys = new Dictionary<string, TranslationKey>();
+        // Use a list to preserve the order keys are encountered (first file wins for order)
+        // New keys from subsequent files are APPENDED AT THE END
+        var consolidatedKeys = new List<TranslationKey>();
+        var keyIndex = new Dictionary<string, int>(); // Track which index each key is at
         var directoryPath = files.FirstOrDefault()?.RelativeDirectoryPath;
 
         foreach (var file in files)
         {
             foreach (var key in file.Keys)
             {
-                if (consolidatedKeys.TryGetValue(key.Key, out var existingKey))
+                if (keyIndex.TryGetValue(key.Key, out var index))
                 {
-                    // Merge language values
+                    // Key exists - merge language values (no position change)
+                    var existingKey = consolidatedKeys[index];
                     foreach (var langValue in key.LanguageValues)
                     {
                         existingKey.LanguageValues[langValue.Key] = langValue.Value;
@@ -127,31 +134,26 @@ public class ResxTranslationFileReader
                     {
                         existingKey.SuggestedValues[suggestion.Key] = suggestion.Value;
                     }
-                    
-                    // Merge confirmation (from base file)
-                    if (key.ConfirmedBy != null && existingKey.ConfirmedBy == null)
-                    {
-                        existingKey.ConfirmedBy = key.ConfirmedBy;
-                    }
                 }
                 else
                 {
-                    // Create new key with updated Source including directory path
-                    consolidatedKeys[key.Key] = new TranslationKey
+                    // New key not seen before - APPEND to end of list
+                    var translationKey = new TranslationKey
                     {
                         Key = key.Key,
                         Source = new SourceFile(key.Source.Name, key.Source.Type, directoryPath),
                         LanguageValues = new Dictionary<string, string>(key.LanguageValues),
-                        SuggestedValues = new Dictionary<string, Suggestion>(key.SuggestedValues),
-                        ConfirmedBy = key.ConfirmedBy
+                        SuggestedValues = new Dictionary<string, Suggestion>(key.SuggestedValues)
                     };
+                    consolidatedKeys.Add(translationKey);
+                    keyIndex[key.Key] = consolidatedKeys.Count - 1;
                 }
             }
         }
 
-        // Fill in missing language values with empty strings
+        // Fill in missing language values with empty strings for consistency
         var allLanguages = files.Select(f => f.Language).Distinct().ToList();
-        foreach (var translationKey in consolidatedKeys.Values)
+        foreach (var translationKey in consolidatedKeys)
         {
             foreach (var language in allLanguages)
             {
@@ -163,61 +165,8 @@ public class ResxTranslationFileReader
             translationKey.UpdateMissingTranslationsStatus();
         }
 
-        return consolidatedKeys.Values.OrderBy(k => k.Key).ToList();
-    }
-
-    /// <summary>
-    /// Parse a value string that may contain a suggestion and/or confirmation
-    /// Format: "actual value SUGGESTION:suggested_value,by:[username],at:[datetime] CONFIRMED:by:[username],at:[datetime]"
-    /// Returns the actual value, parsed suggestion (if present), and parsed confirmation (if present)
-    /// </summary>
-    private (string actualValue, Suggestion? suggestion, Confirmation? confirmation) ParseValue(string rawValue, string language)
-    {
-        const string suggestionPrefix = " SUGGESTION:";
-        const string confirmedPrefix = " CONFIRMED:";
-        
-        var actualValue = rawValue;
-        Suggestion? suggestion = null;
-        Confirmation? confirmation = null;
-        
-        // Check for SUGGESTION
-        var suggestionIndex = rawValue.IndexOf(suggestionPrefix, StringComparison.Ordinal);
-        if (suggestionIndex != -1)
-        {
-            actualValue = rawValue.Substring(0, suggestionIndex);
-            var remainingAfterValue = rawValue.Substring(suggestionIndex + 1); // Skip the leading space
-            
-            // Find where suggestion ends (either at CONFIRMED or end of string)
-            var confirmedIndexInRemaining = remainingAfterValue.IndexOf(confirmedPrefix, StringComparison.Ordinal);
-            
-            string suggestionPart;
-            if (confirmedIndexInRemaining != -1)
-            {
-                suggestionPart = remainingAfterValue.Substring(0, confirmedIndexInRemaining);
-            }
-            else
-            {
-                suggestionPart = remainingAfterValue;
-            }
-            
-            suggestion = Suggestion.FromFileFormat(suggestionPart);
-        }
-        
-        // Check for CONFIRMED
-        var confirmedIndex = rawValue.IndexOf(confirmedPrefix, StringComparison.Ordinal);
-        if (confirmedIndex != -1)
-        {
-            // If there's no suggestion, extract actual value up to CONFIRMED
-            if (suggestionIndex == -1)
-            {
-                actualValue = rawValue.Substring(0, confirmedIndex);
-            }
-            
-            var confirmedPart = rawValue.Substring(confirmedIndex + 1); // Skip the leading space
-            confirmation = Confirmation.FromFileFormat(confirmedPart);
-        }
-        
-        return (actualValue, suggestion, confirmation);
+        // Return in original order - NO SORTING
+        return consolidatedKeys;
     }
 
     /// <summary>

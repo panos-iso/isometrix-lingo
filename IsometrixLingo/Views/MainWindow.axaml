@@ -99,7 +99,7 @@
             
             <!-- App Title and Version (Top Left) -->
             <TextBlock Grid.Column="1"
-                       Text="Isometrix Lingo v3.3.2"
+                       Text="Isometrix Lingo v4.0.0"
                        FontSize="13"
                        FontWeight="SemiBold"
                        VerticalAlignment="Center"
@@ -487,7 +487,7 @@
                 </StackPanel>
 
                 <!-- Main content -->
-                <StackPanel Spacing="20">
+                <StackPanel Spacing="20" Margin="0,0,0,20">
                     <!-- Header -->
                     <StackPanel Spacing="10">
                         <TextBlock Text="Step 3: Choose Your Mode"
@@ -501,13 +501,23 @@
                     </StackPanel>
 
                     <!-- Mode Selection Boxes -->
-                    <Grid ColumnDefinitions="*,20,*" Margin="0,20,0,0">
+                    <!-- When not developer: centered 2 boxes | When developer: left-aligned 3 boxes -->
+                    <Grid Margin="0,20,0,0" HorizontalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
                         <!-- Edit Mode Box -->
                         <Border Grid.Column="0"
+                                Width="280"
                                 Background="#E3F2FD"
                                 BorderThickness="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderThicknessConverter}, ConverterParameter=Edit}"
                                 CornerRadius="10"
-                                Padding="30"
+                                Padding="20"
                                 Cursor="Hand"
                                 Tapped="OnEditModeBoxTapped"
                                 BoxShadow="0 4 8 0 #40000000">
@@ -519,20 +529,20 @@
                                     <Setter Property="BoxShadow" Value="0 6 16 0 #60000000"/>
                                 </Style>
                             </Border.Styles>
-                            <StackPanel Spacing="15">
+                            <StackPanel Spacing="10">
                                 <TextBlock Text="✏️ Edit Mode"
-                                           FontSize="24"
+                                           FontSize="22"
                                            FontWeight="Bold"
                                            Foreground="#0D47A1"
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Directly modify translation values"
-                                           FontSize="16"
+                                           FontSize="14"
                                            TextWrapping="Wrap"
                                            HorizontalAlignment="Center"
                                            Foreground="#1976D2"/>
-                                <Border Height="2" Background="#BBDEFB" Margin="0,5,0,5"/>
+                                <Border Height="2" Background="#BBDEFB" Margin="0,3,0,3"/>
                                 <TextBlock TextWrapping="Wrap"
-                                           FontSize="14"
+                                           FontSize="13"
                                            Foreground="#424242">
                                     <Run Text="• Edit actual translation values"/><LineBreak/>
                                     <Run Text="• Add new translation keys"/><LineBreak/>
@@ -542,24 +552,25 @@
                                 <!-- Selected indicator -->
                                 <Border Background="#1976D2"
                                         CornerRadius="5"
-                                        Padding="10,5"
+                                        Padding="8,4"
                                         HorizontalAlignment="Center"
                                         IsVisible="{Binding CurrentMode, Converter={StaticResource IsEditModeConverter}}"
-                                        Margin="0,10,0,0">
+                                        Margin="0,5,0,0">
                                     <TextBlock Text="✓ SELECTED"
                                                Foreground="White"
                                                FontWeight="Bold"
-                                               FontSize="14"/>
+                                               FontSize="13"/>
                                 </Border>
                             </StackPanel>
                         </Border>
 
                         <!-- Suggest Mode Box -->
                         <Border Grid.Column="2"
+                                Width="280"
                                 Background="#F3E5F5"
                                 BorderThickness="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderThicknessConverter}, ConverterParameter=Suggest}"
                                 CornerRadius="10"
-                                Padding="30"
+                                Padding="20"
                                 Cursor="Hand"
                                 Tapped="OnSuggestModeBoxTapped"
                                 BoxShadow="0 4 8 0 #40000000">
@@ -571,20 +582,20 @@
                                     <Setter Property="BoxShadow" Value="0 6 16 0 #60000000"/>
                                 </Style>
                             </Border.Styles>
-                            <StackPanel Spacing="15">
+                            <StackPanel Spacing="10">
                                 <TextBlock Text="💡 Suggest Mode"
-                                           FontSize="24"
+                                           FontSize="22"
                                            FontWeight="Bold"
                                            Foreground="#6A1B9A"
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Propose translation changes for review"
-                                           FontSize="16"
+                                           FontSize="14"
                                            TextWrapping="Wrap"
                                            HorizontalAlignment="Center"
                                            Foreground="#8E24AA"/>
-                                <Border Height="2" Background="#E1BEE7" Margin="0,5,0,5"/>
+                                <Border Height="2" Background="#E1BEE7" Margin="0,3,0,3"/>
                                 <TextBlock TextWrapping="Wrap"
-                                           FontSize="14"
+                                           FontSize="13"
                                            Foreground="#424242">
                                     <Run Text="• Suggest updates to existing values"/><LineBreak/>
                                     <Run Text="• Suggest translations for new keys"/><LineBreak/>
@@ -594,14 +605,69 @@
                                 <!-- Selected indicator -->
                                 <Border Background="#7B1FA2"
                                         CornerRadius="5"
-                                        Padding="10,5"
+                                        Padding="8,4"
                                         HorizontalAlignment="Center"
                                         IsVisible="{Binding CurrentMode, Converter={StaticResource IsSuggestModeConverter}}"
-                                        Margin="0,10,0,0">
+                                        Margin="0,5,0,0">
                                     <TextBlock Text="✓ SELECTED"
                                                Foreground="White"
                                                FontWeight="Bold"
-                                               FontSize="14"/>
+                                               FontSize="13"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Deployment Mode Box (Developer Only) -->
+                        <Border Grid.Column="4"
+                                Width="280"
+                                Background="#FFF3E0"
+                                BorderThickness="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderThicknessConverter}, ConverterParameter=Deployment}"
+                                CornerRadius="10"
+                                Padding="20"
+                                Cursor="Hand"
+                                Tapped="OnDeploymentModeBoxTapped"
+                                BoxShadow="0 4 8 0 #40000000"
+                                IsVisible="{Binding IsDeveloper}">
+                            <Border.BorderBrush>
+                                <SolidColorBrush Color="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderColorConverter}, ConverterParameter=Deployment}"/>
+                            </Border.BorderBrush>
+                            <Border.Styles>
+                                <Style Selector="Border:pointerover">
+                                    <Setter Property="BoxShadow" Value="0 6 16 0 #60000000"/>
+                                </Style>
+                            </Border.Styles>
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="🚀 Deployment Mode"
+                                           FontSize="22"
+                                           FontWeight="Bold"
+                                           Foreground="#E65100"
+                                           HorizontalAlignment="Center"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="Deploy translations directly to repository"
+                                           FontSize="14"
+                                           TextWrapping="Wrap"
+                                           HorizontalAlignment="Center"
+                                           Foreground="#F57C00"/>
+                                <Border Height="2" Background="#FFE0B2" Margin="0,3,0,3"/>
+                                <TextBlock TextWrapping="Wrap"
+                                           FontSize="13"
+                                           Foreground="#424242">
+                                    <Run Text="• Skip editing - fast deployment"/><LineBreak/>
+                                    <Run Text="• Auto-validate paths before deploy"/><LineBreak/>
+                                    <Run Text="• Deploy to original repo locations"/><LineBreak/>
+                                    <Run Text="• Developer mode only"/>
+                                </TextBlock>
+                                <!-- Selected indicator -->
+                                <Border Background="#FF6F00"
+                                        CornerRadius="5"
+                                        Padding="8,4"
+                                        HorizontalAlignment="Center"
+                                        IsVisible="{Binding CurrentMode, Converter={StaticResource IsDeploymentModeConverter}}"
+                                        Margin="0,5,0,0">
+                                    <TextBlock Text="✓ SELECTED"
+                                               Foreground="White"
+                                               FontWeight="Bold"
+                                               FontSize="13"/>
                                 </Border>
                             </StackPanel>
                         </Border>
@@ -724,10 +790,6 @@
                                         <CheckBox Content="Only With Suggestions"
                                                   IsChecked="{Binding ShowOnlyWithSuggestions}"
                                                   ToolTip.Tip="Show only keys that have suggestions"/>
-                                        <CheckBox Content="Only Unconfirmed"
-                                                  IsChecked="{Binding ShowOnlyUnconfirmed}"
-                                                  IsVisible="{Binding CurrentMode, Converter={StaticResource IsEditModeConverter}}"
-                                                  ToolTip.Tip="Show only keys that are unconfirmed (missing translations or lacking confirmation audit)"/>
                                     </StackPanel>
                                 </Flyout>
                             </Button.Flyout>
@@ -846,48 +908,13 @@
                                   CanUserResizeColumns="True"
                                   CanUserReorderColumns="False"
                                   DoubleTapped="OnGridDoubleTapped"
+                                  ColumnWidth="*"
                                   ToolTip.Tip="{Binding CurrentMode, Converter={StaticResource EditModeTooltipConverter}}">                                  
                             <DataGrid.Styles>
                                 <Style Selector="DataGridRow" x:DataType="models:TranslationKey">
                                     <Setter Property="Background" Value="{Binding HasMissingTranslations, Converter={StaticResource MissingTranslationBorderConverter}}"/>
                                 </Style>
                             </DataGrid.Styles>
-                            <DataGrid.Columns>
-                                <DataGridTemplateColumn Header="Source File" 
-                                                        Width="*" 
-                                                        MinWidth="120"
-                                                        MaxWidth="250">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate DataType="models:TranslationKey">
-                                            <StackPanel Orientation="Vertical" 
-                                                        Margin="5,4"
-                                                        VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
-                                                           TextWrapping="Wrap"/>
-                                                <TextBlock Text="{Binding Source.DirectoryPath, Converter={StaticResource TruncatedDirectoryPathConverter}}"
-                                                           FontSize="10"
-                                                           FontStyle="Italic"
-                                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                                           TextWrapping="Wrap"
-                                                           IsVisible="{Binding Source.DirectoryPath, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="Key" 
-                                                        Width="1.5*" 
-                                                        MinWidth="150"
-                                                        MaxWidth="300">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Key}" 
-                                                       TextWrapping="Wrap"
-                                                       Padding="5,4"
-                                                       VerticalAlignment="Center"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
                         </DataGrid>
                     </Border>
                 </Grid>
@@ -951,6 +978,156 @@
                                 Margin="0,8,0,0"/>
                     </StackPanel>
                 </Border>
+            </DockPanel>
+
+            <!-- Step 6: Deploy to Repository -->
+            <DockPanel IsVisible="{Binding ShowDeployStep}" LastChildFill="True">
+                <!-- Action buttons at bottom -->
+                <StackPanel DockPanel.Dock="Bottom"
+                            Orientation="Horizontal" 
+                            HorizontalAlignment="Right" 
+                            Spacing="10"
+                            Margin="0,15,0,0">
+                    <Button Content="View Exported Files"
+                            Command="{Binding ViewExportedFilesCommand}"
+                            Padding="15,8"/>
+                    <Button Content="Start Over"
+                            Command="{Binding StartOverCommand}"
+                            Padding="15,8"/>
+                    <Button Content="Deploy Again"
+                            Command="{Binding DeployAgainCommand}"
+                            IsVisible="{Binding ShowDeployAgainButton}"
+                            Padding="15,8"/>
+                    <Button Content="{Binding DeployButtonText}"
+                            Classes="PrimaryButton"
+                            Command="{Binding ValidateAndDeployCommand}"
+                            IsEnabled="{Binding CanDeploy}"
+                            Padding="15,8"/>
+                </StackPanel>
+
+                <!-- Header at top -->
+                <StackPanel DockPanel.Dock="Top" Spacing="5" Margin="0,0,0,15">
+                    <TextBlock Text="Step 6: Deploy to Repository"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                    <TextBlock Text="Select the deployment root directory. Validation will run automatically."
+                               TextWrapping="Wrap"
+                               FontSize="14"
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                </StackPanel>
+
+                <!-- Main content -->
+                <ScrollViewer>
+                    <StackPanel Spacing="15">
+                        <!-- Deployment Root Selection -->
+                        <Border BorderBrush="#FF9800"
+                                BorderThickness="2"
+                                Background="{DynamicResource SystemControlAcrylicWindowBrush}"
+                                CornerRadius="8"
+                                Padding="20">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Deployment Root Directory"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="#E65100"/>
+                                
+                                <!-- Smart suggestion (if available) -->
+                                <Border Background="#FFF3E0"
+                                        BorderBrush="#FFE0B2"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="12"
+                                        IsVisible="{Binding HasSuggestedDeploymentRoot}">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="💡 Smart Suggestion"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#F57C00"/>
+                                        <TextBlock Text="{Binding SuggestedDeploymentRoot}"
+                                                   FontSize="12"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="#424242"/>
+                                        <Button Content="Use Suggestion"
+                                                Command="{Binding UseSuggestedRootCommand}"
+                                                Padding="10,5"
+                                                FontSize="12"
+                                                HorizontalAlignment="Left"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Current selection or prompt -->
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding DeploymentRootPath}"
+                                               FontSize="14"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                    <Button Grid.Column="1"
+                                            Content="Select Folder"
+                                            Command="{Binding SelectDeploymentRootCommand}"
+                                            Padding="12,6"
+                                            Margin="10,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Validation Results Banner -->
+                        <Border BorderBrush="{Binding DeploymentValidationBorderBrush}"
+                                BorderThickness="2"
+                                Background="{DynamicResource SystemControlAcrylicWindowBrush}"
+                                CornerRadius="8"
+                                Padding="20"
+                                IsVisible="{Binding HasDeploymentValidationResult}">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="{Binding DeploymentValidationMessage}"
+                                           FontSize="14"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                <Button Content="View Details"
+                                        Command="{Binding ViewDeploymentDetailsCommand}"
+                                        Padding="12,6"
+                                        HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Deployment Success Message -->
+                        <Border Background="#4CAF50"
+                                BorderBrush="#4CAF50"
+                                BorderThickness="2"
+                                CornerRadius="8"
+                                Padding="20"
+                                IsVisible="{Binding ShowDeploymentSuccess}">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <TextBlock Grid.Column="0"
+                                           Text="🎉"
+                                           FontSize="32"
+                                           Margin="0,0,15,0"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding DeploymentSuccessMessage}"
+                                           FontSize="14"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"
+                                           VerticalAlignment="Center"
+                                           Foreground="White"/>
+                                <Button Grid.Column="2"
+                                        Content="View Details"
+                                        Command="{Binding ViewDeploymentHistoryCommand}"
+                                        Background="White"
+                                        Foreground="#4CAF50"
+                                        BorderBrush="White"
+                                        BorderThickness="1"
+                                        Padding="12,6"
+                                        FontWeight="SemiBold"
+                                        Margin="15,0,0,0"
+                                        VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
             </DockPanel>
         </Grid>
         </DockPanel>

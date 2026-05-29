@@ -28,24 +28,24 @@ public class Suggestion
     public string DisplayText => $"{Value} ({Username}, {Timestamp:MMM dd})";
 
     /// <summary>
-    /// Format the suggestion for file storage
+    /// Format the suggestion for file storage with iso-lingo-audit prefix
     /// </summary>
-    public string ToFileFormat() => $"SUGGESTION:{Value},by:[{Username}],at:[{Timestamp:yyyy-MM-ddTHH:mm:ssZ}]";
+    public string ToFileFormat() => $"iso-lingo-audit:SUGGESTION:{Value},by:[{Username}],at:[{Timestamp:yyyy-MM-ddTHH:mm:ssZ}]";
 
     /// <summary>
-    /// Parse a suggestion from file format
+    /// Parse a suggestion from file format (expects iso-lingo-audit prefix)
     /// </summary>
     public static Suggestion? FromFileFormat(string formatted)
     {
-        if (string.IsNullOrWhiteSpace(formatted) || !formatted.StartsWith("SUGGESTION:"))
+        if (string.IsNullOrWhiteSpace(formatted) || !formatted.StartsWith("iso-lingo-audit:SUGGESTION:"))
         {
             return null;
         }
 
         try
         {
-            // Format: SUGGESTION:value,by:[username],at:[datetime]
-            var content = formatted.Substring("SUGGESTION:".Length);
+            // Format: iso-lingo-audit:SUGGESTION:value,by:[username],at:[datetime]
+            var content = formatted.Substring("iso-lingo-audit:SUGGESTION:".Length);
             var parts = content.Split(new[] { ",by:[", "],at:[" }, StringSplitOptions.None);
 
             if (parts.Length != 3)

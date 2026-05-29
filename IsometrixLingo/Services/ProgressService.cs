@@ -44,11 +44,6 @@ public class ProgressService
                         Timestamp = kvp.Value.Timestamp
                     }
                 ),
-                ConfirmedBy = tk.ConfirmedBy != null ? new SerializableConfirmation
-                {
-                    Username = tk.ConfirmedBy.Username,
-                    Timestamp = tk.ConfirmedBy.Timestamp
-                } : null,
                 IsModified = tk.IsModified,
                 OriginalValues = new Dictionary<string, string>(tk.OriginalValues),
                 ModifiedLanguages = tk.ModifiedLanguages.ToList(),
@@ -63,7 +58,33 @@ public class ProgressService
             ModeSelectionStepStatus = state.ModeSelectionStepStatus,
             EditStepStatus = state.EditStepStatus,
             ExportStepStatus = state.ExportStepStatus,
-            CurrentMode = state.CurrentMode
+            DeployStepStatus = state.DeployStepStatus,
+            CurrentMode = state.CurrentMode,
+            
+            // Deployment-related properties
+            RootDirectoryPath = state.RootDirectoryPath,
+            DeploymentRootPath = state.DeploymentRootPath,
+            SuggestedDeploymentRoot = state.SuggestedDeploymentRoot,
+            LastExportFolder = state.LastExportFolder,
+            LastExportFileName = state.LastExportFileName,
+            DeploymentPreviewItems = state.DeploymentPreviewItems.Select(dpi => new SerializableDeploymentPreviewItem
+            {
+                SourcePath = dpi.SourcePath,
+                TargetPath = dpi.TargetPath,
+                IsValid = dpi.IsValid,
+                ErrorMessage = dpi.ErrorMessage
+            }).ToList(),
+            DeploymentValidationSuccess = state.DeploymentValidationSuccess,
+            DeploymentValidationMessage = state.DeploymentValidationMessage,
+            ShowDeploymentSuccess = state.ShowDeploymentSuccess,
+            DeploymentSuccessMessage = state.DeploymentSuccessMessage,
+            DeploymentHistory = state.DeploymentHistory.Select(dh => new SerializableDeploymentHistoryEntry
+            {
+                Timestamp = dh.Timestamp,
+                FileCount = dh.FileCount,
+                Success = dh.Success,
+                DeploymentRoot = dh.DeploymentRoot
+            }).ToList()
         };
 
         var json = JsonSerializer.Serialize(serializableState, AppJsonSerializerContext.Default.SerializableSessionState);
@@ -106,11 +127,6 @@ public class ProgressService
                                 Timestamp = kvp.Value.Timestamp
                             }
                         ),
-                        ConfirmedBy = stk.ConfirmedBy != null ? new Confirmation
-                        {
-                            Username = stk.ConfirmedBy.Username,
-                            Timestamp = stk.ConfirmedBy.Timestamp
-                        } : null,
                         IsModified = stk.IsModified,
                         OriginalValues = new Dictionary<string, string>(stk.OriginalValues),
                         ModifiedLanguages = new HashSet<string>(stk.ModifiedLanguages),
@@ -128,7 +144,33 @@ public class ProgressService
                 ModeSelectionStepStatus = serializableState.ModeSelectionStepStatus,
                 EditStepStatus = serializableState.EditStepStatus,
                 ExportStepStatus = serializableState.ExportStepStatus,
-                CurrentMode = serializableState.CurrentMode
+                DeployStepStatus = serializableState.DeployStepStatus,
+                CurrentMode = serializableState.CurrentMode,
+                
+                // Deployment-related properties
+                RootDirectoryPath = serializableState.RootDirectoryPath,
+                DeploymentRootPath = serializableState.DeploymentRootPath,
+                SuggestedDeploymentRoot = serializableState.SuggestedDeploymentRoot,
+                LastExportFolder = serializableState.LastExportFolder,
+                LastExportFileName = serializableState.LastExportFileName,
+                DeploymentPreviewItems = serializableState.DeploymentPreviewItems.Select(sdpi => new DeploymentPreviewItem
+                {
+                    SourcePath = sdpi.SourcePath,
+                    TargetPath = sdpi.TargetPath,
+                    IsValid = sdpi.IsValid,
+                    ErrorMessage = sdpi.ErrorMessage
+                }).ToList(),
+                DeploymentValidationSuccess = serializableState.DeploymentValidationSuccess,
+                DeploymentValidationMessage = serializableState.DeploymentValidationMessage,
+                ShowDeploymentSuccess = serializableState.ShowDeploymentSuccess,
+                DeploymentSuccessMessage = serializableState.DeploymentSuccessMessage,
+                DeploymentHistory = serializableState.DeploymentHistory.Select(sdh => new DeploymentHistoryEntry
+                {
+                    Timestamp = sdh.Timestamp,
+                    FileCount = sdh.FileCount,
+                    Success = sdh.Success,
+                    DeploymentRoot = sdh.DeploymentRoot
+                }).ToList()
             };
 
             return sessionState;

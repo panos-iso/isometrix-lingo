@@ -1,7 +1,7 @@
 namespace IsometrixLingo.Models;
 
 /// <summary>
-/// Editing mode for the translation workflow
+/// Workflow mode for the translation workflow
 /// </summary>
 public enum EditMode
 {
@@ -13,5 +13,10 @@ public enum EditMode
     /// <summary>
     /// Suggest mode - create suggestions for translation values
     /// </summary>
-    Suggest
+    Suggest,
+
+    /// <summary>
+    /// Deployment mode - skip editing and deploy translations back to repository
+    /// </summary>
+    Deployment
 }

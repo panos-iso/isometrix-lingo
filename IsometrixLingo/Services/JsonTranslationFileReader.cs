@@ -63,50 +63,53 @@ public class JsonTranslationFileReader
 
     public List<TranslationKey> ConsolidateKeys(List<TranslationFile> files)
     {
-        var consolidatedKeys = new Dictionary<string, TranslationKey>();
+        // Use a list to preserve the order keys are encountered (first file wins for order)
+        var consolidatedKeys = new List<TranslationKey>();
+        var keyIndex = new Dictionary<string, int>(); // Track which index each key is at
         var baseFileName = files.FirstOrDefault()?.FilePath;
         var baseName = baseFileName != null ? ExtractBaseFileName(baseFileName) : "unknown";
         var directoryPath = files.FirstOrDefault()?.RelativeDirectoryPath;
 
-        // Collect all unique keys across all files
+        // Collect all unique keys across all files IN ORDER
+        // Keys from first file establish the order
+        // New keys from subsequent files are APPENDED AT THE END
         foreach (var file in files)
         {
             foreach (var key in file.Keys)
             {
-                if (!consolidatedKeys.ContainsKey(key.Key))
+                if (!keyIndex.ContainsKey(key.Key))
                 {
-                    consolidatedKeys[key.Key] = new TranslationKey
+                    // New key not seen before - APPEND to end of list
+                    var translationKey = new TranslationKey
                     {
                         Key = key.Key,
                         Source = new SourceFile(baseName, FileType.Json, directoryPath),
                         LanguageValues = new Dictionary<string, string>(),
                         SuggestedValues = new Dictionary<string, Suggestion>()
                     };
+                    consolidatedKeys.Add(translationKey);
+                    keyIndex[key.Key] = consolidatedKeys.Count - 1;
                 }
 
+                var index = keyIndex[key.Key];
+                
                 // Add language value
                 if (key.LanguageValues.ContainsKey(file.Language))
                 {
-                    consolidatedKeys[key.Key].LanguageValues[file.Language] = key.LanguageValues[file.Language];
+                    consolidatedKeys[index].LanguageValues[file.Language] = key.LanguageValues[file.Language];
                 }
                 
                 // Add suggestion if present
                 if (key.SuggestedValues.ContainsKey(file.Language))
                 {
-                    consolidatedKeys[key.Key].SuggestedValues[file.Language] = key.SuggestedValues[file.Language];
-                }
-                
-                // Add confirmation if present (from English file)
-                if (key.ConfirmedBy != null && consolidatedKeys[key.Key].ConfirmedBy == null)
-                {
-                    consolidatedKeys[key.Key].ConfirmedBy = key.ConfirmedBy;
+                    consolidatedKeys[index].SuggestedValues[file.Language] = key.SuggestedValues[file.Language];
                 }
             }
         }
 
-        // Fill in missing language values with empty strings
+        // Fill in missing language values with empty strings for consistency
         var allLanguages = files.Select(f => f.Language).Distinct().ToList();
-        foreach (var translationKey in consolidatedKeys.Values)
+        foreach (var translationKey in consolidatedKeys)
         {
             foreach (var language in allLanguages)
             {
@@ -118,7 +121,7 @@ public class JsonTranslationFileReader
             translationKey.UpdateMissingTranslationsStatus();
         }
 
-        return consolidatedKeys.Values.ToList();
+        return consolidatedKeys;
     }
 
     private List<TranslationKey> ParseJsonKeys(string json, string baseFileName, string language)
@@ -139,57 +142,27 @@ public class JsonTranslationFileReader
     }
 
     /// <summary>
-    /// Parse a value string that may contain a suggestion and/or confirmation
-    /// Format: "actual value SUGGESTION:suggested_value,by:[username],at:[datetime] CONFIRMED:by:[username],at:[datetime]"
-    /// Returns the actual value, parsed suggestion (if present), and parsed confirmation (if present)
+    /// Parse a value string that may contain a suggestion
+    /// Format: "actual value iso-lingo-audit:SUGGESTION:suggested_value,by:[username],at:[datetime]"
+    /// Returns the actual value and parsed suggestion (if present)
     /// </summary>
-    private (string actualValue, Suggestion? suggestion, Confirmation? confirmation) ParseValue(string rawValue, string language)
+    private (string actualValue, Suggestion? suggestion) ParseValue(string rawValue, string language)
     {
-        const string suggestionPrefix = " SUGGESTION:";
-        const string confirmedPrefix = " CONFIRMED:";
+        const string suggestionPrefix = " iso-lingo-audit:SUGGESTION:";
         
         var actualValue = rawValue;
         Suggestion? suggestion = null;
-        Confirmation? confirmation = null;
         
         // Check for SUGGESTION
         var suggestionIndex = rawValue.IndexOf(suggestionPrefix, StringComparison.Ordinal);
         if (suggestionIndex != -1)
         {
             actualValue = rawValue.Substring(0, suggestionIndex);
-            var remainingAfterValue = rawValue.Substring(suggestionIndex + 1); // Skip the leading space
-            
-            // Find where suggestion ends (either at CONFIRMED or end of string)
-            var confirmedIndexInRemaining = remainingAfterValue.IndexOf(confirmedPrefix, StringComparison.Ordinal);
-            
-            string suggestionPart;
-            if (confirmedIndexInRemaining != -1)
-            {
-                suggestionPart = remainingAfterValue.Substring(0, confirmedIndexInRemaining);
-            }
-            else
-            {
-                suggestionPart = remainingAfterValue;
-            }
-            
+            var suggestionPart = rawValue.Substring(suggestionIndex + 1); // Skip the leading space
             suggestion = Suggestion.FromFileFormat(suggestionPart);
         }
         
-        // Check for CONFIRMED
-        var confirmedIndex = rawValue.IndexOf(confirmedPrefix, StringComparison.Ordinal);
-        if (confirmedIndex != -1)
-        {
-            // If there's no suggestion, extract actual value up to CONFIRMED
-            if (suggestionIndex == -1)
-            {
-                actualValue = rawValue.Substring(0, confirmedIndex);
-            }
-            
-            var confirmedPart = rawValue.Substring(confirmedIndex + 1); // Skip the leading space
-            confirmation = Confirmation.FromFileFormat(confirmedPart);
-        }
-        
-        return (actualValue, suggestion, confirmation);
+        return (actualValue, suggestion);
     }
 
     private void ParseJsonElement(JsonElement element, string prefix, List<TranslationKey> keys, string baseFileName, string language)
@@ -205,7 +178,7 @@ public class JsonTranslationFileReader
                 if (property.Value.ValueKind == JsonValueKind.String)
                 {
                     var rawValue = property.Value.GetString() ?? string.Empty;
-                    var (actualValue, suggestion, confirmation) = ParseValue(rawValue, language);
+                    var (actualValue, suggestion) = ParseValue(rawValue, language);
                     
                     var translationKey = new TranslationKey
                     {
@@ -220,12 +193,6 @@ public class JsonTranslationFileReader
                     if (suggestion != null)
                     {
                         translationKey.SuggestedValues[language] = suggestion;
-                    }
-                    
-                    // Confirmation is at key level, only parse from English file
-                    if (confirmation != null && language == "en")
-                    {
-                        translationKey.ConfirmedBy = confirmation;
                     }
                     
                     keys.Add(translationKey);

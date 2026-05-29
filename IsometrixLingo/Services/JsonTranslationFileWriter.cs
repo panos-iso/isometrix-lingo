@@ -17,14 +17,258 @@ public class JsonTranslationFileWriter
     };
 
     /// <summary>
+    /// Copy original files and update them in-place with changes. Preserves ALL original file content.
+    /// </summary>
+    /// <param name="keys">Translation keys to export</param>
+    /// <param name="sourceDirectory">Source directory containing original imported files</param>
+    /// <param name="outputDirectory">Output directory for exported files</param>
+    /// <param name="username">Username for auditing (optional)</param>
+    /// <param name="currentMode">Current workflow mode (Edit/Suggest/Deployment)</param>
+    public void CopyAndUpdateFiles(List<TranslationKey> keys, string sourceDirectory, string outputDirectory, string? username = null, EditMode currentMode = EditMode.Edit)
+    {
+        if (!Directory.Exists(outputDirectory))
+        {
+            Directory.CreateDirectory(outputDirectory);
+        }
+
+        // Group keys by source file
+        var groupedByFile = keys.GroupBy(k => k.Source);
+
+        foreach (var fileGroup in groupedByFile)
+        {
+            var source = fileGroup.Key;
+            var fileKeys = fileGroup.ToList();
+
+            // Get all languages for this file
+            var languages = fileKeys
+                .SelectMany(k => k.LanguageValues.Keys)
+                .Distinct()
+                .ToList();
+
+            // Process each language file
+            foreach (var language in languages)
+            {
+                var fileName = $"{source.Name}.{language}.json";
+                
+                // Build source and target paths
+                var sourcePath = string.IsNullOrEmpty(source.DirectoryPath)
+                    ? Path.Combine(sourceDirectory, fileName)
+                    : Path.Combine(sourceDirectory, source.DirectoryPath, fileName);
+
+                var targetDirectory = string.IsNullOrEmpty(source.DirectoryPath)
+                    ? outputDirectory
+                    : Path.Combine(outputDirectory, source.DirectoryPath);
+
+                if (!Directory.Exists(targetDirectory))
+                {
+                    Directory.CreateDirectory(targetDirectory);
+                }
+
+                var targetPath = Path.Combine(targetDirectory, fileName);
+
+                // Copy original file to preserve ALL content
+                if (File.Exists(sourcePath))
+                {
+                    File.Copy(sourcePath, targetPath, overwrite: true);
+                }
+                else
+                {
+                    // No original file - create new one (shouldn't happen in normal flow)
+                    WriteLanguageFile(targetPath, fileKeys, language, null, username, currentMode);
+                    continue;
+                }
+
+                // Update the copied file in-place
+                UpdateJsonFileInPlace(targetPath, fileKeys, language, username, currentMode);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Update a JSON file in-place by modifying existing values and appending new keys at the end.
+    /// PRESERVES original file's key order.
+    /// </summary>
+    private void UpdateJsonFileInPlace(string filePath, List<TranslationKey> keys, string language, string? username, EditMode currentMode)
+    {
+        var content = File.ReadAllText(filePath);
+        var jsonNode = JsonNode.Parse(content);
+        
+        if (jsonNode is not JsonObject rootObject)
+        {
+            return;
+        }
+
+        // Detect if nested or flat structure
+        bool isNested = false;
+        foreach (var kvp in rootObject)
+        {
+            if (kvp.Value is JsonObject)
+            {
+                isNested = true;
+                break;
+            }
+        }
+
+        // Create lookup dictionary from keys list for fast access
+        var keyLookup = keys.ToDictionary(k => k.Key, k => k);
+        var processedKeys = new HashSet<string>();
+
+        // Collect all keys from original file in their original order
+        var originalKeys = new List<string>();
+        CollectExistingKeysInOrder(rootObject, "", originalKeys, isNested);
+
+        // Iterate through ORIGINAL file's keys in their existing order and update values
+        foreach (var originalKey in originalKeys)
+        {
+            if (keyLookup.TryGetValue(originalKey, out var translationKey))
+            {
+                var value = translationKey.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+                var finalValue = currentMode == EditMode.Deployment 
+                    ? value 
+                    : AppendAnnotations(value, translationKey, language, username, currentMode == EditMode.Edit);
+
+                // Update existing key in-place (preserves position)
+                UpdateValueInJson(rootObject, originalKey, finalValue, isNested);
+                processedKeys.Add(originalKey);
+            }
+            // If key doesn't exist in our keys list, leave it unchanged (preserve original)
+        }
+
+        // Append NEW keys that weren't in the original file
+        foreach (var key in keys)
+        {
+            if (!processedKeys.Contains(key.Key))
+            {
+                var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+                var finalValue = currentMode == EditMode.Deployment 
+                    ? value 
+                    : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
+
+                if (isNested)
+                {
+                    // Add to nested structure
+                    AddToNestedStructure(rootObject, key.Key, finalValue);
+                }
+                else
+                {
+                    // Add as flat key
+                    rootObject[key.Key] = JsonValue.Create(finalValue);
+                }
+            }
+        }
+
+        // Write back preserving trailing newlines
+        var json = rootObject.ToJsonString(_options);
+        
+        var trailingCount = content.Length - content.TrimEnd('\r', '\n').Length;
+        if (trailingCount > 0)
+        {
+            json += content.Substring(content.Length - trailingCount);
+        }
+        
+        File.WriteAllText(filePath, json);
+    }
+
+    /// <summary>
+    /// Collect all existing keys from JSON in order (handles both flat and nested)
+    /// </summary>
+    private void CollectExistingKeysInOrder(JsonObject obj, string prefix, List<string> keys, bool isNested)
+    {
+        foreach (var kvp in obj)
+        {
+            var fullKey = string.IsNullOrEmpty(prefix) ? kvp.Key : $"{prefix}.{kvp.Key}";
+            
+            if (kvp.Value is JsonObject nestedObj && isNested)
+            {
+                // Recurse into nested object
+                CollectExistingKeysInOrder(nestedObj, fullKey, keys, isNested);
+            }
+            else
+            {
+                // Leaf value - add to list
+                keys.Add(fullKey);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Update a value in JSON object (handles both flat and nested)
+    /// </summary>
+    private void UpdateValueInJson(JsonObject rootObject, string key, string value, bool isNested)
+    {
+        if (!isNested)
+        {
+            // Flat structure - direct update
+            rootObject[key] = JsonValue.Create(value);
+            return;
+        }
+
+        // Nested structure - navigate path
+        var parts = key.Split('.');
+        JsonObject current = rootObject;
+
+        for (int i = 0; i < parts.Length - 1; i++)
+        {
+            if (current[parts[i]] is JsonObject nestedObj)
+            {
+                current = nestedObj;
+            }
+            else
+            {
+                return; // Path doesn't exist (shouldn't happen)
+            }
+        }
+
+        current[parts[^1]] = JsonValue.Create(value);
+    }
+
+    /// <summary>
+    /// Add a new key to nested structure (creates intermediate objects if needed)
+    /// </summary>
+    private void AddToNestedStructure(JsonObject rootObject, string key, string value)
+    {
+        var parts = key.Split('.');
+        
+        if (parts.Length == 1)
+        {
+            rootObject[key] = JsonValue.Create(value);
+            return;
+        }
+
+        JsonObject current = rootObject;
+        
+        for (int i = 0; i < parts.Length - 1; i++)
+        {
+            var part = parts[i];
+            
+            if (!current.ContainsKey(part))
+            {
+                current[part] = new JsonObject();
+            }
+            
+            if (current[part] is JsonObject nestedObj)
+            {
+                current = nestedObj;
+            }
+            else
+            {
+                // Conflict - can't navigate further
+                return;
+            }
+        }
+        
+        current[parts[^1]] = JsonValue.Create(value);
+    }
+
+    /// <summary>
     /// Writes translation keys to JSON files, grouped by language and source file
     /// </summary>
     /// <param name="keys">Translation keys to write</param>
     /// <param name="outputDirectory">Output directory for files</param>
     /// <param name="templateProvider">Optional function to provide JSON template for a given source file name</param>
     /// <param name="username">Username for confirmation auditing (optional)</param>
-    /// <param name="isEditMode">Whether in Edit mode (confirmations only created/updated in Edit mode)</param>
-    public void WriteFiles(List<TranslationKey> keys, string outputDirectory, Func<string, string?>? templateProvider = null, string? username = null, bool isEditMode = true)
+    /// <param name="currentMode">Current workflow mode (Edit/Suggest/Deployment)</param>
+    public void WriteFiles(List<TranslationKey> keys, string outputDirectory, Func<string, string?>? templateProvider = null, string? username = null, EditMode currentMode = EditMode.Edit)
     {
         if (!Directory.Exists(outputDirectory))
         {
@@ -65,81 +309,162 @@ public class JsonTranslationFileWriter
                 // Get template for this source file if available
                 var template = templateProvider?.Invoke(source.Name);
 
-                WriteLanguageFile(filePath, fileKeys, language, template, username, isEditMode);
+                WriteLanguageFile(filePath, fileKeys, language, template, username, currentMode);
             }
         }
     }
 
-    private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, string? template, string? username, bool isEditMode)
+    private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, string? template, string? username, EditMode currentMode)
     {
-        JsonObject jsonObject;
-
+        // Detect original structure from template or existing file
+        string? originalContent = null;
+        bool isNested = false;
+        
+        // First check template if available
         if (!string.IsNullOrEmpty(template))
         {
-            // Parse the template to preserve structure and order
-            try
-            {
-                var parsedNode = JsonNode.Parse(template);
-                jsonObject = parsedNode as JsonObject ?? new JsonObject();
-
-                // Update existing values and track processed keys
-                var processedKeys = new HashSet<string>();
-
-                foreach (var key in keys)
-                {
-                    // Get actual value and suggestion
-                    var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                    var fullValue = AppendAnnotations(value, key, language, username, isEditMode);
-                    
-                    if (UpdateNestedValue(jsonObject, key.Key, fullValue))
-                    {
-                        processedKeys.Add(key.Key);
-                    }
-                }
-
-                // Add new keys that weren't in the template
-                foreach (var key in keys)
-                {
-                    if (!processedKeys.Contains(key.Key))
-                    {
-                        var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                        var fullValue = AppendAnnotations(value, key, language, username, isEditMode);
-                        SetNestedValue(jsonObject, key.Key, fullValue);
-                    }
-                }
-            }
-            catch (JsonException)
-            {
-                // If template parsing fails, fall back to creating from scratch
-                jsonObject = new JsonObject();
-                foreach (var key in keys)
-                {
-                    var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                    var fullValue = AppendAnnotations(value, key, language, username, isEditMode);
-                    SetNestedValue(jsonObject, key.Key, fullValue);
-                }
-            }
+            originalContent = template;
+            isNested = IsNestedStructure(template);
+        }
+        // Otherwise check existing file at target location
+        else if (File.Exists(filePath))
+        {
+            originalContent = File.ReadAllText(filePath);
+            isNested = IsNestedStructure(originalContent);
+        }
+        
+        // Build JSON object in appropriate structure
+        JsonObject jsonObject;
+        
+        if (isNested)
+        {
+            // Convert flat dot-notation keys to nested structure
+            jsonObject = ConvertToNestedStructure(keys, language, username, currentMode);
         }
         else
         {
-            // No template - create from scratch
+            // Write as flat key-value pairs
             jsonObject = new JsonObject();
+            
+            // Iterate keys in original order - NO SORTING
             foreach (var key in keys)
             {
                 var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                var fullValue = AppendAnnotations(value, key, language, username, isEditMode);
-                SetNestedValue(jsonObject, key.Key, fullValue);
+                
+                // In Deployment mode, write clean values without annotations
+                // In Edit/Suggest modes, append annotations inline
+                var finalValue = currentMode == EditMode.Deployment 
+                    ? value 
+                    : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
+                
+                // Write as flat key-value pair (no nesting)
+                jsonObject[key.Key] = JsonValue.Create(finalValue);
             }
         }
 
         var json = jsonObject.ToJsonString(_options);
+        
+        // Preserve trailing newlines from original file
+        string? trailingWhitespace = null;
+        
+        if (originalContent != null)
+        {
+            var trailingCount = originalContent.Length - originalContent.TrimEnd('\r', '\n').Length;
+            if (trailingCount > 0)
+            {
+                trailingWhitespace = originalContent.Substring(originalContent.Length - trailingCount);
+            }
+        }
+        
+        if (trailingWhitespace != null)
+        {
+            json += trailingWhitespace;
+        }
+        
         File.WriteAllText(filePath, json);
+    }
+    
+    /// <summary>
+    /// Detect if JSON content has nested structure or is flat key-value pairs
+    /// </summary>
+    private bool IsNestedStructure(string jsonContent)
+    {
+        try
+        {
+            var jsonNode = JsonNode.Parse(jsonContent);
+            if (jsonNode is not JsonObject jsonObject)
+                return false;
+            
+            // If any top-level value is an object, it's nested
+            foreach (var kvp in jsonObject)
+            {
+                if (kvp.Value is JsonObject)
+                    return true;
+            }
+            
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    
+    /// <summary>
+    /// Convert flat dot-notation keys to nested JSON structure
+    /// Example: "config.dateFormat" -> { "config": { "dateFormat": "value" } }
+    /// </summary>
+    private JsonObject ConvertToNestedStructure(List<TranslationKey> keys, string language, string? username, EditMode currentMode)
+    {
+        var root = new JsonObject();
+        
+        // Process keys in original order to maintain sequence
+        foreach (var key in keys)
+        {
+            var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+            
+            // In Deployment mode, write clean values without annotations
+            // In Edit/Suggest modes, append annotations inline
+            var finalValue = currentMode == EditMode.Deployment 
+                ? value 
+                : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
+            
+            // Split key by dots and create nested structure
+            var parts = key.Key.Split('.');
+            
+            if (parts.Length == 1)
+            {
+                // No nesting - direct key-value
+                root[key.Key] = JsonValue.Create(finalValue);
+            }
+            else
+            {
+                // Navigate/create nested objects
+                JsonObject current = root;
+                
+                for (int i = 0; i < parts.Length - 1; i++)
+                {
+                    var part = parts[i];
+                    
+                    if (!current.ContainsKey(part))
+                    {
+                        current[part] = new JsonObject();
+                    }
+                    
+                    current = (JsonObject)current[part]!;
+                }
+                
+                // Set the final value
+                current[parts[^1]] = JsonValue.Create(finalValue);
+            }
+        }
+        
+        return root;
     }
 
     /// <summary>
-    /// Append suggestion and confirmation annotations to value
-    /// Format: "actual value SUGGESTION:...,by:[username],at:[datetime] CONFIRMED:by:[username],at:[datetime]"
-    /// Auto-creates/updates confirmation for keys with both en and es values when writing English files (Edit mode only)
+    /// Append suggestion annotation to value (no confirmations)
+    /// Format: "actual value iso-lingo-audit:SUGGESTION:...,by:[username],at:[datetime]"
     /// </summary>
     private string AppendAnnotations(string actualValue, TranslationKey key, string language, string? username, bool isEditMode)
     {
@@ -151,117 +476,6 @@ public class JsonTranslationFileWriter
             result = $"{result} {suggestion.ToFileFormat()}";
         }
         
-        // For English files, append confirmation (auto-create/update/remove only in Edit mode)
-        if (language == "en")
-        {
-            if (isEditMode)
-            {
-                var hasEnglish = key.LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue);
-                var hasSpanish = key.LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue);
-                
-                // If key has both languages, ensure it has confirmation
-                if (hasEnglish && hasSpanish)
-                {
-                    // If key was edited, override confirmation with new one
-                    if (key.IsModified && !string.IsNullOrWhiteSpace(username))
-                    {
-                        key.ConfirmedBy = new Confirmation
-                        {
-                            Username = username,
-                            Timestamp = DateTime.UtcNow
-                        };
-                    }
-                    // If key was not edited and has no confirmation, create one
-                    else if (!key.IsModified && key.ConfirmedBy == null && !string.IsNullOrWhiteSpace(username))
-                    {
-                        key.ConfirmedBy = new Confirmation
-                        {
-                            Username = username,
-                            Timestamp = DateTime.UtcNow
-                        };
-                    }
-                    // Otherwise keep existing confirmation (if any)
-                }
-                // If key is incomplete, remove any existing confirmation
-                else if (key.ConfirmedBy != null)
-                {
-                    key.ConfirmedBy = null;
-                }
-            }
-            
-            // Always write existing confirmations to file (both Edit and Suggest mode)
-            if (key.ConfirmedBy != null)
-            {
-                result = $"{result} {key.ConfirmedBy.ToFileFormat()}";
-            }
-        }
-        
         return result;
-    }
-
-    /// <summary>
-    /// Update a value in an existing nested structure, returns true if key was found and updated
-    /// </summary>
-    private bool UpdateNestedValue(JsonObject root, string key, string value)
-    {
-        var parts = key.Split('.');
-        JsonObject current = root;
-
-        // Navigate to the parent of the target key
-        for (int i = 0; i < parts.Length - 1; i++)
-        {
-            var part = parts[i];
-
-            if (!current.ContainsKey(part))
-            {
-                return false; // Path doesn't exist in template
-            }
-
-            if (current[part] is JsonObject jsonObj)
-            {
-                current = jsonObj;
-            }
-            else
-            {
-                return false; // Path conflicts with non-object value
-            }
-        }
-
-        var finalKey = parts[^1];
-        if (current.ContainsKey(finalKey))
-        {
-            current[finalKey] = JsonValue.Create(value);
-            return true;
-        }
-
-        return false;
-    }
-
-    private void SetNestedValue(JsonObject root, string key, string value)
-    {
-        var parts = key.Split('.');
-        JsonObject current = root;
-
-        for (int i = 0; i < parts.Length - 1; i++)
-        {
-            var part = parts[i];
-
-            if (!current.ContainsKey(part))
-            {
-                current[part] = new JsonObject();
-            }
-
-            if (current[part] is JsonObject jsonObj)
-            {
-                current = jsonObj;
-            }
-            else
-            {
-                // Handle case where path conflicts (shouldn't happen with valid data)
-                return;
-            }
-        }
-
-        current[parts[^1]] = JsonValue.Create(value);
     }
 }

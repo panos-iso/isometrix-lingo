@@ -33,6 +33,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly ProgressService _progressService;
     private readonly UserSettingsService _settingsService;
     private readonly PathDisplayService _pathDisplayService;
+    private readonly DeploymentService _deploymentService;
     private string _lastExportFolder = string.Empty;
     private string _lastExportFileName = string.Empty;
     
@@ -49,6 +50,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _username = "User";
+
+    [ObservableProperty]
+    private bool _isDeveloper = false;
 
     [ObservableProperty]
     private ObservableCollection<SourceFile?> _availableSourceFiles = new();
@@ -89,9 +93,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     // Workflow state properties
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowFileMappingStep), nameof(ShowModeSelectionStep), nameof(ShowEditStep), nameof(ShowExportStep),
-                               nameof(Step1Background), nameof(Step2Background), nameof(Step3Background), nameof(Step4Background), nameof(Step5Background),
-                               nameof(Step1Status), nameof(Step2Status), nameof(Step3Status), nameof(Step4Status), nameof(Step5Status))]
+    [NotifyPropertyChangedFor(nameof(ShowImportStep), nameof(ShowFileMappingStep), nameof(ShowModeSelectionStep), nameof(ShowEditStep), nameof(ShowExportStep), nameof(ShowDeployStep),
+                               nameof(Step1Background), nameof(Step2Background), nameof(Step3Background), nameof(Step4Background), nameof(Step5Background), nameof(Step6Background),
+                               nameof(Step1Status), nameof(Step2Status), nameof(Step3Status), nameof(Step4Status), nameof(Step5Status), nameof(Step6Status))]
     private WorkflowStep _currentStep = WorkflowStep.Import;
 
     [ObservableProperty]
@@ -115,6 +119,10 @@ public partial class MainWindowViewModel : ViewModelBase
     private StepStatus _exportStepStatus = StepStatus.NotStarted;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Step6Background), nameof(Step6Foreground), nameof(Step6Status))]
+    private StepStatus _deployStepStatus = StepStatus.NotStarted;
+
+    [ObservableProperty]
     private bool _showOriginalValues;
 
     [ObservableProperty]
@@ -122,9 +130,6 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _showOnlyWithSuggestions;
-
-    [ObservableProperty]
-    private bool _showOnlyUnconfirmed;
 
     [ObservableProperty]
     private bool _showFilters = true;
@@ -144,11 +149,70 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private int _errorCount;
 
+    // Deployment properties
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanDeploy))]
+    private string _deploymentRootPath = "Click 'Select Folder' to choose deployment directory";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSuggestedDeploymentRoot))]
+    private string _suggestedDeploymentRoot = string.Empty;
+
+    [ObservableProperty]
+    private ObservableCollection<DeploymentPreviewItem> _deploymentPreviewItems = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDeploymentPreview))]
+    private string _deploymentPreviewSummary = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasValidationMessage))]
+    private string _validationMessage = string.Empty;
+
+    [ObservableProperty]
+    private SolidColorBrush _validationMessageColor = new SolidColorBrush(Colors.Black);
+
+    [ObservableProperty]
+    private bool _showDeployAgainButton = false;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDeploymentValidationResult))]
+    [NotifyPropertyChangedFor(nameof(DeploymentValidationBorderBrush))]
+    [NotifyPropertyChangedFor(nameof(CanDeploy))]
+    private bool _deploymentValidationSuccess = false;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDeploymentValidationResult))]
+    private string _deploymentValidationMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _deploymentSuccessMessage = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DeployButtonText))]
+    private bool _showDeploymentSuccess = false;
+
+    [ObservableProperty]
+    private ObservableCollection<DeploymentHistoryEntry> _deploymentHistory = new();
+
+    public bool HasSuggestedDeploymentRoot => !string.IsNullOrWhiteSpace(SuggestedDeploymentRoot);
+    public bool HasDeploymentPreview => DeploymentPreviewItems.Count > 0;
+    public bool HasValidationMessage => !string.IsNullOrWhiteSpace(ValidationMessage);
+    public bool HasDeploymentValidationResult => !string.IsNullOrWhiteSpace(DeploymentValidationMessage);
+    public SolidColorBrush DeploymentValidationBorderBrush => DeploymentValidationSuccess 
+        ? new SolidColorBrush(Color.FromRgb(76, 175, 80))   // Green
+        : new SolidColorBrush(Color.FromRgb(239, 83, 80));  // Red
+    public bool CanDeploy => !string.IsNullOrWhiteSpace(DeploymentRootPath) && 
+                             DeploymentRootPath != "Click 'Select Folder' to choose deployment directory" &&
+                             DeploymentValidationSuccess;
+    public string DeployButtonText => ShowDeploymentSuccess ? "Re-deploy" : "Deploy";
+
     public bool ShowImportStep => CurrentStep == WorkflowStep.Import;
     public bool ShowFileMappingStep => CurrentStep == WorkflowStep.FileMapping;
     public bool ShowModeSelectionStep => CurrentStep == WorkflowStep.ModeSelection;
     public bool ShowEditStep => CurrentStep == WorkflowStep.Edit;
     public bool ShowExportStep => CurrentStep == WorkflowStep.Export;
+    public bool ShowDeployStep => CurrentStep == WorkflowStep.Deploy;
 
     public string StartOverButtonText => ExportStepStatus == StepStatus.Completed ? "Start New Session" : "Start Over";
 
@@ -187,6 +251,13 @@ public partial class MainWindowViewModel : ViewModelBase
         _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
     };
 
+    public SolidColorBrush Step6Background => DeployStepStatus switch
+    {
+        StepStatus.Completed => new SolidColorBrush(Color.FromRgb(76, 175, 80)),  // Green
+        StepStatus.InProgress => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
+        _ => new SolidColorBrush(Color.FromRgb(158, 158, 158)) // Medium gray
+    };
+
     public SolidColorBrush Step1Foreground => ImportStepStatus switch
     {
         StepStatus.NotStarted => new SolidColorBrush(Colors.White),
@@ -212,6 +283,12 @@ public partial class MainWindowViewModel : ViewModelBase
     };
 
     public SolidColorBrush Step5Foreground => ExportStepStatus switch
+    {
+        StepStatus.NotStarted => new SolidColorBrush(Colors.White),
+        _ => new SolidColorBrush(Colors.White)
+    };
+
+    public SolidColorBrush Step6Foreground => DeployStepStatus switch
     {
         StepStatus.NotStarted => new SolidColorBrush(Colors.White),
         _ => new SolidColorBrush(Colors.White)
@@ -252,6 +329,13 @@ public partial class MainWindowViewModel : ViewModelBase
         _ => "Not Started"
     };
 
+    public string Step6Status => DeployStepStatus switch
+    {
+        StepStatus.Completed => "✓ Complete",
+        StepStatus.InProgress => "In Progress",
+        _ => "Not Started"
+    };
+
     public bool CanImport => !HasKeys;
 
     public event EventHandler? LanguagesChanged;
@@ -266,6 +350,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _progressService = new ProgressService();
         _settingsService = new UserSettingsService();
         _pathDisplayService = new PathDisplayService();
+        _deploymentService = new DeploymentService();
 
         // Load username from settings
         LoadUserSettings();
@@ -910,20 +995,30 @@ public partial class MainWindowViewModel : ViewModelBase
                 return;
             }
 
-            // Step 1: Show branch warning dialog
-            var branchWarning = new BranchWarningDialog();
-            var confirmed = await branchWarning.ShowDialog<bool>(window);
-            
-            if (!confirmed)
+            // Step 1: Show branch warning dialog (developers only)
+            if (IsDeveloper)
             {
-                return;
+                var branchWarning = new BranchWarningDialog();
+                var confirmed = await branchWarning.ShowDialog<bool>(window);
+                
+                if (!confirmed)
+                {
+                    return;
+                }
             }
 
             // Step 2: Open folder picker for parent directory
+            // Load last import directory from settings
+            var settings = _settingsService.Load();
+            var defaultImportPath = !string.IsNullOrEmpty(settings?.LastImportDirectory) && Directory.Exists(settings.LastImportDirectory)
+                ? settings.LastImportDirectory
+                : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
             var folders = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
                 Title = "Select Parent Directory Containing Repositories",
-                AllowMultiple = false
+                AllowMultiple = false,
+                SuggestedStartLocation = await window.StorageProvider.TryGetFolderFromPathAsync(defaultImportPath)
             });
 
             if (folders.Count == 0)
@@ -932,6 +1027,14 @@ public partial class MainWindowViewModel : ViewModelBase
             }
 
             var parentPath = folders[0].Path.LocalPath;
+
+            // Save the selected directory to settings for next time
+            if (settings == null)
+            {
+                settings = new UserSettings { Username = Username };
+            }
+            settings.LastImportDirectory = parentPath;
+            _settingsService.Save(settings);
 
             // Step 3: Scan directories using DirectoryScanner
             var scanner = new DirectoryScanner(_jsonReader, _resxReader);
@@ -1382,6 +1485,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
         // Update display text
         UpdateFilesDisplayText();
+        
+        // Apply file filters to ensure TranslationStore state is in sync with UI
+        // (this is needed because setting IsSelected during initialization doesn't trigger events)
+        ApplyFileFilters();
     }
 
     private string GetTopLevelDirectory(string? directoryPath)
@@ -1595,7 +1702,6 @@ public partial class MainWindowViewModel : ViewModelBase
         ShowOriginalValues = false;
         ShowOnlyMissingTranslations = false;
         ShowOnlyWithSuggestions = false;
-        ShowOnlyUnconfirmed = false;
         _translationStore.FilterBySourceFiles(null!);
         _translationStore.FilterBySearchTerm(string.Empty);
         UpdateStatusMessage();
@@ -1622,12 +1728,6 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnShowOnlyWithSuggestionsChanged(bool value)
     {
         _translationStore.FilterBySuggestions(value);
-        UpdateStatusMessage();
-    }
-
-    partial void OnShowOnlyUnconfirmedChanged(bool value)
-    {
-        _translationStore.FilterByConfirmation(value);
         UpdateStatusMessage();
     }
 
@@ -1713,20 +1813,27 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var outputPath = folder[0].Path.LocalPath;
 
-        // Group all keys by file type and export using appropriate writer
+        // Validate that we have the source directory (imported files location)
+        if (string.IsNullOrEmpty(_rootDirectoryPath) || !Directory.Exists(_rootDirectoryPath))
+        {
+            StatusMessage = "Source directory not found. Cannot export - please re-import files.";
+            return;
+        }
+
+        // Group all keys by file type and export using copy-then-update approach
         var jsonKeys = allKeys.Where(k => k.Source.Type == FileType.Json).ToList();
         var resxKeys = allKeys.Where(k => k.Source.Type == FileType.Resx).ToList();
 
         if (jsonKeys.Count > 0)
         {
-            // Provide template provider function to preserve original JSON structure
-            _jsonWriter.WriteFiles(jsonKeys, outputPath, sourceFileName => _translationStore.GetJsonTemplate(sourceFileName), Username, CurrentMode == EditMode.Edit);
+            // Copy original files and update them in-place (preserves ALL original content)
+            _jsonWriter.CopyAndUpdateFiles(jsonKeys, _rootDirectoryPath, outputPath, Username, CurrentMode);
         }
 
         if (resxKeys.Count > 0)
         {
-            // Provide template provider function to preserve original RESX structure
-            _resxWriter.WriteFiles(resxKeys, outputPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName), Username, CurrentMode == EditMode.Edit);
+            // Copy original files and update them in-place (preserves ALL original content)
+            _resxWriter.CopyAndUpdateFiles(resxKeys, _rootDirectoryPath, outputPath, Username, CurrentMode);
         }
 
         StatusMessage = $"Exported {allKeys.Count} translation key(s) to {outputPath}.";
@@ -1900,6 +2007,115 @@ public partial class MainWindowViewModel : ViewModelBase
         return confirmed;
     }
 
+    private async Task<bool> ShowMissingTranslationsWarning(Window window, int missingCount)
+    {
+        var dialog = new Window
+        {
+            Title = "Missing Translations Warning",
+            Width = 550,
+            Height = 280,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        var mainPanel = new StackPanel
+        {
+            Margin = new Thickness(20),
+            Spacing = 15
+        };
+
+        // Warning header
+        mainPanel.Children.Add(new TextBlock
+        {
+            Text = "⚠ Missing Translations Detected",
+            FontSize = 18,
+            FontWeight = FontWeight.Bold,
+            Foreground = new SolidColorBrush(Color.FromRgb(255, 87, 34)) // Deep Orange
+        });
+
+        // Warning message
+        mainPanel.Children.Add(new TextBlock
+        {
+            Text = $"{missingCount} translation key(s) have missing values. These will be exported with empty values and deployed to your repositories.",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 14,
+            Foreground = new SolidColorBrush(Color.FromRgb(66, 66, 66))
+        });
+
+        // Recommendation box
+        var recommendationBox = new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(255, 248, 225)), // Light yellow
+            BorderBrush = new SolidColorBrush(Color.FromRgb(255, 193, 7)), // Amber
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(15),
+            Margin = new Thickness(0, 5, 0, 0)
+        };
+
+        var recommendationText = new TextBlock
+        {
+            Text = "💡 Recommendation: Consider using Edit or Suggest mode to resolve missing translations before deployment.",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.FromRgb(102, 60, 0))
+        };
+
+        recommendationBox.Child = recommendationText;
+        mainPanel.Children.Add(recommendationBox);
+
+        // Confirmation question
+        mainPanel.Children.Add(new TextBlock
+        {
+            Text = "Do you want to continue with deployment anyway?",
+            FontWeight = FontWeight.SemiBold,
+            FontSize = 14,
+            Margin = new Thickness(0, 10, 0, 0)
+        });
+
+        // Buttons
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = 10,
+            Margin = new Thickness(0, 20, 0, 0)
+        };
+
+        var cancelButton = new Button
+        {
+            Content = "Cancel Deployment",
+            Width = 150,
+            Padding = new Thickness(10, 8),
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
+
+        var continueButton = new Button
+        {
+            Content = "Continue Anyway",
+            Width = 150,
+            Padding = new Thickness(10, 8),
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            Background = new SolidColorBrush(Color.FromRgb(255, 87, 34)), // Deep Orange
+            Foreground = Brushes.White
+        };
+
+        bool shouldContinue = false;
+
+        cancelButton.Click += (s, args) => { shouldContinue = false; dialog.Close(); };
+        continueButton.Click += (s, args) => { shouldContinue = true; dialog.Close(); };
+
+        buttonPanel.Children.Add(cancelButton);
+        buttonPanel.Children.Add(continueButton);
+
+        mainPanel.Children.Add(buttonPanel);
+
+        dialog.Content = mainPanel;
+        await dialog.ShowDialog(window);
+
+        return shouldContinue;
+    }
+
     private async Task PromptAfterExport(Window window)
     {
         var dialog = new Window
@@ -2046,7 +2262,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void SaveProgress()
+    private void SaveProgress(bool showMessage = true)
     {
         try
         {
@@ -2062,13 +2278,30 @@ public partial class MainWindowViewModel : ViewModelBase
                 ModeSelectionStepStatus = ModeSelectionStepStatus,
                 EditStepStatus = EditStepStatus,
                 ExportStepStatus = ExportStepStatus,
-                CurrentMode = CurrentMode
+                DeployStepStatus = DeployStepStatus,
+                CurrentMode = CurrentMode,
+                
+                // Deployment-related properties
+                RootDirectoryPath = _rootDirectoryPath ?? string.Empty,
+                DeploymentRootPath = DeploymentRootPath != "Click 'Select Folder' to choose deployment directory" ? DeploymentRootPath : string.Empty,
+                SuggestedDeploymentRoot = SuggestedDeploymentRoot,
+                LastExportFolder = _lastExportFolder ?? string.Empty,
+                LastExportFileName = _lastExportFileName ?? string.Empty,
+                DeploymentPreviewItems = DeploymentPreviewItems.ToList(),
+                DeploymentValidationSuccess = DeploymentValidationSuccess,
+                DeploymentValidationMessage = DeploymentValidationMessage,
+                ShowDeploymentSuccess = ShowDeploymentSuccess,
+                DeploymentSuccessMessage = DeploymentSuccessMessage,
+                DeploymentHistory = DeploymentHistory.ToList()
             };
 
             _progressService.SaveProgress(sessionState);
             _translationStore.MarkAllChangesSaved();
             HasUnsavedChanges = false;
-            StatusMessage = "Progress saved successfully.";
+            if (showMessage)
+            {
+                StatusMessage = "Progress saved successfully.";
+            }
         }
         catch (Exception ex)
         {
@@ -2144,9 +2377,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (!confirmed) return;
 
-        // Proceed with start over
+        // Proceed with start over - clear all in-memory state first
         _translationStore.Clear();
-        _progressService.ClearProgress();
         ImportedFileNames.Clear();
         IgnoredFileNames.Clear();
         FilePairs.Clear();
@@ -2161,10 +2393,38 @@ public partial class MainWindowViewModel : ViewModelBase
         ModeSelectionStepStatus = StepStatus.NotStarted;
         EditStepStatus = StepStatus.NotStarted;
         ExportStepStatus = StepStatus.NotStarted;
+        DeployStepStatus = StepStatus.NotStarted;
         CurrentMode = EditMode.Edit;
+
+        // Clear deployment state COMPLETELY
+        DeploymentValidationSuccess = false;
+        DeploymentValidationMessage = string.Empty;
+        ShowDeploymentSuccess = false;
+        DeploymentSuccessMessage = string.Empty;
+        DeploymentHistory.Clear();
+        DeploymentRootPath = "Click 'Select Folder' to choose deployment directory";
+        SuggestedDeploymentRoot = string.Empty;
+        DeploymentPreviewItems.Clear();
+        DeploymentPreviewSummary = string.Empty;
+        ValidationMessage = string.Empty;
+        ShowDeployAgainButton = false;
+        ImportErrors.Clear();
+        HasErrors = false;
+        ErrorCount = 0;
+        _lastExportFolder = string.Empty;
+        _lastExportFileName = string.Empty;
+        
+        // Force property change notifications for computed properties
+        OnPropertyChanged(nameof(HasDeploymentValidationResult));
+        OnPropertyChanged(nameof(DeploymentValidationBorderBrush));
+        OnPropertyChanged(nameof(CanDeploy));
+        OnPropertyChanged(nameof(DeployButtonText));
 
         UpdateFileFilters();
         StatusMessage = "Ready. Click Import to load translation files.";
+        
+        // Delete saved progress file LAST, after all state is cleared
+        _progressService.ClearProgress();
     }
 
     [RelayCommand]
@@ -2337,7 +2597,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        // Get the main window for the folder picker
+        // Get the main window for dialog and folder picker
         var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
             ? desktop.MainWindow
             : null;
@@ -2346,6 +2606,22 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             StatusMessage = "Unable to show folder picker.";
             return;
+        }
+
+        // In deployment mode, warn about missing translations before export
+        if (CurrentMode == EditMode.Deployment)
+        {
+            var keysWithMissingTranslations = allKeys.Where(k => k.HasMissingTranslations).ToList();
+            
+            if (keysWithMissingTranslations.Count > 0)
+            {
+                var continueWithExport = await ShowMissingTranslationsWarning(window, keysWithMissingTranslations.Count);
+                if (!continueWithExport)
+                {
+                    StatusMessage = "Export cancelled.";
+                    return;
+                }
+            }
         }
 
         // Load last export directory from settings, or use default
@@ -2386,7 +2662,17 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             // Use the root directory name in the zip filename
             var rootDirName = Path.GetFileName(_rootDirectoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            zipFileName = $"{rootDirName}_exported_{timestamp}.zip";
+            
+            // Strip any existing "_exported_YYYYMMDD_HHMMSS" suffix to avoid stacking
+            // (e.g., "repos_exported_20260530_123456" becomes "repos")
+            var cleanedName = System.Text.RegularExpressions.Regex.Replace(
+                rootDirName, 
+                @"_exported_\d{8}_\d{6}$", 
+                "", 
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase
+            );
+            
+            zipFileName = $"{cleanedName}_exported_{timestamp}.zip";
         }
         else
         {
@@ -2394,34 +2680,46 @@ public partial class MainWindowViewModel : ViewModelBase
             zipFileName = $"exported_translations_{timestamp}.zip";
         }
 
-        var tempFolderPath = Path.Combine(Path.GetTempPath(), $"isometrix_lingo_export_{timestamp}");
+        // Create folder name without .zip extension for the ZIP contents
+        var folderName = Path.GetFileNameWithoutExtension(zipFileName);
+        var tempRootPath = Path.Combine(Path.GetTempPath(), $"isometrix_lingo_export_{timestamp}");
+        var tempFolderPath = Path.Combine(tempRootPath, folderName);
         var zipFilePath = Path.Combine(outputPath, zipFileName);
+
+        // Validate that we have the source directory
+        if (string.IsNullOrEmpty(_rootDirectoryPath) || !Directory.Exists(_rootDirectoryPath))
+        {
+            StatusMessage = "Source directory not found. Cannot export - please re-import files.";
+            return;
+        }
 
         try
         {
-            // Create temporary folder for exported files
+            // Create temporary folder structure for exported files
             Directory.CreateDirectory(tempFolderPath);
 
-            // Group all keys by file type and export to temp folder
+            // Group all keys by file type and export to temp folder using copy-then-update
             var jsonKeys = allKeys.Where(k => k.Source.Type == FileType.Json).ToList();
             var resxKeys = allKeys.Where(k => k.Source.Type == FileType.Resx).ToList();
 
             if (jsonKeys.Count > 0)
             {
-                _jsonWriter.WriteFiles(jsonKeys, tempFolderPath, sourceFileName => _translationStore.GetJsonTemplate(sourceFileName), Username, CurrentMode == EditMode.Edit);
+                // Copy original files and update them in-place (preserves ALL original content)
+                _jsonWriter.CopyAndUpdateFiles(jsonKeys, _rootDirectoryPath, tempFolderPath, Username, CurrentMode);
             }
 
             if (resxKeys.Count > 0)
             {
-                _resxWriter.WriteFiles(resxKeys, tempFolderPath, sourceFileName => _translationStore.GetResxTemplate(sourceFileName), Username, CurrentMode == EditMode.Edit);
+                // Copy original files and update them in-place (preserves ALL original content)
+                _resxWriter.CopyAndUpdateFiles(resxKeys, _rootDirectoryPath, tempFolderPath, Username, CurrentMode);
             }
 
-            // Create ZIP file
+            // Create ZIP file from the root temp folder (includes the named folder)
             if (File.Exists(zipFilePath))
             {
                 File.Delete(zipFilePath);
             }
-            ZipFile.CreateFromDirectory(tempFolderPath, zipFilePath);
+            ZipFile.CreateFromDirectory(tempRootPath, zipFilePath);
 
             // Clean up temp folder
             Directory.Delete(tempFolderPath, true);
@@ -2436,8 +2734,33 @@ public partial class MainWindowViewModel : ViewModelBase
             _lastExportFolder = outputPath;
             _lastExportFileName = zipFileName;
 
-            // Prompt to start over
-            await PromptToStartOverAfterExport();
+            // In deployment mode, transition to Deploy step instead of prompting to start over
+            if (CurrentMode == EditMode.Deployment)
+            {
+                // Clear any previous deployment errors
+                ImportErrors.Clear();
+                HasErrors = false;
+                ErrorCount = 0;
+                ValidationMessage = string.Empty;
+                ShowDeployAgainButton = false;
+                
+                DeployStepStatus = StepStatus.InProgress;
+                CurrentStep = WorkflowStep.Deploy;
+                StatusMessage = "Export complete. Ready for deployment.";
+                
+                // Generate smart deployment root suggestion
+                var suggestion = _deploymentService.SuggestDeploymentRoot(_lastExportFolder, _lastExportFileName);
+                if (!string.IsNullOrEmpty(suggestion))
+                {
+                    SuggestedDeploymentRoot = suggestion;
+                    StatusMessage = $"Export complete. Smart suggestion found: {Path.GetFileName(suggestion)}";
+                }
+            }
+            else
+            {
+                // Prompt to start over in Edit/Suggest modes
+                await PromptToStartOverAfterExport();
+            }
         }
         catch (Exception ex)
         {
@@ -2622,22 +2945,8 @@ public partial class MainWindowViewModel : ViewModelBase
         var sessionState = _progressService.LoadProgress();
         if (sessionState != null && sessionState.TranslationKeys.Count > 0)
         {
-            // DEBUG: Count confirmations before adding to store
-            var confirmationsLoaded = sessionState.TranslationKeys.Count(k => k.ConfirmedBy != null);
-            System.Diagnostics.Debug.WriteLine($"[LoadProgress] Loaded {confirmationsLoaded} keys with confirmations out of {sessionState.TranslationKeys.Count} total keys");
-            
-            // DEBUG: Show some details
-            foreach (var key in sessionState.TranslationKeys.Where(k => k.ConfirmedBy != null).Take(3))
-            {
-                System.Diagnostics.Debug.WriteLine($"  Key: {key.Key}, ConfirmationDisplayText: '{key.ConfirmationDisplayText}'");
-            }
-            
             // Restore translation keys
             _translationStore.AddTranslations(sessionState.TranslationKeys);
-            
-            // DEBUG: Count confirmations after adding to store
-            var confirmationsInStore = _translationStore.GetAllKeys().Count(k => k.ConfirmedBy != null);
-            System.Diagnostics.Debug.WriteLine($"[LoadProgress] Store now has {confirmationsInStore} keys with confirmations");
 
             // Restore templates
             _translationStore.RestoreResxTemplates(sessionState.ResxTemplates);
@@ -2657,7 +2966,59 @@ public partial class MainWindowViewModel : ViewModelBase
             ModeSelectionStepStatus = sessionState.ModeSelectionStepStatus;
             EditStepStatus = sessionState.EditStepStatus;
             ExportStepStatus = sessionState.ExportStepStatus;
+            DeployStepStatus = sessionState.DeployStepStatus;
             CurrentMode = sessionState.CurrentMode;
+            
+            // Restore deployment-related state
+            if (!string.IsNullOrEmpty(sessionState.RootDirectoryPath))
+            {
+                _rootDirectoryPath = sessionState.RootDirectoryPath;
+            }
+            if (!string.IsNullOrEmpty(sessionState.DeploymentRootPath))
+            {
+                DeploymentRootPath = sessionState.DeploymentRootPath;
+            }
+            SuggestedDeploymentRoot = sessionState.SuggestedDeploymentRoot;
+            if (!string.IsNullOrEmpty(sessionState.LastExportFolder))
+            {
+                _lastExportFolder = sessionState.LastExportFolder;
+            }
+            if (!string.IsNullOrEmpty(sessionState.LastExportFileName))
+            {
+                _lastExportFileName = sessionState.LastExportFileName;
+            }
+            
+            // Restore deployment preview items
+            DeploymentPreviewItems.Clear();
+            foreach (var item in sessionState.DeploymentPreviewItems)
+            {
+                DeploymentPreviewItems.Add(item);
+            }
+            
+            // Restore deployment validation and success state
+            DeploymentValidationSuccess = sessionState.DeploymentValidationSuccess;
+            DeploymentValidationMessage = sessionState.DeploymentValidationMessage;
+            ShowDeploymentSuccess = sessionState.ShowDeploymentSuccess;
+            DeploymentSuccessMessage = sessionState.DeploymentSuccessMessage;
+            
+            // Restore deployment history
+            DeploymentHistory.Clear();
+            foreach (var entry in sessionState.DeploymentHistory)
+            {
+                DeploymentHistory.Add(entry);
+            }
+            
+            // Notify property changes for deployment-related computed properties
+            if (DeploymentPreviewItems.Count > 0)
+            {
+                OnPropertyChanged(nameof(HasDeploymentPreview));
+                OnPropertyChanged(nameof(CanDeploy));
+                DeploymentPreviewSummary = $"{DeploymentPreviewItems.Count} file(s) ready for deployment";
+            }
+            
+            // Notify property changes for deployment validation and success
+            OnPropertyChanged(nameof(HasDeploymentValidationResult));
+            OnPropertyChanged(nameof(DeploymentValidationBorderBrush));
 
             // Regenerate file pairs if we're on the FileMapping step
             if (CurrentStep == WorkflowStep.FileMapping || FileMappingStepStatus != StepStatus.NotStarted)
@@ -2669,7 +3030,14 @@ public partial class MainWindowViewModel : ViewModelBase
             HasKeys = true;
             HasUnsavedChanges = false;
 
-            StatusMessage = $"Loaded {sessionState.TranslationKeys.Count} translation keys from saved progress ({confirmationsLoaded} confirmed).";
+            // Build status message with deployment info if on deploy step
+            var statusMsg = $"Loaded {sessionState.TranslationKeys.Count} translation keys from saved progress.";
+            if (CurrentStep == WorkflowStep.Deploy && !string.IsNullOrEmpty(_rootDirectoryPath))
+            {
+                statusMsg += $" Import directory: {Path.GetFileName(_rootDirectoryPath)}";
+            }
+            StatusMessage = statusMsg;
+            
             LanguagesChanged?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -2686,9 +3054,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private void LoadUserSettings()
     {
         var settings = _settingsService.Load();
-        if (settings != null && !string.IsNullOrWhiteSpace(settings.Username))
+        if (settings != null)
         {
-            Username = settings.Username;
+            if (!string.IsNullOrWhiteSpace(settings.Username))
+            {
+                Username = settings.Username;
+            }
+            IsDeveloper = settings.IsDeveloper;
         }
     }
 
@@ -2852,11 +3224,48 @@ public partial class MainWindowViewModel : ViewModelBase
     private void ConfirmModeSelection()
     {
         ModeSelectionStepStatus = StepStatus.Completed;
-        EditStepStatus = StepStatus.InProgress;
-        CurrentStep = WorkflowStep.Edit;
-        
-        var modeText = CurrentMode == EditMode.Edit ? "Edit" : "Suggest";
-        StatusMessage = $"{modeText} mode selected. You can now {modeText.ToLower()} translations.";
+
+        if (CurrentMode == EditMode.Deployment)
+        {
+            // Deployment mode: skip Edit and Export steps, go directly to Deploy
+            EditStepStatus = StepStatus.NotStarted; // Skipped
+            ExportStepStatus = StepStatus.NotStarted; // Skipped
+            DeployStepStatus = StepStatus.InProgress;
+            CurrentStep = WorkflowStep.Deploy;
+            
+            // Set the last export info from the imported directory
+            if (!string.IsNullOrEmpty(_rootDirectoryPath))
+            {
+                var parentDir = Directory.GetParent(_rootDirectoryPath);
+                if (parentDir != null)
+                {
+                    _lastExportFolder = parentDir.FullName;
+                    _lastExportFileName = Path.GetFileName(_rootDirectoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) + ".zip";
+                }
+            }
+            
+            StatusMessage = "Deployment mode selected. Ready to deploy translations.";
+            
+            // Generate smart deployment root suggestion
+            if (!string.IsNullOrEmpty(_lastExportFolder) && !string.IsNullOrEmpty(_lastExportFileName))
+            {
+                var suggestion = _deploymentService.SuggestDeploymentRoot(_lastExportFolder, _lastExportFileName);
+                if (!string.IsNullOrEmpty(suggestion))
+                {
+                    SuggestedDeploymentRoot = suggestion;
+                    StatusMessage = $"Deployment mode selected. Smart suggestion found: {Path.GetFileName(suggestion)}";
+                }
+            }
+        }
+        else
+        {
+            // Edit or Suggest mode: proceed to Edit step
+            EditStepStatus = StepStatus.InProgress;
+            CurrentStep = WorkflowStep.Edit;
+            
+            var modeText = CurrentMode == EditMode.Edit ? "Edit" : "Suggest";
+            StatusMessage = $"{modeText} mode selected. You can now {modeText.ToLower()} translations.";
+        }
 
         // Auto-save progress
         SaveProgress();
@@ -2934,7 +3343,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             Title = "User Profile",
             Width = 400,
-            Height = 180,
+            Height = 230,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };
@@ -2962,6 +3371,15 @@ public partial class MainWindowViewModel : ViewModelBase
             Text = Username
         };
         contentPanel.Children.Add(usernameBox);
+
+        // Developer mode checkbox
+        var developerCheckBox = new CheckBox
+        {
+            Content = "Developer Mode (enables deployment features)",
+            IsChecked = IsDeveloper,
+            Margin = new Thickness(0, 10, 0, 0)
+        };
+        contentPanel.Children.Add(developerCheckBox);
 
         DockPanel.SetDock(contentPanel, Dock.Top);
         mainPanel.Children.Add(contentPanel);
@@ -2991,22 +3409,48 @@ public partial class MainWindowViewModel : ViewModelBase
             HorizontalContentAlignment = HorizontalAlignment.Center
         };
 
-        // Enable save button only when username changes
+        // Enable save button only when username or developer mode changes
         usernameBox.TextChanged += (s, e) =>
         {
             var newText = usernameBox.Text?.Trim() ?? "";
-            saveButton.IsEnabled = !string.IsNullOrWhiteSpace(newText) && newText != Username;
+            var newDeveloper = developerCheckBox.IsChecked == true;
+            saveButton.IsEnabled = (!string.IsNullOrWhiteSpace(newText) && newText != Username) || newDeveloper != IsDeveloper;
+        };
+
+        developerCheckBox.IsCheckedChanged += (s, e) =>
+        {
+            var newText = usernameBox.Text?.Trim() ?? "";
+            var newDeveloper = developerCheckBox.IsChecked == true;
+            saveButton.IsEnabled = (!string.IsNullOrWhiteSpace(newText) && newText != Username) || newDeveloper != IsDeveloper;
         };
 
         saveButton.Click += (s, args) =>
         {
             var newUsername = usernameBox.Text?.Trim();
+            var newDeveloper = developerCheckBox.IsChecked == true;
+            bool changed = false;
+
             if (!string.IsNullOrWhiteSpace(newUsername) && newUsername != Username)
             {
                 Username = newUsername;
-                var settings = new UserSettings { Username = newUsername };
+                changed = true;
+            }
+
+            if (newDeveloper != IsDeveloper)
+            {
+                IsDeveloper = newDeveloper;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                var settings = _settingsService.Load() ?? new UserSettings();
+                settings.Username = Username;
+                settings.IsDeveloper = IsDeveloper;
+                settings.LastExportDirectory = settings.LastExportDirectory; // Preserve existing
+                settings.LastDeploymentRoot = settings.LastDeploymentRoot; // Preserve existing
                 _settingsService.Save(settings);
-                StatusMessage = $"Username updated to '{newUsername}'.";
+                StatusMessage = "Profile updated successfully.";
             }
             dialog.Close();
         };
@@ -3071,5 +3515,544 @@ public partial class MainWindowViewModel : ViewModelBase
         
         StatusMessage = $"Rejected suggestion for '{key.Key}' in {LanguageHelper.GetLanguageName(language)}.";
     }
+
+    #region Deployment Commands
+
+    [RelayCommand]
+    private async Task SelectDeploymentRoot()
+    {
+        // Clear previous deployment state when selecting a new root
+        ImportErrors.Clear();
+        HasErrors = false;
+        ErrorCount = 0;
+        ValidationMessage = string.Empty;
+        DeploymentValidationMessage = string.Empty;
+        DeploymentValidationSuccess = false;
+        DeploymentPreviewItems.Clear();
+        ShowDeploymentSuccess = false;
+
+        var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+
+        if (window == null)
+        {
+            StatusMessage = "Unable to show folder picker.";
+            return;
+        }
+
+        // Load last deployment root from settings, or use parent of last export directory
+        var settings = _settingsService.Load();
+        var defaultPath = !string.IsNullOrEmpty(settings?.LastDeploymentRoot) && Directory.Exists(settings.LastDeploymentRoot)
+            ? settings.LastDeploymentRoot
+            : !string.IsNullOrEmpty(settings?.LastExportDirectory)
+                ? Directory.GetParent(settings.LastExportDirectory)?.FullName ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+                : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+        var folders = await window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select Deployment Root Directory",
+            AllowMultiple = false,
+            SuggestedStartLocation = await window.StorageProvider.TryGetFolderFromPathAsync(defaultPath)
+        });
+
+        if (folders.Count == 0)
+        {
+            StatusMessage = "Deployment root selection cancelled.";
+            return;
+        }
+
+        DeploymentRootPath = folders[0].Path.LocalPath;
+
+        // Save to settings
+        if (settings == null)
+        {
+            settings = new UserSettings { Username = Username };
+        }
+        settings.LastDeploymentRoot = DeploymentRootPath;
+        _settingsService.Save(settings);
+
+        StatusMessage = $"Deployment root set to: {DeploymentRootPath}";
+        
+        // Perform validation automatically
+        await PerformDeploymentValidation();
+    }
+
+    [RelayCommand]
+    private async Task UseSuggestedRoot()
+    {
+        if (!HasSuggestedDeploymentRoot)
+            return;
+
+        // Clear previous deployment state
+        ImportErrors.Clear();
+        HasErrors = false;
+        ErrorCount = 0;
+        ValidationMessage = string.Empty;
+        DeploymentValidationMessage = string.Empty;
+        DeploymentValidationSuccess = false;
+        DeploymentPreviewItems.Clear();
+        ShowDeploymentSuccess = false;
+
+        DeploymentRootPath = SuggestedDeploymentRoot;
+        
+        // Save to settings
+        var settings = _settingsService.Load() ?? new UserSettings { Username = Username };
+        settings.LastDeploymentRoot = DeploymentRootPath;
+        _settingsService.Save(settings);
+
+        StatusMessage = $"Using suggested deployment root: {DeploymentRootPath}";
+        
+        // Perform validation automatically
+        await PerformDeploymentValidation();
+    }
+
+    [RelayCommand]
+    private async Task ValidateAndDeploy()
+    {
+        if (!CanDeploy)
+        {
+            StatusMessage = "Cannot deploy: Validation must pass before deployment.";
+            return;
+        }
+
+        if (string.IsNullOrEmpty(_rootDirectoryPath) || !Directory.Exists(_rootDirectoryPath))
+        {
+            StatusMessage = "Session root directory not found. Please re-import translations.";
+            return;
+        }
+
+        // Execute deployment (validation already done)
+        StatusMessage = "Deploying files...";
+        var (success, deploymentErrors) = _deploymentService.ExecuteDeploymentFromDirectory(_rootDirectoryPath, DeploymentRootPath);
+
+        if (success)
+        {
+            DeployStepStatus = StepStatus.Completed;
+            DeploymentSuccessMessage = $"✓ Deployment successful! {DeploymentPreviewItems.Count} file(s) deployed.";
+            ShowDeploymentSuccess = true;
+            ShowDeployAgainButton = true;
+            
+            // Add to deployment history (keep only last 5)
+            DeploymentHistory.Add(new DeploymentHistoryEntry
+            {
+                Timestamp = DateTime.Now,
+                FileCount = DeploymentPreviewItems.Count,
+                Success = true,
+                DeploymentRoot = DeploymentRootPath
+            });
+            
+            // Keep only last 5 entries
+            while (DeploymentHistory.Count > 5)
+            {
+                DeploymentHistory.RemoveAt(0);
+            }
+            
+            // Save progress after successful deployment (without showing message)
+            SaveProgress(showMessage: false);
+            
+            // Show "Progress saved" message for 1 second, then switch to deployment message
+            StatusMessage = "Progress saved successfully.";
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(1000);
+                StatusMessage = $"Successfully deployed {DeploymentPreviewItems.Count} file(s) to {DeploymentRootPath}";
+            });
+        }
+        else
+        {
+            // Deployment failed - show errors
+            ImportErrors.Clear();
+            foreach (var error in deploymentErrors)
+            {
+                ImportErrors.Add(error);
+            }
+            HasErrors = true;
+            ErrorCount = deploymentErrors.Count;
+            DeploymentValidationSuccess = false;
+            DeploymentValidationMessage = $"❌ Deployment failed: {deploymentErrors.Count} error(s) detected. All changes rolled back.";
+            StatusMessage = $"Deployment failed with {deploymentErrors.Count} error(s). No files were changed.";
+            
+            // Add to deployment history (keep only last 5)
+            DeploymentHistory.Add(new DeploymentHistoryEntry
+            {
+                Timestamp = DateTime.Now,
+                FileCount = DeploymentPreviewItems.Count,
+                Success = false,
+                DeploymentRoot = DeploymentRootPath
+            });
+            
+            // Keep only last 5 entries
+            while (DeploymentHistory.Count > 5)
+            {
+                DeploymentHistory.RemoveAt(0);
+            }
+            
+            // Save progress even on failure (to persist error state)
+            SaveProgress(showMessage: false);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    [RelayCommand]
+    private async Task ViewDeploymentHistory()
+    {
+        var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+
+        if (window == null)
+        {
+            StatusMessage = "Unable to show deployment history.";
+            return;
+        }
+
+        // Show history in reverse chronological order (most recent first)
+        var historyToShow = DeploymentHistory.Reverse().ToList();
+        var viewModel = DeploymentDetailsViewModel.CreateForHistory(historyToShow);
+
+        var dialog = new DeploymentDetailsDialog
+        {
+            DataContext = viewModel
+        };
+
+        await dialog.ShowDialog(window);
+    }
+
+    [RelayCommand]
+    private async Task ViewDeploymentDetails()
+    {
+        var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+
+        if (window == null)
+        {
+            StatusMessage = "Unable to show deployment details.";
+            return;
+        }
+
+        DeploymentDetailsViewModel viewModel;
+
+        if (DeploymentValidationSuccess)
+        {
+            // Show preview items
+            viewModel = DeploymentDetailsViewModel.CreateForPreview(DeploymentPreviewItems.ToList());
+        }
+        else
+        {
+            // Show validation errors
+            viewModel = DeploymentDetailsViewModel.CreateForErrors(ImportErrors.ToList());
+        }
+
+        var dialog = new DeploymentDetailsDialog
+        {
+            DataContext = viewModel
+        };
+
+        await dialog.ShowDialog(window);
+    }
+
+    [RelayCommand]
+    private async Task DeployAgain()
+    {
+        // Re-deploy to the same location without requiring re-selection
+        if (!CanDeploy)
+        {
+            StatusMessage = "Cannot deploy: Please select a deployment root first.";
+            return;
+        }
+
+        // Clear previous validation state and re-execute deployment
+        ValidationMessage = string.Empty;
+        ShowDeployAgainButton = false;
+        await ValidateAndDeploy();
+    }
+
+    [RelayCommand]
+    private async Task ViewExportedFiles()
+    {
+        if (string.IsNullOrEmpty(_lastExportFolder))
+        {
+            StatusMessage = "No export folder available.";
+            return;
+        }
+
+        try
+        {
+            // Open the export folder in file explorer
+            if (OperatingSystem.IsWindows())
+            {
+                Process.Start("explorer.exe", _lastExportFolder);
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                Process.Start("open", _lastExportFolder);
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                Process.Start("xdg-open", _lastExportFolder);
+            }
+
+            StatusMessage = $"Opened export folder: {_lastExportFolder}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Failed to open export folder: {ex.Message}";
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task GenerateDeploymentPreview()
+    {
+        // Validate that we have the source directory
+        if (string.IsNullOrEmpty(_rootDirectoryPath))
+        {
+            StatusMessage = "Error: No import directory found. Please start a new session and import files first.";
+            return;
+        }
+
+        if (!Directory.Exists(_rootDirectoryPath))
+        {
+            StatusMessage = $"Error: Import directory no longer exists: {_rootDirectoryPath}. Please start a new session.";
+            return;
+        }
+
+        // Validate deployment root is set
+        if (string.IsNullOrEmpty(DeploymentRootPath) || DeploymentRootPath == "Click 'Select Folder' to choose deployment directory")
+        {
+            StatusMessage = "Please select a deployment root directory first.";
+            return;
+        }
+
+        // Generate preview
+        var previewItems = _deploymentService.GetDeploymentPreviewFromDirectory(_rootDirectoryPath, DeploymentRootPath);
+        
+        DeploymentPreviewItems.Clear();
+        foreach (var item in previewItems)
+        {
+            DeploymentPreviewItems.Add(item);
+        }
+
+        // Notify that HasDeploymentPreview and CanDeploy may have changed
+        OnPropertyChanged(nameof(HasDeploymentPreview));
+        OnPropertyChanged(nameof(CanDeploy));
+
+        DeploymentPreviewSummary = $"{previewItems.Count} file(s) ready for deployment";
+        StatusMessage = $"Preview generated: {previewItems.Count} file(s) will be deployed.";
+
+        // Save progress after generating preview
+        SaveProgress();
+
+        await Task.CompletedTask;
+    }
+
+    private async Task PerformDeploymentValidation()
+    {
+        // Check if any suggestions exist - must be resolved before deployment
+        var allKeys = _translationStore.GetAllKeys();
+        var keysWithSuggestions = allKeys.Where(k => k.SuggestedValues.Any()).ToList();
+        
+        if (keysWithSuggestions.Count > 0)
+        {
+            // Populate ImportErrors with details about suggestions
+            ImportErrors.Clear();
+            foreach (var key in keysWithSuggestions)
+            {
+                var languages = string.Join(", ", key.SuggestedValues.Keys);
+                ImportErrors.Add(new ImportError
+                {
+                    ErrorType = ImportErrorType.Other,
+                    FileName = key.Source.Name,
+                    Message = $"Key '{key.Key}' has unresolved suggestion(s) for: {languages}",
+                    Guidance = "Accept or reject the suggestion before deploying."
+                });
+            }
+            
+            HasErrors = true;
+            ErrorCount = keysWithSuggestions.Count;
+            DeploymentValidationSuccess = false;
+            DeploymentValidationMessage = $"❌ Cannot deploy: {keysWithSuggestions.Count} translation(s) have unresolved suggestions. Please accept or reject all suggestions before deploying.";
+            StatusMessage = $"Deployment blocked: {keysWithSuggestions.Count} unresolved suggestion(s).";
+            return;
+        }
+        
+        // Validate that we have the source directory
+        if (string.IsNullOrEmpty(_rootDirectoryPath) || !Directory.Exists(_rootDirectoryPath))
+        {
+            DeploymentValidationSuccess = false;
+            DeploymentValidationMessage = "❌ Session root directory not found. Please re-import translations.";
+            StatusMessage = "Validation failed: import directory not found.";
+            return;
+        }
+
+        // Validate deployment root is set
+        if (string.IsNullOrEmpty(DeploymentRootPath) || DeploymentRootPath == "Click 'Select Folder' to choose deployment directory")
+        {
+            DeploymentValidationSuccess = false;
+            DeploymentValidationMessage = "❌ Please select a deployment root directory.";
+            StatusMessage = "Validation failed: no deployment root selected.";
+            return;
+        }
+
+        // Step 1: Generate preview
+        var previewItems = _deploymentService.GetDeploymentPreviewFromDirectory(_rootDirectoryPath, DeploymentRootPath);
+        
+        DeploymentPreviewItems.Clear();
+        foreach (var item in previewItems)
+        {
+            DeploymentPreviewItems.Add(item);
+        }
+
+        // Step 2: Soft validation (root name match) - warn but don't fail
+        var (isMatch, matchMessage) = _deploymentService.ValidateRootNameMatch(DeploymentRootPath, _rootDirectoryPath);
+        if (!isMatch && IsDeveloper)
+        {
+            // For developers, show a warning in the message but don't fail validation
+            DeploymentValidationMessage = $"⚠️ Warning: {matchMessage}. You can still proceed.";
+        }
+
+        // Step 3: Hard validation (all paths must be valid)
+        var validationErrors = _deploymentService.ValidateAllPathsFromDirectory(_rootDirectoryPath, DeploymentRootPath);
+        if (validationErrors.Count > 0)
+        {
+            // Hard validation failed - show errors and block deployment
+            ImportErrors.Clear();
+            foreach (var error in validationErrors)
+            {
+                ImportErrors.Add(error);
+            }
+            HasErrors = true;
+            ErrorCount = validationErrors.Count;
+            DeploymentValidationSuccess = false;
+            DeploymentValidationMessage = $"❌ Validation failed: {validationErrors.Count} error(s) detected.";
+            StatusMessage = $"Deployment validation failed with {validationErrors.Count} error(s).";
+            return;
+        }
+
+        // Validation succeeded
+        DeploymentValidationSuccess = true;
+        DeploymentValidationMessage = $"✅ Validation successful: {previewItems.Count} file(s) ready for deployment.";
+        StatusMessage = $"Validation successful: {previewItems.Count} file(s) ready to deploy.";
+
+        // Save progress after validation
+        SaveProgress();
+
+        await Task.CompletedTask;
+    }
+
+    private async Task<bool> ShowSoftValidationWarning(string warningMessage)
+    {
+        var window = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+
+        if (window == null)
+        {
+            return false;
+        }
+
+        var dialog = new Window
+        {
+            Title = "Deployment Warning",
+            Width = 500,
+            Height = 280,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        var panel = new StackPanel
+        {
+            Margin = new Thickness(20),
+            Spacing = 15
+        };
+
+        // Warning header
+        var headerPanel = new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#FFF3E0")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#FF9800")),
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(12)
+        };
+
+        var headerStack = new StackPanel { Spacing = 5 };
+        headerStack.Children.Add(new TextBlock
+        {
+            Text = "⚠️ Deployment Path Mismatch",
+            FontSize = 16,
+            FontWeight = FontWeight.Bold,
+            Foreground = new SolidColorBrush(Color.Parse("#E65100"))
+        });
+        headerStack.Children.Add(new TextBlock
+        {
+            Text = warningMessage,
+            FontSize = 13,
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            Foreground = new SolidColorBrush(Color.Parse("#424242"))
+        });
+        headerPanel.Child = headerStack;
+        panel.Children.Add(headerPanel);
+
+        // Explanation
+        panel.Children.Add(new TextBlock
+        {
+            Text = "This warning indicates the deployment directory name doesn't match the original import directory. You can continue if you're sure this is the correct location.",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            FontSize = 12,
+            Foreground = new SolidColorBrush(Color.Parse("#666666"))
+        });
+
+        // Buttons
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+            Spacing = 10,
+            Margin = new Thickness(0, 5, 0, 0)
+        };
+
+        bool continueDeployment = false;
+
+        var cancelButton = new Button
+        {
+            Content = "Cancel Deployment",
+            Width = 150,
+            Padding = new Thickness(10, 6)
+        };
+        cancelButton.Click += (s, args) =>
+        {
+            continueDeployment = false;
+            dialog.Close();
+        };
+
+        var continueButton = new Button
+        {
+            Content = "Continue Anyway",
+            Width = 150,
+            Padding = new Thickness(10, 6),
+            Background = new SolidColorBrush(Color.Parse("#FF9800")),
+            Foreground = Avalonia.Media.Brushes.White
+        };
+        continueButton.Click += (s, args) =>
+        {
+            continueDeployment = true;
+            dialog.Close();
+        };
+
+        buttonPanel.Children.Add(cancelButton);
+        buttonPanel.Children.Add(continueButton);
+        panel.Children.Add(buttonPanel);
+
+        dialog.Content = panel;
+        await dialog.ShowDialog(window);
+
+        return continueDeployment;
+    }
+
+    #endregion
 }
 

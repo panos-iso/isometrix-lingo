@@ -173,11 +173,75 @@ public partial class MainWindow : Window
         if (DataContext is not MainWindowViewModel viewModel)
             return;
 
-        // Remove existing columns after Key and Source File (keep first 2)
-        while (TranslationsGrid.Columns.Count > 2)
+        // Clear all columns and rebuild from scratch
+        TranslationsGrid.Columns.Clear();
+
+        // Add Source File column
+        var sourceFileColumn = new DataGridTemplateColumn
         {
-            TranslationsGrid.Columns.RemoveAt(2);
-        }
+            Header = "Source File",
+            Width = new DataGridLength(1, DataGridLengthUnitType.Star),
+            MinWidth = 120,
+            CellTemplate = new FuncDataTemplate<TranslationKey>((key, _) =>
+            {
+                var stackPanel = new StackPanel
+                {
+                    Orientation = Avalonia.Layout.Orientation.Vertical,
+                    Margin = new Avalonia.Thickness(5, 4),
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                };
+
+                if (key?.Source != null)
+                {
+                    var type = key.Source.Type == FileType.Json ? "JSON" : "RESX";
+                    var fileNameBlock = new TextBlock
+                    {
+                        Text = $"{key.Source.Name} ({type})",
+                        TextWrapping = Avalonia.Media.TextWrapping.Wrap
+                    };
+                    stackPanel.Children.Add(fileNameBlock);
+
+                    if (!string.IsNullOrEmpty(key.Source.DirectoryPath))
+                    {
+                        var dirPath = key.Source.DirectoryPath;
+                        if (dirPath.Length > 30)
+                            dirPath = "..." + dirPath.Substring(dirPath.Length - 27);
+                        
+                        var dirBlock = new TextBlock
+                        {
+                            Text = dirPath,
+                            FontSize = 10,
+                            FontStyle = FontStyle.Italic,
+                            Foreground = new SolidColorBrush(Color.Parse("#808080")),
+                            TextWrapping = Avalonia.Media.TextWrapping.Wrap
+                        };
+                        stackPanel.Children.Add(dirBlock);
+                    }
+                }
+
+                return stackPanel;
+            })
+        };
+        TranslationsGrid.Columns.Add(sourceFileColumn);
+
+        // Add Key column
+        var keyColumn = new DataGridTemplateColumn
+        {
+            Header = "Key",
+            Width = new DataGridLength(1, DataGridLengthUnitType.Star),
+            MinWidth = 120,
+            CellTemplate = new FuncDataTemplate<TranslationKey>((key, _) =>
+            {
+                return new TextBlock
+                {
+                    Text = key?.Key ?? "",
+                    TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                    Padding = new Avalonia.Thickness(5, 4),
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                };
+            })
+        };
+        TranslationsGrid.Columns.Add(keyColumn);
 
         // Add a column for each language
         foreach (var language in viewModel.Languages.OrderBy(l => l))
@@ -186,9 +250,8 @@ public partial class MainWindow : Window
             var column = new DataGridTemplateColumn
             {
                 Header = languageName,
-                Width = new DataGridLength(1, DataGridLengthUnitType.Star),
+                Width = new DataGridLength(1.2, DataGridLengthUnitType.Star),
                 MinWidth = 120,
-                MaxWidth = 300,
                 CellTemplate = new FuncDataTemplate<object>((data, _) =>
                 {
                     // Create a border to apply background color and left border for highlighting
@@ -381,69 +444,12 @@ public partial class MainWindow : Window
             TranslationsGrid.Columns.Add(column);
         }
 
-        // Add Last Confirmed column before Actions
-        var confirmedColumn = new DataGridTemplateColumn
-        {
-            Header = "Last Confirmed By",
-            Width = new DataGridLength(1.2, DataGridLengthUnitType.Star),
-            MinWidth = 180,
-            MaxWidth = 250,
-            CellTemplate = new FuncDataTemplate<object>((data, _) =>
-            {
-                if (data is not TranslationKey key || key.ConfirmedBy == null)
-                    return new TextBlock();
-
-                var panel = new StackPanel
-                {
-                    Orientation = Avalonia.Layout.Orientation.Vertical,
-                    Spacing = 4,
-                    Margin = new Avalonia.Thickness(5, 4),
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-                };
-
-                // Username text - don't set Foreground at all, let theme handle it
-                var usernameText = new TextBlock
-                {
-                    Text = key.ConfirmedBy.Username,
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-                };
-
-                // Date badge
-                var dateBorder = new Border
-                {
-                    Background = Brushes.DarkSlateGray,
-                    BorderBrush = Brushes.Gray,
-                    BorderThickness = new Avalonia.Thickness(1),
-                    CornerRadius = new Avalonia.CornerRadius(3),
-                    Padding = new Avalonia.Thickness(6, 2),
-                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-                };
-
-                var dateText = new TextBlock
-                {
-                    Text = key.ConfirmedBy.Timestamp.ToString("MMM dd, yyyy"),
-                    FontSize = 11,
-                    FontStyle = Avalonia.Media.FontStyle.Italic,
-                    Foreground = Brushes.White
-                };
-
-                dateBorder.Child = dateText;
-                panel.Children.Add(usernameText);
-                panel.Children.Add(dateBorder);
-
-                return panel;
-            })
-        };
-        TranslationsGrid.Columns.Add(confirmedColumn);
-
         // Add Actions column at the end
         var actionsColumn = new DataGridTemplateColumn
         {
             Header = "Actions",
-            Width = DataGridLength.Auto,
+            Width = new DataGridLength(0.6, DataGridLengthUnitType.Star),
             MinWidth = 100,
-            MaxWidth = 120,
             CellTemplate = new FuncDataTemplate<object>((data, _) =>
             {
                 var panel = new StackPanel
@@ -630,6 +636,14 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel viewModel)
         {
             viewModel.SelectModeCommand.Execute(EditMode.Suggest);
+        }
+    }
+
+    private void OnDeploymentModeBoxTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.SelectModeCommand.Execute(EditMode.Deployment);
         }
     }
 }

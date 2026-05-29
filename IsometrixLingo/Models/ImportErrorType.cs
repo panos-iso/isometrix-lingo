@@ -31,6 +31,26 @@ public enum ImportErrorType
     UnsupportedLanguage,
     
     /// <summary>
+    /// A file was not found at the expected location.
+    /// </summary>
+    FileNotFound,
+    
+    /// <summary>
+    /// A file path is invalid or points outside the allowed directory.
+    /// </summary>
+    InvalidPath,
+    
+    /// <summary>
+    /// An error occurred while reading a file.
+    /// </summary>
+    ReadError,
+    
+    /// <summary>
+    /// An error occurred while writing a file.
+    /// </summary>
+    WriteError,
+    
+    /// <summary>
     /// An unspecified error occurred during import.
     /// </summary>
     Other

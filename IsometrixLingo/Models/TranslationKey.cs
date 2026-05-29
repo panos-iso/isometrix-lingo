@@ -34,23 +34,6 @@ public partial class TranslationKey : ObservableObject
     [ObservableProperty]
     private Dictionary<string, Suggestion> _suggestedValues = new();
 
-    [ObservableProperty]
-    private Confirmation? _confirmedBy;
-    
-    /// <summary>
-    /// Called when ConfirmedBy changes - notify UI that display text also changed
-    /// </summary>
-    partial void OnConfirmedByChanged(Confirmation? value)
-    {
-        OnPropertyChanged(nameof(ConfirmationDisplayText));
-        OnPropertyChanged(nameof(IsConfirmed));
-    }
-
-    /// <summary>
-    /// Get display text for confirmation, or empty string if not confirmed
-    /// </summary>
-    public string ConfirmationDisplayText => ConfirmedBy?.DisplayText ?? string.Empty;
-
     /// <summary>
     /// Check if a specific language value has been modified
     /// </summary>
@@ -71,23 +54,6 @@ public partial class TranslationKey : ObservableObject
     /// Check if this key has any suggestions across any language
     /// </summary>
     public bool HasAnySuggestions => SuggestedValues.Count > 0;
-
-    /// <summary>
-    /// Check if this key is confirmed (has both en and es values AND confirmation audit)
-    /// </summary>
-    public bool IsConfirmed
-    {
-        get
-        {
-            if (ConfirmedBy == null)
-                return false;
-
-            var hasEnglish = LanguageValues.TryGetValue("en", out var enValue) && !string.IsNullOrWhiteSpace(enValue);
-            var hasSpanish = LanguageValues.TryGetValue("es", out var esValue) && !string.IsNullOrWhiteSpace(esValue);
-
-            return hasEnglish && hasSpanish;
-        }
-    }
 
     /// <summary>
     /// Update the HasMissingTranslations property based on current language values and suggestions.
