@@ -3620,6 +3620,10 @@ public partial class MainWindowViewModel : ViewModelBase
             DeploymentPreviewItems.Add(item);
         }
 
+        // Notify that HasDeploymentPreview and CanDeploy may have changed
+        OnPropertyChanged(nameof(HasDeploymentPreview));
+        OnPropertyChanged(nameof(CanDeploy));
+
         DeploymentPreviewSummary = $"{previewItems.Count} file(s) ready for deployment";
         StatusMessage = $"Preview generated: {previewItems.Count} file(s) will be deployed.";
 

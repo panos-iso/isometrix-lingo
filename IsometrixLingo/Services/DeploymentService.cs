@@ -473,13 +473,11 @@ public class DeploymentService
                 // Get relative path from source directory
                 var relativePath = Path.GetRelativePath(sourceDirectory, sourceFile);
                 
-                // Map to deployment target path
-                var targetPath = Path.Combine(deploymentRoot, relativePath);
-
+                // Map to deployment target path (store as relative for UI display)
                 previewItems.Add(new DeploymentPreviewItem
                 {
                     SourcePath = relativePath,
-                    TargetPath = targetPath,
+                    TargetPath = relativePath,
                     IsValid = true
                 });
             }
