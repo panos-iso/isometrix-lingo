@@ -99,7 +99,7 @@
             
             <!-- App Title and Version (Top Left) -->
             <TextBlock Grid.Column="1"
-                       Text="Isometrix Lingo v3.3.2"
+                       Text="Isometrix Lingo v4.0.0"
                        FontSize="13"
                        FontWeight="SemiBold"
                        VerticalAlignment="Center"
