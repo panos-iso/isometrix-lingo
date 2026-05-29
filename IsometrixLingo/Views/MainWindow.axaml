@@ -515,7 +515,7 @@
                                 Background="#E3F2FD"
                                 BorderThickness="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderThicknessConverter}, ConverterParameter=Edit}"
                                 CornerRadius="10"
-                                Padding="30"
+                                Padding="20"
                                 Cursor="Hand"
                                 Tapped="OnEditModeBoxTapped"
                                 BoxShadow="0 4 8 0 #40000000">
@@ -527,20 +527,20 @@
                                     <Setter Property="BoxShadow" Value="0 6 16 0 #60000000"/>
                                 </Style>
                             </Border.Styles>
-                            <StackPanel Spacing="15">
+                            <StackPanel Spacing="10">
                                 <TextBlock Text="✏️ Edit Mode"
-                                           FontSize="24"
+                                           FontSize="22"
                                            FontWeight="Bold"
                                            Foreground="#0D47A1"
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Directly modify translation values"
-                                           FontSize="16"
+                                           FontSize="14"
                                            TextWrapping="Wrap"
                                            HorizontalAlignment="Center"
                                            Foreground="#1976D2"/>
-                                <Border Height="2" Background="#BBDEFB" Margin="0,5,0,5"/>
+                                <Border Height="2" Background="#BBDEFB" Margin="0,3,0,3"/>
                                 <TextBlock TextWrapping="Wrap"
-                                           FontSize="14"
+                                           FontSize="13"
                                            Foreground="#424242">
                                     <Run Text="• Edit actual translation values"/><LineBreak/>
                                     <Run Text="• Add new translation keys"/><LineBreak/>
@@ -550,14 +550,14 @@
                                 <!-- Selected indicator -->
                                 <Border Background="#1976D2"
                                         CornerRadius="5"
-                                        Padding="10,5"
+                                        Padding="8,4"
                                         HorizontalAlignment="Center"
                                         IsVisible="{Binding CurrentMode, Converter={StaticResource IsEditModeConverter}}"
-                                        Margin="0,10,0,0">
+                                        Margin="0,5,0,0">
                                     <TextBlock Text="✓ SELECTED"
                                                Foreground="White"
                                                FontWeight="Bold"
-                                               FontSize="14"/>
+                                               FontSize="13"/>
                                 </Border>
                             </StackPanel>
                         </Border>
@@ -567,7 +567,7 @@
                                 Background="#F3E5F5"
                                 BorderThickness="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderThicknessConverter}, ConverterParameter=Suggest}"
                                 CornerRadius="10"
-                                Padding="30"
+                                Padding="20"
                                 Cursor="Hand"
                                 Tapped="OnSuggestModeBoxTapped"
                                 BoxShadow="0 4 8 0 #40000000">
@@ -579,20 +579,20 @@
                                     <Setter Property="BoxShadow" Value="0 6 16 0 #60000000"/>
                                 </Style>
                             </Border.Styles>
-                            <StackPanel Spacing="15">
+                            <StackPanel Spacing="10">
                                 <TextBlock Text="💡 Suggest Mode"
-                                           FontSize="24"
+                                           FontSize="22"
                                            FontWeight="Bold"
                                            Foreground="#6A1B9A"
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Propose translation changes for review"
-                                           FontSize="16"
+                                           FontSize="14"
                                            TextWrapping="Wrap"
                                            HorizontalAlignment="Center"
                                            Foreground="#8E24AA"/>
-                                <Border Height="2" Background="#E1BEE7" Margin="0,5,0,5"/>
+                                <Border Height="2" Background="#E1BEE7" Margin="0,3,0,3"/>
                                 <TextBlock TextWrapping="Wrap"
-                                           FontSize="14"
+                                           FontSize="13"
                                            Foreground="#424242">
                                     <Run Text="• Suggest updates to existing values"/><LineBreak/>
                                     <Run Text="• Suggest translations for new keys"/><LineBreak/>
@@ -602,14 +602,14 @@
                                 <!-- Selected indicator -->
                                 <Border Background="#7B1FA2"
                                         CornerRadius="5"
-                                        Padding="10,5"
+                                        Padding="8,4"
                                         HorizontalAlignment="Center"
                                         IsVisible="{Binding CurrentMode, Converter={StaticResource IsSuggestModeConverter}}"
-                                        Margin="0,10,0,0">
+                                        Margin="0,5,0,0">
                                     <TextBlock Text="✓ SELECTED"
                                                Foreground="White"
                                                FontWeight="Bold"
-                                               FontSize="14"/>
+                                               FontSize="13"/>
                                 </Border>
                             </StackPanel>
                         </Border>
@@ -619,7 +619,7 @@
                                 Background="#FFF3E0"
                                 BorderThickness="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderThicknessConverter}, ConverterParameter=Deployment}"
                                 CornerRadius="10"
-                                Padding="30"
+                                Padding="20"
                                 Cursor="Hand"
                                 Tapped="OnDeploymentModeBoxTapped"
                                 BoxShadow="0 4 8 0 #40000000"
@@ -632,21 +632,21 @@
                                     <Setter Property="BoxShadow" Value="0 6 16 0 #60000000"/>
                                 </Style>
                             </Border.Styles>
-                            <StackPanel Spacing="15">
+                            <StackPanel Spacing="10">
                                 <TextBlock Text="🚀 Deployment Mode"
-                                           FontSize="24"
+                                           FontSize="22"
                                            FontWeight="Bold"
                                            Foreground="#E65100"
                                            HorizontalAlignment="Center"
                                            TextWrapping="Wrap"/>
                                 <TextBlock Text="Deploy translations directly to repository"
-                                           FontSize="16"
+                                           FontSize="14"
                                            TextWrapping="Wrap"
                                            HorizontalAlignment="Center"
                                            Foreground="#F57C00"/>
-                                <Border Height="2" Background="#FFE0B2" Margin="0,5,0,5"/>
+                                <Border Height="2" Background="#FFE0B2" Margin="0,3,0,3"/>
                                 <TextBlock TextWrapping="Wrap"
-                                           FontSize="14"
+                                           FontSize="13"
                                            Foreground="#424242">
                                     <Run Text="• Skip editing - fast deployment"/><LineBreak/>
                                     <Run Text="• Auto-validate paths before deploy"/><LineBreak/>
@@ -656,14 +656,14 @@
                                 <!-- Selected indicator -->
                                 <Border Background="#FF6F00"
                                         CornerRadius="5"
-                                        Padding="10,5"
+                                        Padding="8,4"
                                         HorizontalAlignment="Center"
                                         IsVisible="{Binding CurrentMode, Converter={StaticResource IsDeploymentModeConverter}}"
-                                        Margin="0,10,0,0">
+                                        Margin="0,5,0,0">
                                     <TextBlock Text="✓ SELECTED"
                                                Foreground="White"
                                                FontWeight="Bold"
-                                               FontSize="14"/>
+                                               FontSize="13"/>
                                 </Border>
                             </StackPanel>
                         </Border>
