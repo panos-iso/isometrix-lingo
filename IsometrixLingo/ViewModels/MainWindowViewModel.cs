@@ -3527,6 +3527,9 @@ public partial class MainWindowViewModel : ViewModelBase
             ValidationMessageColor = new SolidColorBrush(Colors.Green);
             StatusMessage = $"Successfully deployed {DeploymentPreviewItems.Count} file(s) to {DeploymentRootPath}";
             ShowDeployAgainButton = true;
+            
+            // Save progress after successful deployment
+            SaveProgress();
         }
         else
         {
@@ -3541,6 +3544,9 @@ public partial class MainWindowViewModel : ViewModelBase
             ValidationMessage = $"❌ Deployment failed: {deploymentErrors.Count} error(s) detected. All changes rolled back.";
             ValidationMessageColor = new SolidColorBrush(Colors.Red);
             StatusMessage = $"Deployment failed with {deploymentErrors.Count} error(s). No files were changed.";
+            
+            // Save progress even on failure (to persist error state)
+            SaveProgress();
         }
 
         await Task.CompletedTask;
@@ -3616,6 +3622,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
         DeploymentPreviewSummary = $"{previewItems.Count} file(s) ready for deployment";
         StatusMessage = $"Preview generated: {previewItems.Count} file(s) will be deployed.";
+
+        // Save progress after generating preview
+        SaveProgress();
 
         await Task.CompletedTask;
     }

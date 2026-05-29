@@ -1159,7 +1159,8 @@
                                                                    Text="{Binding SourcePath}"
                                                                    FontSize="12"
                                                                    TextWrapping="Wrap"
-                                                                   FontFamily="Courier New"/>
+                                                                   FontFamily="Courier New"
+                                                                   Foreground="#212121"/>
                                                         <TextBlock Grid.Column="1"
                                                                    Text=" → "
                                                                    FontSize="12"
@@ -1169,7 +1170,8 @@
                                                                    Text="{Binding TargetPath}"
                                                                    FontSize="12"
                                                                    TextWrapping="Wrap"
-                                                                   FontFamily="Courier New"/>
+                                                                   FontFamily="Courier New"
+                                                                   Foreground="#212121"/>
                                                     </Grid>
                                                 </Border>
                                             </DataTemplate>
