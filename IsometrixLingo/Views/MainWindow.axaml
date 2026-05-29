@@ -908,48 +908,13 @@
                                   CanUserResizeColumns="True"
                                   CanUserReorderColumns="False"
                                   DoubleTapped="OnGridDoubleTapped"
+                                  ColumnWidth="*"
                                   ToolTip.Tip="{Binding CurrentMode, Converter={StaticResource EditModeTooltipConverter}}">                                  
                             <DataGrid.Styles>
                                 <Style Selector="DataGridRow" x:DataType="models:TranslationKey">
                                     <Setter Property="Background" Value="{Binding HasMissingTranslations, Converter={StaticResource MissingTranslationBorderConverter}}"/>
                                 </Style>
                             </DataGrid.Styles>
-                            <DataGrid.Columns>
-                                <DataGridTemplateColumn Header="Source File" 
-                                                        Width="*" 
-                                                        MinWidth="120"
-                                                        MaxWidth="250">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate DataType="models:TranslationKey">
-                                            <StackPanel Orientation="Vertical" 
-                                                        Margin="5,4"
-                                                        VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Source, Converter={StaticResource SourceFileConverter}}" 
-                                                           TextWrapping="Wrap"/>
-                                                <TextBlock Text="{Binding Source.DirectoryPath, Converter={StaticResource TruncatedDirectoryPathConverter}}"
-                                                           FontSize="10"
-                                                           FontStyle="Italic"
-                                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                                           TextWrapping="Wrap"
-                                                           IsVisible="{Binding Source.DirectoryPath, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="Key" 
-                                                        Width="1.5*" 
-                                                        MinWidth="150"
-                                                        MaxWidth="300">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Key}" 
-                                                       TextWrapping="Wrap"
-                                                       Padding="5,4"
-                                                       VerticalAlignment="Center"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
                         </DataGrid>
                     </Border>
                 </Grid>
