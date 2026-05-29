@@ -120,8 +120,8 @@ public class ResxTranslationFileWriter
                 }
             }
 
-            // Add new data elements for keys that weren't in the template
-            foreach (var key in keys.OrderBy(k => k.Key))
+            // Add new data elements for keys that weren't in the template (preserve original order)
+            foreach (var key in keys)
             {
                 if (!processedKeys.Contains(key.Key))
                 {
@@ -148,8 +148,8 @@ public class ResxTranslationFileWriter
             // Fall back to creating a new RESX structure
             root = CreateResxDocument();
 
-            // Add data elements for each key
-            foreach (var key in keys.OrderBy(k => k.Key))
+            // Add data elements for each key (preserve original order)
+            foreach (var key in keys)
             {
                 var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
                 
