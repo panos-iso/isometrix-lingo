@@ -2884,11 +2884,24 @@ public partial class MainWindowViewModel : ViewModelBase
     private void ConfirmModeSelection()
     {
         ModeSelectionStepStatus = StepStatus.Completed;
-        EditStepStatus = StepStatus.InProgress;
-        CurrentStep = WorkflowStep.Edit;
-        
-        var modeText = CurrentMode == EditMode.Edit ? "Edit" : "Suggest";
-        StatusMessage = $"{modeText} mode selected. You can now {modeText.ToLower()} translations.";
+
+        if (CurrentMode == EditMode.Deployment)
+        {
+            // Deployment mode: skip Edit step and go directly to Export
+            EditStepStatus = StepStatus.NotStarted; // Skipped
+            ExportStepStatus = StepStatus.InProgress;
+            CurrentStep = WorkflowStep.Export;
+            StatusMessage = "Deployment mode selected. Click 'Export as ZIP' to prepare translations for deployment.";
+        }
+        else
+        {
+            // Edit or Suggest mode: proceed to Edit step
+            EditStepStatus = StepStatus.InProgress;
+            CurrentStep = WorkflowStep.Edit;
+            
+            var modeText = CurrentMode == EditMode.Edit ? "Edit" : "Suggest";
+            StatusMessage = $"{modeText} mode selected. You can now {modeText.ToLower()} translations.";
+        }
 
         // Auto-save progress
         SaveProgress();
