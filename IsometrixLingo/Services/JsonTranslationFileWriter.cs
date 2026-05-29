@@ -72,84 +72,22 @@ public class JsonTranslationFileWriter
 
     private void WriteLanguageFile(string filePath, List<TranslationKey> keys, string language, string? template, string? username, EditMode currentMode)
     {
-        JsonObject jsonObject;
-
-        if (!string.IsNullOrEmpty(template))
+        // ALWAYS write flat JSON - no nested objects
+        // Keys with dots stay as literal keys: "buttons.activate" not { "buttons": { "activate": ... }}
+        var jsonObject = new JsonObject();
+        
+        foreach (var key in keys)
         {
-            // Parse the template to preserve structure and order
-            try
-            {
-                var parsedNode = JsonNode.Parse(template);
-                jsonObject = parsedNode as JsonObject ?? new JsonObject();
-
-                // Update existing values and track processed keys
-                var processedKeys = new HashSet<string>();
-
-                foreach (var key in keys)
-                {
-                    // Get actual value
-                    var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                    
-                    // In Deployment mode, write clean values without annotations
-                    // In Edit/Suggest modes, append annotations inline (JSON doesn't support comments natively)
-                    var finalValue = currentMode == EditMode.Deployment 
-                        ? value 
-                        : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
-                    
-                    if (UpdateNestedValue(jsonObject, key.Key, finalValue))
-                    {
-                        processedKeys.Add(key.Key);
-                    }
-                }
-
-                // Add new keys that weren't in the template
-                foreach (var key in keys)
-                {
-                    if (!processedKeys.Contains(key.Key))
-                    {
-                        var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                        
-                        // In Deployment mode, write clean values without annotations
-                        var finalValue = currentMode == EditMode.Deployment 
-                            ? value 
-                            : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
-                        
-                        SetNestedValue(jsonObject, key.Key, finalValue);
-                    }
-                }
-            }
-            catch (JsonException)
-            {
-                // If template parsing fails, fall back to creating from scratch
-                jsonObject = new JsonObject();
-                foreach (var key in keys)
-                {
-                    var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                    
-                    // In Deployment mode, write clean values without annotations
-                    var finalValue = currentMode == EditMode.Deployment 
-                        ? value 
-                        : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
-                    
-                    SetNestedValue(jsonObject, key.Key, finalValue);
-                }
-            }
-        }
-        else
-        {
-            // No template - create from scratch
-            jsonObject = new JsonObject();
-            foreach (var key in keys)
-            {
-                var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
-                
-                // In Deployment mode, write clean values without annotations  
-                var finalValue = currentMode == EditMode.Deployment 
-                    ? value 
-                    : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
-                
-                SetNestedValue(jsonObject, key.Key, finalValue);
-            }
+            var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
+            
+            // In Deployment mode, write clean values without annotations
+            // In Edit/Suggest modes, append annotations inline
+            var finalValue = currentMode == EditMode.Deployment 
+                ? value 
+                : AppendAnnotations(value, key, language, username, currentMode == EditMode.Edit);
+            
+            // Write as flat key-value pair (no nesting)
+            jsonObject[key.Key] = JsonValue.Create(finalValue);
         }
 
         var json = jsonObject.ToJsonString(_options);
@@ -171,71 +109,5 @@ public class JsonTranslationFileWriter
         }
         
         return result;
-    }
-
-    /// <summary>
-    /// Update a value in an existing nested structure, returns true if key was found and updated
-    /// </summary>
-    private bool UpdateNestedValue(JsonObject root, string key, string value)
-    {
-        var parts = key.Split('.');
-        JsonObject current = root;
-
-        // Navigate to the parent of the target key
-        for (int i = 0; i < parts.Length - 1; i++)
-        {
-            var part = parts[i];
-
-            if (!current.ContainsKey(part))
-            {
-                return false; // Path doesn't exist in template
-            }
-
-            if (current[part] is JsonObject jsonObj)
-            {
-                current = jsonObj;
-            }
-            else
-            {
-                return false; // Path conflicts with non-object value
-            }
-        }
-
-        var finalKey = parts[^1];
-        if (current.ContainsKey(finalKey))
-        {
-            current[finalKey] = JsonValue.Create(value);
-            return true;
-        }
-
-        return false;
-    }
-
-    private void SetNestedValue(JsonObject root, string key, string value)
-    {
-        var parts = key.Split('.');
-        JsonObject current = root;
-
-        for (int i = 0; i < parts.Length - 1; i++)
-        {
-            var part = parts[i];
-
-            if (!current.ContainsKey(part))
-            {
-                current[part] = new JsonObject();
-            }
-
-            if (current[part] is JsonObject jsonObj)
-            {
-                current = jsonObj;
-            }
-            else
-            {
-                // Handle case where path conflicts (shouldn't happen with valid data)
-                return;
-            }
-        }
-
-        current[parts[^1]] = JsonValue.Create(value);
     }
 }
