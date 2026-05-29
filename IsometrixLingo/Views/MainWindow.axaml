@@ -501,17 +501,19 @@
                     </StackPanel>
 
                     <!-- Mode Selection Boxes -->
-                    <Grid Margin="0,20,0,0">
+                    <!-- When not developer: centered 2 boxes | When developer: left-aligned 3 boxes -->
+                    <Grid Margin="0,20,0,0" HorizontalAlignment="Center">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="20"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="20"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         
                         <!-- Edit Mode Box -->
                         <Border Grid.Column="0"
+                                Width="280"
                                 Background="#E3F2FD"
                                 BorderThickness="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderThicknessConverter}, ConverterParameter=Edit}"
                                 CornerRadius="10"
@@ -564,6 +566,7 @@
 
                         <!-- Suggest Mode Box -->
                         <Border Grid.Column="2"
+                                Width="280"
                                 Background="#F3E5F5"
                                 BorderThickness="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderThicknessConverter}, ConverterParameter=Suggest}"
                                 CornerRadius="10"
@@ -616,6 +619,7 @@
 
                         <!-- Deployment Mode Box (Developer Only) -->
                         <Border Grid.Column="4"
+                                Width="280"
                                 Background="#FFF3E0"
                                 BorderThickness="{Binding CurrentMode, Converter={StaticResource ModeSelectionBorderThicknessConverter}, ConverterParameter=Deployment}"
                                 CornerRadius="10"

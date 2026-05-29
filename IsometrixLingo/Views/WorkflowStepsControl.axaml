@@ -8,7 +8,16 @@
              x:DataType="vm:MainWindowViewModel">
     
     <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" BorderThickness="0,0,0,1" Padding="10">
-        <Grid ColumnDefinitions="*,*,*,*,*">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
             <!-- Step 1: Import -->
             <Border Grid.Column="0" 
                     Background="{Binding Step1Background}"
@@ -121,7 +130,7 @@
             <Border Grid.Column="4" 
                     Background="{Binding Step5Background}"
                     CornerRadius="4"
-                    Margin="3,0,0,0"
+                    Margin="3,0,3,0"
                     Padding="12,10">
                 <StackPanel>
                     <TextBlock Text="Step 5" 
@@ -138,6 +147,34 @@
                     <TextBlock Text="{Binding Step5Status}" 
                                FontSize="10" 
                                Foreground="{Binding Step5Foreground}"
+                               Opacity="0.9"
+                               HorizontalAlignment="Center"
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Step 6: Deploy (Developer Only) -->
+            <Border Grid.Column="5" 
+                    Background="{Binding Step6Background}"
+                    CornerRadius="4"
+                    Margin="3,0,0,0"
+                    Padding="12,10"
+                    IsVisible="{Binding IsDeveloper}">
+                <StackPanel>
+                    <TextBlock Text="Step 6" 
+                               FontSize="11" 
+                               Foreground="{Binding Step6Foreground}"
+                               Opacity="0.8"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Deploy" 
+                               FontSize="13" 
+                               FontWeight="SemiBold"
+                               Foreground="{Binding Step6Foreground}"
+                               HorizontalAlignment="Center"
+                               Margin="0,2,0,0"/>
+                    <TextBlock Text="{Binding Step6Status}" 
+                               FontSize="10" 
+                               Foreground="{Binding Step6Foreground}"
                                Opacity="0.9"
                                HorizontalAlignment="Center"
                                Margin="0,2,0,0"/>
