@@ -2366,9 +2366,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (!confirmed) return;
 
-        // Proceed with start over
+        // Proceed with start over - clear all in-memory state first
         _translationStore.Clear();
-        _progressService.ClearProgress();
         ImportedFileNames.Clear();
         IgnoredFileNames.Clear();
         FilePairs.Clear();
@@ -2386,26 +2385,35 @@ public partial class MainWindowViewModel : ViewModelBase
         DeployStepStatus = StepStatus.NotStarted;
         CurrentMode = EditMode.Edit;
 
-        // Clear deployment state
+        // Clear deployment state COMPLETELY
+        DeploymentValidationSuccess = false;
+        DeploymentValidationMessage = string.Empty;
+        ShowDeploymentSuccess = false;
+        DeploymentSuccessMessage = string.Empty;
+        DeploymentHistory.Clear();
         DeploymentRootPath = "Click 'Select Folder' to choose deployment directory";
         SuggestedDeploymentRoot = string.Empty;
         DeploymentPreviewItems.Clear();
         DeploymentPreviewSummary = string.Empty;
         ValidationMessage = string.Empty;
         ShowDeployAgainButton = false;
-        DeploymentValidationSuccess = false;
-        DeploymentValidationMessage = string.Empty;
-        ShowDeploymentSuccess = false;
-        DeploymentSuccessMessage = string.Empty;
-        DeploymentHistory.Clear();
         ImportErrors.Clear();
         HasErrors = false;
         ErrorCount = 0;
         _lastExportFolder = string.Empty;
         _lastExportFileName = string.Empty;
+        
+        // Force property change notifications for computed properties
+        OnPropertyChanged(nameof(HasDeploymentValidationResult));
+        OnPropertyChanged(nameof(DeploymentValidationBorderBrush));
+        OnPropertyChanged(nameof(CanDeploy));
+        OnPropertyChanged(nameof(DeployButtonText));
 
         UpdateFileFilters();
         StatusMessage = "Ready. Click Import to load translation files.";
+        
+        // Delete saved progress file LAST, after all state is cleared
+        _progressService.ClearProgress();
     }
 
     [RelayCommand]
