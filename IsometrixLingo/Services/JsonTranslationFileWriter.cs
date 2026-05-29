@@ -74,8 +74,10 @@ public class JsonTranslationFileWriter
     {
         // ALWAYS write flat JSON - no nested objects
         // Keys with dots stay as literal keys: "buttons.activate" not { "buttons": { "activate": ... }}
+        // PRESERVE ORIGINAL KEY ORDER - JsonObject maintains insertion order in .NET 5+
         var jsonObject = new JsonObject();
         
+        // Iterate keys in original order - NO SORTING
         foreach (var key in keys)
         {
             var value = key.LanguageValues.TryGetValue(language, out var val) ? val : string.Empty;
