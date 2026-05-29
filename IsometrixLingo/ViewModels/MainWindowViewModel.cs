@@ -973,13 +973,16 @@ public partial class MainWindowViewModel : ViewModelBase
                 return;
             }
 
-            // Step 1: Show branch warning dialog
-            var branchWarning = new BranchWarningDialog();
-            var confirmed = await branchWarning.ShowDialog<bool>(window);
-            
-            if (!confirmed)
+            // Step 1: Show branch warning dialog (developers only)
+            if (IsDeveloper)
             {
-                return;
+                var branchWarning = new BranchWarningDialog();
+                var confirmed = await branchWarning.ShowDialog<bool>(window);
+                
+                if (!confirmed)
+                {
+                    return;
+                }
             }
 
             // Step 2: Open folder picker for parent directory
